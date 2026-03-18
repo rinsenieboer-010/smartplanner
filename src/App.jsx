@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { supabase } from "./supabase.js";
 
 const today = new Date();
 const getTodayKey = () => {
@@ -1039,13 +1040,122 @@ function Splitter({ onMouseDown }) {
 }
 
 // ── APP ───────────────────────────────────────────────────────────────────────
+// ── LOGIN PAGE ────────────────────────────────────────────────────────────────
+function LoginPage() {
+  const [mode, setMode]       = useState("login"); // "login" | "signup"
+  const [email, setEmail]     = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError]     = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleEmail = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const { error } = mode === "login"
+      ? await supabase.auth.signInWithPassword({ email, password })
+      : await supabase.auth.signUp({ email, password });
+    if (error) setError(error.message);
+    setLoading(false);
+  };
+
+  const handleOAuth = async (provider) => {
+    setError(null);
+    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: window.location.origin } });
+    if (error) setError(error.message);
+  };
+
+  const providers = [
+    { id: "google",    label: "Google",    icon: "G" },
+    { id: "azure",     label: "Microsoft", icon: "M" },
+    { id: "apple",     label: "Apple",     icon: "" },
+  ];
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#111827", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans', sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');`}</style>
+
+      {/* Logo */}
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:40 }}>
+        <span style={{ fontSize:22, fontWeight:700, color:"#f9fafb", letterSpacing:0.5 }}>SmartPlanner</span>
+        <div style={{ display:"flex", gap:5 }}>
+          <div style={{ width:8, height:8, borderRadius:"50%", background:"#DC2626" }} />
+          <div style={{ width:8, height:8, borderRadius:"50%", background:"#E6B400" }} />
+          <div style={{ width:8, height:8, borderRadius:"50%", background:"#2563EB" }} />
+        </div>
+      </div>
+
+      {/* Card */}
+      <div style={{ background:"#18181b", borderRadius:16, padding:"36px 40px", width:"100%", maxWidth:400, boxShadow:"0 8px 32px rgba(0,0,0,0.4)" }}>
+        <h2 style={{ color:"#f9fafb", fontSize:20, fontWeight:700, marginBottom:24, textAlign:"center" }}>
+          {mode === "login" ? "Inloggen" : "Account aanmaken"}
+        </h2>
+
+        {/* OAuth buttons */}
+        <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
+          {providers.map(p => (
+            <button key={p.id} onClick={() => handleOAuth(p.id)}
+              style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, padding:"11px 0", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, fontWeight:500, cursor:"pointer", transition:"background 0.15s" }}
+              onMouseEnter={e => e.currentTarget.style.background="#3f3f46"}
+              onMouseLeave={e => e.currentTarget.style.background="#27272a"}>
+              <span style={{ fontWeight:700, fontSize:15 }}>{p.icon}</span> Doorgaan met {p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Divider */}
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:24 }}>
+          <div style={{ flex:1, height:1, background:"#3f3f46" }} />
+          <span style={{ color:"#71717a", fontSize:12 }}>of</span>
+          <div style={{ flex:1, height:1, background:"#3f3f46" }} />
+        </div>
+
+        {/* Email form */}
+        <form onSubmit={handleEmail} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          <input type="email" placeholder="E-mailadres" value={email} onChange={e => setEmail(e.target.value)} required
+            style={{ padding:"10px 14px", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, outline:"none" }} />
+          <input type="password" placeholder="Wachtwoord" value={password} onChange={e => setPassword(e.target.value)} required
+            style={{ padding:"10px 14px", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, outline:"none" }} />
+          {error && <div style={{ color:"#FCA5A5", fontSize:13 }}>{error}</div>}
+          <button type="submit" disabled={loading}
+            style={{ padding:"11px 0", borderRadius:8, border:"none", background:"#2563EB", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity: loading ? 0.7 : 1, transition:"opacity 0.15s" }}>
+            {loading ? "Laden..." : mode === "login" ? "Inloggen" : "Account aanmaken"}
+          </button>
+        </form>
+
+        {/* Toggle mode */}
+        <div style={{ textAlign:"center", marginTop:20, fontSize:13, color:"#71717a" }}>
+          {mode === "login" ? "Nog geen account? " : "Al een account? "}
+          <span onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); }}
+            style={{ color:"#60a5fa", cursor:"pointer", fontWeight:500 }}>
+            {mode === "login" ? "Aanmaken" : "Inloggen"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  const [session, setSession]   = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [tasks, setTasks]   = useState(initTasks);
   const [events, setEvents] = useState(initEvents);
   const [trash, setTrash]   = useState([]);
   const [widths, setWidths] = useState([320, null, 320]);
   const containerRef = useRef(null);
   const totalRef     = useRef(0);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const update = () => {
@@ -1134,6 +1244,15 @@ export default function App() {
     </div>
   );
 
+  if (authLoading) return (
+    <div style={{ minHeight:"100vh", background:"#111827", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans', sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');`}</style>
+      <span style={{ color:"#9ca3af", fontSize:14 }}>Laden...</span>
+    </div>
+  );
+
+  if (!session) return <LoginPage />;
+
   return (
     <>
       <style>{`
@@ -1148,7 +1267,14 @@ export default function App() {
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#DC2626" }} />
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#E6B400" }} />
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#2563EB" }} />
-        <div style={{ marginLeft:"auto", fontSize:12, color:"#9ca3af" }}>{today.getDate()} {MONTHS[today.getMonth()]} {today.getFullYear()}</div>
+        <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:16 }}>
+          <span style={{ fontSize:12, color:"#9ca3af" }}>{today.getDate()} {MONTHS[today.getMonth()]} {today.getFullYear()}</span>
+          <span style={{ fontSize:12, color:"#6b7280" }}>{session.user.email}</span>
+          <button onClick={() => supabase.auth.signOut()}
+            style={{ fontSize:12, color:"#9ca3af", background:"none", border:"1px solid #3f3f46", borderRadius:6, padding:"3px 10px", cursor:"pointer" }}>
+            Uitloggen
+          </button>
+        </div>
       </div>
       <div ref={containerRef} style={{ display:"flex", height:"calc(100vh - 44px)", overflow:"hidden" }}>
         <div style={{ width: widths[0] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
