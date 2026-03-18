@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "./supabase.js";
+import { loadTasks, loadEvents, loadLists, addTaskDB, updateTaskDB, deleteTaskDB, addEventDB, updateEventDB, deleteEventDB, addListDB, updateListDB, deleteListDB } from "./db.js";
 
 const today = new Date();
 const getTodayKey = () => {
@@ -44,21 +45,13 @@ const EVENT_BORDER = { blue: "#2563EB", red: "#DC2626", yellow: "#E6B400" };
 const pastDate    = dateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate()-2));
 const futureDate  = dateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate()+5));
 
-const initTasks = [
-  { id: 1, title: "Rapport afmaken",   priority: "hoog",  status: "bezig", deadline: getTodayKey(), list: "mine" },
-  { id: 2, title: "Sport (hardlopen)", priority: "midden", status: "open",  deadline: pastDate,      list: "mine" },
-  { id: 3, title: "Boodschappen doen", priority: "laag",  status: "open",  deadline: null,          list: "mine" },
-  { id: 4, title: "Belastingaangifte", priority: "hoog",  status: "open",  deadline: futureDate,    list: "mine" },
+const DEFAULT_LISTS = [
+  { id: "mine",       label: "Mijn taken",  color: "#2563EB" },
+  { id: "school",     label: "School",      color: "#E6B400" },
+  { id: "huishouden", label: "Huishouden",  color: "#DC2626" },
+  { id: "werk",       label: "Werk",        color: "#DC2626" },
 ];
 
-const initEvents = (() => {
-  const ev = [];
-  const d0 = new Date(today); d0.setDate(today.getDate() - (today.getDay()||7) + 1);
-  ev.push({ id: 10, title: "Team standup", date: dateKey(d0), startH: 9, startM: 0, endH: 10, endM: 0, color: "blue" });
-  const wed = new Date(d0); wed.setDate(d0.getDate()+2);
-  ev.push({ id: 11, title: "Klantgesprek", date: dateKey(wed), startH: 14, startM: 0, endH: 15, endM: 30, color: "red" });
-  return ev;
-})();
 
 // ── DATE PICKER ──────────────────────────────────────────────────────────────
 function DatePicker({ value, onChange, onClose }) {
@@ -156,7 +149,7 @@ function DatePicker({ value, onChange, onClose }) {
 }
 
 // ── TASK PANEL ────────────────────────────────────────────────────────────────
-function TaskPanel({ tasks, setTasks, trash, setTrash, panelWidth }) {
+function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, panelWidth }) {
   const showSidebar = panelWidth > 400;
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -164,12 +157,6 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, panelWidth }) {
   const [fadingOut, setFadingOut] = useState({}); // id -> true when animating out
   const [datePickerOpen, setDatePickerOpen] = useState(null); // task id
   const [openNoteId, setOpenNoteId] = useState(null);
-  const [lists, setLists] = useState([
-    { id: "mine",       label: "Mijn taken",  color: "#2563EB" },
-    { id: "school",     label: "School",      color: "#E6B400" },
-    { id: "huishouden", label: "Huishouden",  color: "#DC2626" },
-    { id: "werk",       label: "Werk",        color: "#DC2626" },
-  ]);
   const [sharedLists, setSharedLists] = useState([
     { id: "lisa", label: "Lisa", color: "#E6B400" },
   ]);
@@ -215,12 +202,11 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, panelWidth }) {
   });
 
   const completeDone = (id) => {
-    // Step 1: show strikethrough briefly
     setFadingOut(f => ({ ...f, [id]: true }));
-    // Step 2: after 600ms move to trash
     setTimeout(() => {
       const task = tasks.find(t => t.id === id);
       if (task) {
+        deleteTaskDB(id);
         setTrash(tr => [...tr, { ...task, completedAt: new Date().toISOString() }]);
         setTasks(t => t.filter(x => x.id !== id));
       }
@@ -232,7 +218,10 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, panelWidth }) {
     const task = visibleTrash.find(t => t.id === id);
     if (task) {
       const { completedAt, ...restored } = task;
-      setTasks(t => [...t, { ...restored, status: "open" }]);
+      const newTask = { ...restored, status: "open" };
+      addTaskDB(userId, newTask).then(saved => {
+        setTasks(t => [...t, saved]);
+      });
       setTrash(tr => tr.filter(t => t.id !== id));
     }
   };
@@ -241,28 +230,47 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, panelWidth }) {
 
   const addTask = () => {
     if (!newTitle.trim()) return;
-    setTasks(t => [...t, { id: Date.now(), title: newTitle.trim(), priority: "", status: "", deadline: null, list: activeList }]);
+    const taskData = { title: newTitle.trim(), priority: "", status: "", deadline: null, list: activeList };
+    addTaskDB(userId, taskData).then(saved => setTasks(t => [...t, saved]));
     setNewTitle(""); setAdding(false);
   };
-  const remove     = (id) => setTasks(t => t.filter(x => x.id !== id));
-  const cyclePrio  = (id) => {
+  const remove = (id) => {
+    deleteTaskDB(id);
+    setTasks(t => t.filter(x => x.id !== id));
+  };
+  const cyclePrio = (id) => {
     const next = { "":"hoog", hoog:"midden", midden:"laag", laag:"" };
-    setTasks(t => t.map(x => x.id===id ? { ...x, priority: next[x.priority] } : x));
+    setTasks(t => t.map(x => {
+      if (x.id !== id) return x;
+      const updated = { ...x, priority: next[x.priority] };
+      updateTaskDB(updated);
+      return updated;
+    }));
   };
   const cycleStatus = (id) => {
     const next = { "":"open", open:"bezig", bezig:"klaar", klaar:"" };
-    setTasks(t => t.map(x => x.id===id ? { ...x, status: next[x.status] } : x));
+    setTasks(t => t.map(x => {
+      if (x.id !== id) return x;
+      const updated = { ...x, status: next[x.status] };
+      updateTaskDB(updated);
+      return updated;
+    }));
   };
   const addList = () => {
     if (!newListName.trim()) return;
     const colors = ["#2563EB","#DC2626","#E6B400","#2563EB","#DC2626"];
     const color = colors[lists.length % colors.length];
     const id = "list_" + Date.now();
-    setLists(l => [...l, { id, label: newListName.trim(), color }]);
+    const newList = { id, label: newListName.trim(), color };
+    addListDB(userId, newList);
+    setLists(l => [...l, newList]);
     setNewListName(""); setAddingList(false); setActiveList(id);
   };
   const deleteList = () => {
     if (lists.length <= 1) return;
+    const tasksToDelete = tasks.filter(x => (x.list||"mine") === activeList);
+    tasksToDelete.forEach(t => deleteTaskDB(t.id));
+    deleteListDB(activeList);
     setLists(l => l.filter(x => x.id !== activeList));
     setTasks(t => t.filter(x => (x.list||"mine") !== activeList));
     setActiveList(lists.find(l => l.id !== activeList)?.id || "mine");
@@ -274,7 +282,12 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, panelWidth }) {
   };
   const confirmRename = () => {
     if (!editListValue.trim()) { setEditingListName(false); return; }
-    setLists(l => l.map(x => x.id===activeList ? { ...x, label: editListValue.trim() } : x));
+    setLists(l => l.map(x => {
+      if (x.id !== activeList) return x;
+      const updated = { ...x, label: editListValue.trim() };
+      updateListDB(updated);
+      return updated;
+    }));
     setEditingListName(false);
   };
 
@@ -377,7 +390,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, panelWidth }) {
               {showColorPicker && !isTrash && !isShared && (
                 <div style={{ position:"absolute", top:20, left:0, background:"#fff", border:"1px solid #e5e7eb", borderRadius:6, padding:"8px", display:"flex", gap:8, boxShadow:"0 4px 12px rgba(0,0,0,0.1)", zIndex:20 }}>
                   {["#2563EB","#DC2626","#E6B400"].map(hex => (
-                    <div key={hex} onClick={() => { setLists(l => l.map(x => x.id===activeList ? { ...x, color: hex } : x)); setShowColorPicker(false); }}
+                    <div key={hex} onClick={() => { setLists(l => l.map(x => { if (x.id!==activeList) return x; const u={...x,color:hex}; updateListDB(u); return u; })); setShowColorPicker(false); }}
                       style={{ width:18, height:18, borderRadius:"50%", background:hex, cursor:"pointer", border: activeColor===hex ? "3px solid #111827" : "2px solid transparent", boxSizing:"border-box" }} />
                   ))}
                 </div>
@@ -482,7 +495,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, panelWidth }) {
                       {datePickerOpen === task.id && (
                         <DatePicker
                           value={task.deadline}
-                          onChange={(dk) => setTasks(t => t.map(x => x.id===task.id ? { ...x, deadline: dk } : x))}
+                          onChange={(dk) => setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,deadline:dk}; updateTaskDB(u); return u; }))}
                           onClose={() => setDatePickerOpen(null)}
                         />
                       )}
@@ -502,7 +515,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, panelWidth }) {
                         <textarea
                           autoFocus
                           value={task.note || ""}
-                          onChange={e => setTasks(t => t.map(x => x.id===task.id ? { ...x, note: e.target.value } : x))}
+                          onChange={e => { const note = e.target.value; setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,note}; updateTaskDB(u); return u; })); }}
                           placeholder="Notitie toevoegen..."
                           rows={2}
                           style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"6px 8px", fontSize:12, outline:"none", resize:"none", color:"#374151", background:"#fff", fontFamily:"'DM Sans', sans-serif", boxSizing:"border-box", display:"block" }}
@@ -548,7 +561,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, panelWidth }) {
 }
 
 // ── CALENDAR PANEL ────────────────────────────────────────────────────────────
-function CalendarPanel({ events, setEvents, panelWidth }) {
+function CalendarPanel({ events, setEvents, userId, panelWidth }) {
   const showSidebar = panelWidth > 400;
   const [weekBase, setWeekBase] = useState(new Date(today));
   const [adding, setAdding] = useState(null);
@@ -630,7 +643,8 @@ function CalendarPanel({ events, setEvents, panelWidth }) {
 
   const addEvent = () => {
     if (!newTitle.trim() || !adding) return;
-    setEvents(ev => [...ev, { id: Date.now(), title: newTitle.trim(), note: modalNote.trim(), date: adding.date, startH: modalStartH, startM: modalStartM, endH: modalEndH, endM: modalEndM, color: modalColor }]);
+    const eventData = { title: newTitle.trim(), note: modalNote.trim(), date: adding.date, startH: modalStartH, startM: modalStartM, endH: modalEndH, endM: modalEndM, color: modalColor };
+    addEventDB(userId, eventData).then(saved => setEvents(ev => [...ev, saved]));
     setNewTitle(""); setAdding(null);
   };
 
@@ -866,8 +880,10 @@ function CalendarPanel({ events, setEvents, panelWidth }) {
                   ))}
                 </div>
                 <button onClick={() => {
-                  setEvents(evs => evs.map(x => x.id===selectedEvent.id ? { ...x, title: editTitle, startH: editStartH, startM: editStartM, endH: editEndH, endM: editEndM, color: editColor } : x));
-                  setSelectedEvent(prev => ({ ...prev, title: editTitle, startH: editStartH, startM: editStartM, endH: editEndH, endM: editEndM, color: editColor }));
+                  const updated = { ...selectedEvent, title: editTitle, startH: editStartH, startM: editStartM, endH: editEndH, endM: editEndM, color: editColor };
+                  updateEventDB(updated);
+                  setEvents(evs => evs.map(x => x.id===selectedEvent.id ? updated : x));
+                  setSelectedEvent(updated);
                   setEditMode(false);
                 }} style={{ marginTop:4, background:"#2563EB", color:"#fff", border:"none", borderRadius:4, padding:"7px", fontSize:12, fontWeight:700, cursor:"pointer" }}>
                   Wijzigingen opslaan
@@ -886,14 +902,14 @@ function CalendarPanel({ events, setEvents, panelWidth }) {
                 placeholder="Voeg een notitie toe..."
                 rows={3}
                 style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"8px 10px", fontSize:12, outline:"none", boxSizing:"border-box", resize:"none", color:"#374151", fontFamily:"'DM Sans', sans-serif", display:"block" }} />
-              <button onClick={() => { setEvents(evs => evs.map(x => x.id===selectedEvent.id ? { ...x, note: editNote } : x)); setSelectedEvent(null); }}
+              <button onClick={() => { const updated = {...selectedEvent, note: editNote}; updateEventDB(updated); setEvents(evs => evs.map(x => x.id===selectedEvent.id ? updated : x)); setSelectedEvent(null); }}
                 style={{ marginTop:6, background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"4px 12px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
                 Opslaan
               </button>
             </div>
 
             <div style={{ display:"flex", gap:8 }}>
-              <button onClick={() => { setEvents(evs => evs.filter(x => x.id!==selectedEvent.id)); setSelectedEvent(null); }}
+              <button onClick={() => { deleteEventDB(selectedEvent.id); setEvents(evs => evs.filter(x => x.id!==selectedEvent.id)); setSelectedEvent(null); }}
                 style={{ flex:1, background:"#FEE2E2", color:"#DC2626", border:"none", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:13, fontWeight:700 }}>Verwijder</button>
               <button onClick={() => setSelectedEvent(null)}
                 style={{ background:"#f3f4f6", color:"#374151", border:"none", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:13 }}>Sluit</button>
@@ -1042,20 +1058,23 @@ function Splitter({ onMouseDown }) {
 // ── APP ───────────────────────────────────────────────────────────────────────
 // ── LOGIN PAGE ────────────────────────────────────────────────────────────────
 function LoginPage() {
-  const [mode, setMode]       = useState("login"); // "login" | "signup"
-  const [email, setEmail]     = useState("");
+  const [mode, setMode]         = useState("login"); // "login" | "signup"
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError]     = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [error, setError]       = useState(null);
+  const [loading, setLoading]   = useState(false);
 
   const handleEmail = async (e) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error } = mode === "login"
-      ? await supabase.auth.signInWithPassword({ email, password })
-      : await supabase.auth.signUp({ email, password });
-    if (error) setError(error.message);
+    if (mode === "login") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setError(error.message);
+    } else {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) setError(error.message);
+    }
     setLoading(false);
   };
 
@@ -1066,9 +1085,8 @@ function LoginPage() {
   };
 
   const providers = [
-    { id: "google",    label: "Google",    icon: "G" },
-    { id: "azure",     label: "Microsoft", icon: "M" },
-    { id: "apple",     label: "Apple",     icon: "" },
+    { id: "google", label: "Google",    icon: "G" },
+    { id: "azure",  label: "Microsoft", icon: "M" },
   ];
 
   return (
@@ -1114,7 +1132,7 @@ function LoginPage() {
         <form onSubmit={handleEmail} style={{ display:"flex", flexDirection:"column", gap:12 }}>
           <input type="email" placeholder="E-mailadres" value={email} onChange={e => setEmail(e.target.value)} required
             style={{ padding:"10px 14px", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, outline:"none" }} />
-          <input type="password" placeholder="Wachtwoord" value={password} onChange={e => setPassword(e.target.value)} required
+          <input type="password" placeholder="Wachtwoord (min. 6 tekens)" value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
             style={{ padding:"10px 14px", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, outline:"none" }} />
           {error && <div style={{ color:"#FCA5A5", fontSize:13 }}>{error}</div>}
           <button type="submit" disabled={loading}
@@ -1137,12 +1155,13 @@ function LoginPage() {
 }
 
 export default function App() {
-  const [session, setSession]   = useState(null);
+  const [session, setSession]     = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [tasks, setTasks]   = useState(initTasks);
-  const [events, setEvents] = useState(initEvents);
-  const [trash, setTrash]   = useState([]);
-  const [widths, setWidths] = useState([320, null, 320]);
+  const [tasks, setTasks]         = useState([]);
+  const [events, setEvents]       = useState([]);
+  const [lists, setLists]         = useState(DEFAULT_LISTS);
+  const [trash, setTrash]         = useState([]);
+  const [widths, setWidths]       = useState([320, null, 320]);
   const containerRef = useRef(null);
   const totalRef     = useRef(0);
 
@@ -1158,6 +1177,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!session) return;
+    const uid = session.user.id;
+    Promise.all([loadTasks(uid), loadEvents(uid), loadLists(uid)]).then(([t, ev, ls]) => {
+      setTasks(t);
+      setEvents(ev);
+      if (ls) setLists(ls);
+    });
+  }, [session]);
+
+  useEffect(() => {
     const update = () => {
       if (containerRef.current) {
         totalRef.current = containerRef.current.offsetWidth;
@@ -1165,10 +1194,12 @@ export default function App() {
         setWidths([320, Math.max(200, mid), 320]);
       }
     };
-    update();
+    if (session) {
+      setTimeout(update, 0);
+    }
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
-  }, []);
+  }, [session]);
 
   // Snap on release only
   const snapOnRelease = (raw, total) => {
@@ -1278,11 +1309,11 @@ export default function App() {
       </div>
       <div ref={containerRef} style={{ display:"flex", height:"calc(100vh - 44px)", overflow:"hidden" }}>
         <div style={{ width: widths[0] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
-          {isCollapsedLeft ? <CollapsedLabel label="Taken" /> : <TaskPanel tasks={tasks} setTasks={setTasks} trash={trash} setTrash={setTrash} panelWidth={widths[0]??320} />}
+          {isCollapsedLeft ? <CollapsedLabel label="Taken" /> : <TaskPanel tasks={tasks} setTasks={setTasks} trash={trash} setTrash={setTrash} lists={lists} setLists={setLists} userId={session.user.id} panelWidth={widths[0]??320} />}
         </div>
         <Splitter onMouseDown={startLeft} />
         <div style={{ width: widths[1] ?? 200, flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.12s ease" }}>
-          {isCollapsedMid ? <CollapsedLabel label="Agenda" /> : <CalendarPanel events={events} setEvents={setEvents} panelWidth={widths[1]??200} />}
+          {isCollapsedMid ? <CollapsedLabel label="Agenda" /> : <CalendarPanel events={events} setEvents={setEvents} userId={session.user.id} panelWidth={widths[1]??200} />}
         </div>
         <Splitter onMouseDown={startRight} />
         <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
