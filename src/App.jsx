@@ -1080,7 +1080,7 @@ function LoginPage() {
 
   const handleOAuth = async (provider) => {
     setError(null);
-    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: window.location.origin } });
+    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: window.location.href.split('#')[0].split('?')[0] } });
     if (error) setError(error.message);
   };
 
@@ -1166,6 +1166,10 @@ export default function App() {
   const totalRef     = useRef(0);
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setAuthLoading(false);
