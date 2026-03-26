@@ -1166,29 +1166,29 @@ export default function App() {
   const totalRef     = useRef(0);
 
   useEffect(() => {
+    // onAuthStateChange only updates session, never sets authLoading
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setAuthLoading(false);
     });
 
-    // Handle OAuth redirect: extract tokens from URL hash manually
-    const hashParams = new URLSearchParams(window.location.hash.slice(1));
-    const access_token  = hashParams.get('access_token');
-    const refresh_token = hashParams.get('refresh_token');
+    // Determine initial auth state sequentially, no race condition
+    async function initAuth() {
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const access_token  = hashParams.get('access_token');
+      const refresh_token = hashParams.get('refresh_token');
 
-    if (access_token && refresh_token) {
-      supabase.auth.setSession({ access_token, refresh_token }).then(({ data: { session } }) => {
-        setSession(session);
-        setAuthLoading(false);
+      if (access_token && refresh_token) {
+        const { data } = await supabase.auth.setSession({ access_token, refresh_token });
+        setSession(data.session);
         window.history.replaceState(null, '', window.location.pathname);
-      });
-    } else {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setSession(session);
-        setAuthLoading(false);
-      });
+      } else {
+        const { data } = await supabase.auth.getSession();
+        setSession(data.session);
+      }
+      setAuthLoading(false);
     }
 
+    initAuth();
     return () => subscription.unsubscribe();
   }, []);
 
