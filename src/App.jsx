@@ -1178,7 +1178,8 @@ export default function App() {
       const refresh_token = hashParams.get('refresh_token');
 
       if (access_token && refresh_token) {
-        const { data } = await supabase.auth.setSession({ access_token, refresh_token });
+        // Use refreshSession to bypass clock skew issues with the initial access token
+        const { data } = await supabase.auth.refreshSession({ refresh_token });
         setSession(data.session);
         window.history.replaceState(null, '', window.location.pathname);
       } else {
