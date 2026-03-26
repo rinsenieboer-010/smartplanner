@@ -1095,7 +1095,7 @@ function LoginPage() {
 
       {/* Logo */}
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:40 }}>
-        <span style={{ fontSize:22, fontWeight:700, color:"#f9fafb", letterSpacing:0.5 }}>SmartPlanner</span>
+        <span style={{ fontSize:22, fontWeight:700, color:"#f9fafb", letterSpacing:0.5 }}>justmyplan</span>
         <div style={{ display:"flex", gap:5 }}>
           <div style={{ width:8, height:8, borderRadius:"50%", background:"#DC2626" }} />
           <div style={{ width:8, height:8, borderRadius:"50%", background:"#E6B400" }} />
@@ -1311,7 +1311,7 @@ export default function App() {
         @keyframes bounce { 0%,80%,100% { transform:scale(0.6); opacity:0.4 } 40% { transform:scale(1); opacity:1 } }
       `}</style>
       <div style={{ height:44, background:"#111827", display:"flex", alignItems:"center", padding:"0 20px", gap:16, flexShrink:0 }}>
-        <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:16, fontWeight:700, color:"#f9fafb", letterSpacing:0.5 }}>SmartPlanner</span>
+        <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:16, fontWeight:700, color:"#f9fafb", letterSpacing:0.5 }}>justmyplan</span>
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#DC2626" }} />
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#E6B400" }} />
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#2563EB" }} />
