@@ -1166,14 +1166,29 @@ export default function App() {
   const totalRef     = useRef(0);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setAuthLoading(false);
-    });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setAuthLoading(false);
     });
+
+    // Handle OAuth redirect: extract tokens from URL hash manually
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const access_token  = hashParams.get('access_token');
+    const refresh_token = hashParams.get('refresh_token');
+
+    if (access_token && refresh_token) {
+      supabase.auth.setSession({ access_token, refresh_token }).then(({ data: { session } }) => {
+        setSession(session);
+        setAuthLoading(false);
+        window.history.replaceState(null, '', window.location.pathname);
+      });
+    } else {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        setAuthLoading(false);
+      });
+    }
+
     return () => subscription.unsubscribe();
   }, []);
 
