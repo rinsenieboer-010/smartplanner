@@ -1,7 +1,7 @@
-# SmartPlanner — Project Context
+# justmyplan — Project Context
 
 ## Wat is dit?
-SmartPlanner is een React productiviteitsapp met drie panelen: Taken (links), Agenda (midden), AI-assistent (rechts). De panelen zijn versleepbaar met splitters die snappen naar 5%, 50% of 95%.
+justmyplan is een React productiviteitsapp met drie panelen: Taken (links), Agenda (midden), AI-assistent (rechts). De panelen zijn versleepbaar met splitters die snappen naar 5%, 50% of 95%.
 
 ## Tech stack
 - React (Vite) — alles in één bestand: `src/App.jsx`

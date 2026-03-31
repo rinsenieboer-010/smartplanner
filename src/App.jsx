@@ -1162,6 +1162,12 @@ export default function App() {
   const [lists, setLists]         = useState(DEFAULT_LISTS);
   const [trash, setTrash]         = useState([]);
   const [widths, setWidths]       = useState([320, null, 320]);
+  const [apiKey, setApiKey]               = useState(null);
+  const [showSettings, setShowSettings]   = useState(false);
+  const [outgoingShares, setOutgoingShares] = useState([]);
+  const [incomingShares, setIncomingShares] = useState([]);
+  const [inviteEmail, setInviteEmail]     = useState("");
+  const [invitePermission, setInvitePermission] = useState("view");
   const containerRef = useRef(null);
   const totalRef     = useRef(0);
 
@@ -1195,12 +1201,82 @@ export default function App() {
 
   useEffect(() => {
     if (!session) return;
+    supabase.from("api_keys").select("key").eq("user_id", session.user.id).single()
+      .then(({ data }) => { if (data) setApiKey(data.key); });
+  }, [session]);
+
+  useEffect(() => {
+    if (!showSettings || !session) return;
+    supabase.from("shares").select("*").eq("owner_id", session.user.id)
+      .then(({ data }) => setOutgoingShares(data || []));
+    supabase.from("shares").select("*").eq("invited_email", session.user.email).eq("status", "pending")
+      .then(({ data }) => setIncomingShares(data || []));
+  }, [showSettings, session]);
+
+  const invitePerson = async () => {
+    if (!inviteEmail.trim()) return;
+    const email = inviteEmail.trim().toLowerCase();
+    const { data, error } = await supabase.from("shares").insert({
+      owner_id: session.user.id,
+      owner_email: session.user.email,
+      invited_email: email,
+      permission: invitePermission,
+    }).select().single();
+    if (!error && data) {
+      setOutgoingShares(s => [...s, data]);
+      setInviteEmail("");
+    }
+  };
+
+  const removeShare = async (id) => {
+    await supabase.from("shares").delete().eq("id", id);
+    setOutgoingShares(s => s.filter(x => x.id !== id));
+  };
+
+  const updateSharePermission = async (id, permission) => {
+    await supabase.from("shares").update({ permission }).eq("id", id);
+    setOutgoingShares(s => s.map(x => x.id === id ? { ...x, permission } : x));
+  };
+
+  const acceptInvitation = async (id) => {
+    await supabase.from("shares").update({ status: "accepted" }).eq("id", id);
+    setIncomingShares(s => s.filter(x => x.id !== id));
+  };
+
+  const declineInvitation = async (id) => {
+    await supabase.from("shares").update({ status: "declined" }).eq("id", id);
+    setIncomingShares(s => s.filter(x => x.id !== id));
+  };
+
+  const generateApiKey = async () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    const key = "jmp_" + Array.from({ length: 40 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    await supabase.from("api_keys").upsert({ user_id: session.user.id, key });
+    setApiKey(key);
+  };
+
+  useEffect(() => {
+    if (!session) return;
     const uid = session.user.id;
-    Promise.all([loadTasks(uid), loadEvents(uid), loadLists(uid)]).then(([t, ev, ls]) => {
-      setTasks(t);
-      setEvents(ev);
-      if (ls) setLists(ls);
-    });
+
+    const reloadAll = () =>
+      Promise.all([loadTasks(uid), loadEvents(uid), loadLists(uid)]).then(([t, ev, ls]) => {
+        setTasks(t);
+        setEvents(ev);
+        if (ls) setLists(ls);
+      });
+
+    reloadAll();
+
+    // Realtime sync: wijzigingen vanaf telefoon verschijnen direct in de web app
+    const channel = supabase
+      .channel(`user-data-${uid}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks',  filter: `user_id=eq.${uid}` }, reloadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: `user_id=eq.${uid}` }, reloadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lists',  filter: `user_id=eq.${uid}` }, reloadAll)
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
   }, [session]);
 
   useEffect(() => {
@@ -1315,12 +1391,14 @@ export default function App() {
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#DC2626" }} />
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#E6B400" }} />
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#2563EB" }} />
-        <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:16 }}>
+        <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:12 }}>
           <span style={{ fontSize:12, color:"#9ca3af" }}>{today.getDate()} {MONTHS[today.getMonth()]} {today.getFullYear()}</span>
-          <span style={{ fontSize:12, color:"#6b7280" }}>{session.user.email}</span>
-          <button onClick={() => supabase.auth.signOut()}
-            style={{ fontSize:12, color:"#9ca3af", background:"none", border:"1px solid #3f3f46", borderRadius:6, padding:"3px 10px", cursor:"pointer" }}>
-            Uitloggen
+          <button onClick={() => setShowSettings(true)}
+            title="Instellingen"
+            style={{ background:"none", border:"none", cursor:"pointer", color:"#9ca3af", fontSize:18, padding:"4px 6px", display:"flex", alignItems:"center", borderRadius:6, transition:"color 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.color="#f9fafb"}
+            onMouseLeave={e => e.currentTarget.style.color="#9ca3af"}>
+            ⚙
           </button>
         </div>
       </div>
@@ -1337,6 +1415,139 @@ export default function App() {
           {isCollapsedRight ? <CollapsedLabel label="Assistent" /> : <AIPanel tasks={tasks} events={events} />}
         </div>
       </div>
+
+      {/* ── Instellingen modal ── */}
+      {showSettings && (
+        <div onClick={() => setShowSettings(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#18181b", borderRadius:16, width:400, maxHeight:"88vh", display:"flex", flexDirection:"column", boxShadow:"0 20px 60px rgba(0,0,0,0.5)" }}>
+          <div style={{ padding:"28px 28px 0", flexShrink:0 }}>
+
+            {/* Header */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24 }}>
+              <span style={{ color:"#f9fafb", fontSize:17, fontWeight:700 }}>⚙ Instellingen</span>
+              <button onClick={() => setShowSettings(false)} style={{ background:"none", border:"none", color:"#9ca3af", fontSize:20, cursor:"pointer" }}>✕</button>
+            </div>
+          </div>
+          <div style={{ overflowY:"auto", padding:"0 28px 28px", flex:1 }}>
+
+            {/* Account sectie */}
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>Account</div>
+              <div style={{ fontSize:13, color:"#9ca3af", marginBottom:12 }}>{session.user.email}</div>
+              <button onClick={() => { supabase.auth.signOut(); setShowSettings(false); }}
+                style={{ width:"100%", padding:"9px 0", borderRadius:8, border:"1px solid #3f3f46", background:"none", color:"#f87171", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                Uitloggen
+              </button>
+            </div>
+
+            <div style={{ height:1, background:"#27272a", marginBottom:20 }} />
+
+            {/* API sectie */}
+            <div>
+              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>API Toegang</div>
+              <div style={{ fontSize:12, color:"#6b7280", marginBottom:12, lineHeight:1.5 }}>
+                Gebruik je API key om je taken en agenda op te vragen vanuit andere apps of Claude.
+              </div>
+
+              {/* API Key */}
+              <div style={{ fontSize:11, color:"#6b7280", marginBottom:4 }}>API Key</div>
+              {apiKey ? (
+                <>
+                  <div style={{ background:"#111827", borderRadius:6, padding:"8px 10px", fontSize:11, color:"#60a5fa", fontFamily:"monospace", marginBottom:8, wordBreak:"break-all" }}>
+                    {apiKey}
+                  </div>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button onClick={() => navigator.clipboard.writeText(apiKey)}
+                      style={{ flex:1, padding:"8px 0", borderRadius:6, border:"1px solid #3f3f46", background:"none", color:"#f9fafb", fontSize:12, cursor:"pointer" }}>
+                      Kopieer
+                    </button>
+                    <button onClick={generateApiKey}
+                      style={{ flex:1, padding:"8px 0", borderRadius:6, border:"none", background:"#27272a", color:"#9ca3af", fontSize:12, cursor:"pointer" }}>
+                      Vernieuwen
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <button onClick={generateApiKey}
+                  style={{ width:"100%", padding:"9px 0", borderRadius:8, border:"none", background:"#2563EB", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                  Genereer API key
+                </button>
+              )}
+
+              {apiKey && (
+                <div style={{ fontSize:11, color:"#6b7280", marginTop:12, lineHeight:1.5 }}>
+                  Gebruik header: <code style={{ color:"#9ca3af" }}>Authorization: Bearer {apiKey.slice(0,12)}...</code>
+                </div>
+              )}
+            </div>
+
+            <div style={{ height:1, background:"#27272a", margin:"20px 0" }} />
+
+            {/* ── Delen sectie ── */}
+            <div>
+              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:14 }}>Delen</div>
+
+              {/* Uitgedeeld aan */}
+              <div style={{ fontSize:12, color:"#9ca3af", marginBottom:8, fontWeight:600 }}>Gedeeld door mij</div>
+              {outgoingShares.length === 0 && (
+                <div style={{ fontSize:12, color:"#3f3f46", marginBottom:12 }}>Nog niemand uitgenodigd</div>
+              )}
+              {outgoingShares.map(s => (
+                <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, background:"#111827", borderRadius:8, padding:"8px 10px" }}>
+                  <span style={{ flex:1, fontSize:12, color:"#9ca3af", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.invited_email}</span>
+                  <span style={{ fontSize:10, color: s.status === "accepted" ? "#4ade80" : "#6b7280", marginRight:4 }}>
+                    {s.status === "accepted" ? "actief" : "wacht..."}
+                  </span>
+                  {/* Permissie toggle */}
+                  <button onClick={() => updateSharePermission(s.id, s.permission === "view" ? "edit" : "view")}
+                    title={s.permission === "view" ? "Bekijken — klik voor bewerken" : "Bewerken — klik voor bekijken"}
+                    style={{ background:"#27272a", border:"none", borderRadius:6, padding:"3px 8px", cursor:"pointer", fontSize:14 }}>
+                    {s.permission === "view" ? "👁" : "✏️"}
+                  </button>
+                  <button onClick={() => removeShare(s.id)}
+                    style={{ background:"none", border:"none", cursor:"pointer", color:"#6b7280", fontSize:14, padding:2 }}>✕</button>
+                </div>
+              ))}
+
+              {/* Uitnodigen */}
+              <div style={{ display:"flex", gap:6, marginTop:10 }}>
+                <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && invitePerson()}
+                  placeholder="e-mailadres..."
+                  style={{ flex:1, background:"#111827", border:"1px solid #3f3f46", borderRadius:6, padding:"7px 10px", fontSize:12, color:"#f9fafb", outline:"none" }} />
+                <button onClick={() => setInvitePermission(p => p === "view" ? "edit" : "view")}
+                  title={invitePermission === "view" ? "Bekijken" : "Bewerken"}
+                  style={{ background:"#27272a", border:"1px solid #3f3f46", borderRadius:6, padding:"6px 10px", cursor:"pointer", fontSize:14 }}>
+                  {invitePermission === "view" ? "👁" : "✏️"}
+                </button>
+                <button onClick={invitePerson}
+                  style={{ background:"#2563EB", border:"none", borderRadius:6, padding:"6px 12px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                  Uitnodigen
+                </button>
+              </div>
+
+              {/* Binnenkomende uitnodigingen */}
+              {incomingShares.length > 0 && (
+                <>
+                  <div style={{ height:1, background:"#27272a", margin:"16px 0 12px" }} />
+                  <div style={{ fontSize:12, color:"#9ca3af", marginBottom:8, fontWeight:600 }}>Uitnodigingen</div>
+                  {incomingShares.map(s => (
+                    <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, background:"#111827", borderRadius:8, padding:"8px 10px" }}>
+                      <span style={{ fontSize:14 }}>{s.permission === "view" ? "👁" : "✏️"}</span>
+                      <span style={{ flex:1, fontSize:12, color:"#9ca3af", overflow:"hidden", textOverflow:"ellipsis" }}>{s.owner_email}</span>
+                      <button onClick={() => acceptInvitation(s.id)}
+                        style={{ background:"#166534", border:"none", borderRadius:6, padding:"3px 8px", color:"#4ade80", fontSize:12, cursor:"pointer" }}>✓</button>
+                      <button onClick={() => declineInvitation(s.id)}
+                        style={{ background:"none", border:"none", cursor:"pointer", color:"#6b7280", fontSize:14 }}>✕</button>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

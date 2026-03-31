@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "Bash(npm --version)",
+      "Read(//c/Users/RJNie/Documents/**)",
+      "Bash(npx create-expo-app@latest \"smartplanner tel\" --template blank)",
+      "Bash(npx create-expo-app@latest \"smartplanner-tel\" --template blank)",
+      "Bash(npx expo:*)"
+    ]
+  }
+}
