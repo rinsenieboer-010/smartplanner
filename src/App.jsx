@@ -1058,10 +1058,11 @@ function Splitter({ onMouseDown }) {
 // ── APP ───────────────────────────────────────────────────────────────────────
 // ── LOGIN PAGE ────────────────────────────────────────────────────────────────
 function LoginPage() {
-  const [mode, setMode]         = useState("login"); // "login" | "signup"
+  const [mode, setMode]         = useState("login"); // "login" | "signup" | "forgot"
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [error, setError]       = useState(null);
+  const [success, setSuccess]   = useState(null);
   const [loading, setLoading]   = useState(false);
 
   const handleEmail = async (e) => {
@@ -1071,12 +1072,20 @@ function LoginPage() {
     if (mode === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
-    } else {
+    } else if (mode === "signup") {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) setError(error.message);
+    } else {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      });
+      if (error) setError(error.message);
+      else setSuccess("Check je e-mail voor de resetlink.");
     }
     setLoading(false);
   };
+
+  const switchMode = (m) => { setMode(m); setError(null); setSuccess(null); };
 
   const handleOAuth = async (provider) => {
     setError(null);
@@ -1106,49 +1115,118 @@ function LoginPage() {
       {/* Card */}
       <div style={{ background:"#18181b", borderRadius:16, padding:"36px 40px", width:"100%", maxWidth:400, boxShadow:"0 8px 32px rgba(0,0,0,0.4)" }}>
         <h2 style={{ color:"#f9fafb", fontSize:20, fontWeight:700, marginBottom:24, textAlign:"center" }}>
-          {mode === "login" ? "Inloggen" : "Account aanmaken"}
+          {mode === "login" ? "Inloggen" : mode === "signup" ? "Account aanmaken" : "Wachtwoord vergeten"}
         </h2>
 
-        {/* OAuth buttons */}
-        <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
-          {providers.map(p => (
-            <button key={p.id} onClick={() => handleOAuth(p.id)}
-              style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, padding:"11px 0", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, fontWeight:500, cursor:"pointer", transition:"background 0.15s" }}
-              onMouseEnter={e => e.currentTarget.style.background="#3f3f46"}
-              onMouseLeave={e => e.currentTarget.style.background="#27272a"}>
-              <span style={{ fontWeight:700, fontSize:15 }}>{p.icon}</span> Doorgaan met {p.label}
-            </button>
-          ))}
-        </div>
+        {mode !== "forgot" && <>
+          {/* OAuth buttons */}
+          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
+            {providers.map(p => (
+              <button key={p.id} onClick={() => handleOAuth(p.id)}
+                style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, padding:"11px 0", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, fontWeight:500, cursor:"pointer", transition:"background 0.15s" }}
+                onMouseEnter={e => e.currentTarget.style.background="#3f3f46"}
+                onMouseLeave={e => e.currentTarget.style.background="#27272a"}>
+                <span style={{ fontWeight:700, fontSize:15 }}>{p.icon}</span> Doorgaan met {p.label}
+              </button>
+            ))}
+          </div>
 
-        {/* Divider */}
-        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:24 }}>
-          <div style={{ flex:1, height:1, background:"#3f3f46" }} />
-          <span style={{ color:"#71717a", fontSize:12 }}>of</span>
-          <div style={{ flex:1, height:1, background:"#3f3f46" }} />
-        </div>
+          {/* Divider */}
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:24 }}>
+            <div style={{ flex:1, height:1, background:"#3f3f46" }} />
+            <span style={{ color:"#71717a", fontSize:12 }}>of</span>
+            <div style={{ flex:1, height:1, background:"#3f3f46" }} />
+          </div>
+        </>}
 
         {/* Email form */}
         <form onSubmit={handleEmail} style={{ display:"flex", flexDirection:"column", gap:12 }}>
           <input type="email" placeholder="E-mailadres" value={email} onChange={e => setEmail(e.target.value)} required
             style={{ padding:"10px 14px", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, outline:"none" }} />
-          <input type="password" placeholder="Wachtwoord (min. 6 tekens)" value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
-            style={{ padding:"10px 14px", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, outline:"none" }} />
+          {mode !== "forgot" && (
+            <input type="password" placeholder="Wachtwoord (min. 6 tekens)" value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
+              style={{ padding:"10px 14px", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, outline:"none" }} />
+          )}
+          {mode === "login" && (
+            <div style={{ textAlign:"right", marginTop:-4 }}>
+              <span onClick={() => switchMode("forgot")} style={{ color:"#60a5fa", fontSize:12, cursor:"pointer" }}>
+                Wachtwoord vergeten?
+              </span>
+            </div>
+          )}
           {error && <div style={{ color:"#FCA5A5", fontSize:13 }}>{error}</div>}
-          <button type="submit" disabled={loading}
-            style={{ padding:"11px 0", borderRadius:8, border:"none", background:"#2563EB", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity: loading ? 0.7 : 1, transition:"opacity 0.15s" }}>
-            {loading ? "Laden..." : mode === "login" ? "Inloggen" : "Account aanmaken"}
-          </button>
+          {success && <div style={{ color:"#86efac", fontSize:13 }}>{success}</div>}
+          {!success && (
+            <button type="submit" disabled={loading}
+              style={{ padding:"11px 0", borderRadius:8, border:"none", background:"#2563EB", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity: loading ? 0.7 : 1, transition:"opacity 0.15s" }}>
+              {loading ? "Laden..." : mode === "login" ? "Inloggen" : mode === "signup" ? "Account aanmaken" : "Resetlink sturen"}
+            </button>
+          )}
         </form>
 
         {/* Toggle mode */}
         <div style={{ textAlign:"center", marginTop:20, fontSize:13, color:"#71717a" }}>
-          {mode === "login" ? "Nog geen account? " : "Al een account? "}
-          <span onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); }}
-            style={{ color:"#60a5fa", cursor:"pointer", fontWeight:500 }}>
-            {mode === "login" ? "Aanmaken" : "Inloggen"}
-          </span>
+          {mode === "forgot" ? (
+            <span onClick={() => switchMode("login")} style={{ color:"#60a5fa", cursor:"pointer", fontWeight:500 }}>Terug naar inloggen</span>
+          ) : mode === "login" ? <>
+            Nog geen account?{" "}
+            <span onClick={() => switchMode("signup")} style={{ color:"#60a5fa", cursor:"pointer", fontWeight:500 }}>Aanmaken</span>
+          </> : <>
+            Al een account?{" "}
+            <span onClick={() => switchMode("login")} style={{ color:"#60a5fa", cursor:"pointer", fontWeight:500 }}>Inloggen</span>
+          </>}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ResetPasswordPage({ onDone }) {
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
+  const [error, setError]       = useState(null);
+  const [success, setSuccess]   = useState(false);
+  const [loading, setLoading]   = useState(false);
+
+  const handleReset = async (e) => {
+    e.preventDefault();
+    if (password !== password2) { setError("Wachtwoorden komen niet overeen."); return; }
+    if (password.length < 6)    { setError("Wachtwoord moet minimaal 6 tekens zijn."); return; }
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) setError(error.message);
+    else { setSuccess(true); setTimeout(onDone, 1500); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#111827", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans', sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');`}</style>
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:40 }}>
+        <span style={{ fontSize:22, fontWeight:700, color:"#f9fafb" }}>justmyplan</span>
+        <div style={{ display:"flex", gap:5 }}>
+          <div style={{ width:8, height:8, borderRadius:"50%", background:"#DC2626" }} />
+          <div style={{ width:8, height:8, borderRadius:"50%", background:"#E6B400" }} />
+          <div style={{ width:8, height:8, borderRadius:"50%", background:"#2563EB" }} />
+        </div>
+      </div>
+      <div style={{ background:"#18181b", borderRadius:16, padding:"36px 40px", width:"100%", maxWidth:400, boxShadow:"0 8px 32px rgba(0,0,0,0.4)" }}>
+        <h2 style={{ color:"#f9fafb", fontSize:20, fontWeight:700, marginBottom:24, textAlign:"center" }}>Nieuw wachtwoord instellen</h2>
+        {success ? (
+          <div style={{ color:"#86efac", fontSize:14, textAlign:"center" }}>Wachtwoord gewijzigd! Je bent nu ingelogd.</div>
+        ) : (
+          <form onSubmit={handleReset} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            <input type="password" placeholder="Nieuw wachtwoord" value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
+              style={{ padding:"10px 14px", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, outline:"none" }} />
+            <input type="password" placeholder="Herhaal wachtwoord" value={password2} onChange={e => setPassword2(e.target.value)} required
+              style={{ padding:"10px 14px", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, outline:"none" }} />
+            {error && <div style={{ color:"#FCA5A5", fontSize:13 }}>{error}</div>}
+            <button type="submit" disabled={loading}
+              style={{ padding:"11px 0", borderRadius:8, border:"none", background:"#2563EB", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity: loading ? 0.7 : 1 }}>
+              {loading ? "Opslaan..." : "Wachtwoord opslaan"}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -1157,6 +1235,7 @@ function LoginPage() {
 export default function App() {
   const [session, setSession]     = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [resetMode, setResetMode] = useState(false);
   const [tasks, setTasks]         = useState([]);
   const [events, setEvents]       = useState([]);
   const [lists, setLists]         = useState(DEFAULT_LISTS);
@@ -1184,9 +1263,11 @@ export default function App() {
       const refresh_token = hashParams.get('refresh_token');
 
       if (access_token && refresh_token) {
+        const type = hashParams.get('type');
         // Use refreshSession to bypass clock skew issues with the initial access token
         const { data } = await supabase.auth.refreshSession({ refresh_token });
         setSession(data.session);
+        if (type === 'recovery') setResetMode(true);
         window.history.replaceState(null, '', window.location.pathname);
       } else {
         const { data } = await supabase.auth.getSession();
@@ -1376,6 +1457,7 @@ export default function App() {
   );
 
   if (!session) return <LoginPage />;
+  if (resetMode) return <ResetPasswordPage onDone={() => setResetMode(false)} />;
 
   return (
     <>
