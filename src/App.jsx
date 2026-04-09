@@ -971,7 +971,7 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
 }
 
 // ── AI PANEL ──────────────────────────────────────────────────────────────────
-function AIPanel({ tasks, events }) {
+function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
   const lang = useLang();
   const [messages, setMessages] = useState([
     { role: "assistant", content: t('nl', 'aiGreeting') }
@@ -982,12 +982,28 @@ function AIPanel({ tasks, events }) {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages]);
 
-  const buildContext = () => {
-    const taskList = tasks.map(task => "- " + task.title + " (" + task.priority + ", " + task.status + (task.deadline ? ", deadline: " + task.deadline : "") + ")").join("\n");
-    const eventList = events.map(e => "- " + e.title + " " + e.date + " " + pad(e.startH) + ":" + pad(e.startM) + "-" + pad(e.endH) + ":" + pad(e.endM)).join("\n");
-    const todayStr = today.getDate() + " " + (MONTHS_BY_LANG[lang] || MONTHS_NL)[today.getMonth()] + " " + today.getFullYear();
-    const systemPrompt = t(lang, 'aiSystemPrompt')(todayStr);
-    return systemPrompt + "\n\n" + t(lang, 'aiTasks').toUpperCase() + ":\n" + (taskList || "-") + "\n\n" + t(lang, 'aiEvents').toUpperCase() + ":\n" + (eventList || "-");
+  const executeActions = async (actions) => {
+    for (const action of actions) {
+      if (action.type === "create_event") {
+        const d = action.data;
+        const eventData = { title: d.title, date: d.date, startH: d.start_h, startM: d.start_m, endH: d.end_h, endM: d.end_m, color: d.color || "blue", note: "" };
+        const saved = await addEventDB(userId, eventData);
+        setEvents(ev => [...ev, saved]);
+      } else if (action.type === "create_task") {
+        const d = action.data;
+        const taskData = { title: d.title, deadline: d.deadline || null, priority: d.priority || "", status: "", list: "mine", note: "" };
+        const saved = await addTaskDB(userId, taskData);
+        setTasks(t => [...t, saved]);
+      } else if (action.type === "update_task") {
+        const d = action.data;
+        setTasks(t => t.map(x => {
+          if (x.id !== d.task_id) return x;
+          const updated = { ...x, ...(d.status !== undefined && { status: d.status }), ...(d.deadline !== undefined && { deadline: d.deadline }), ...(d.priority !== undefined && { priority: d.priority }) };
+          updateTaskDB(updated);
+          return updated;
+        }));
+      }
+    }
   };
 
   const send = async () => {
@@ -998,21 +1014,23 @@ function AIPanel({ tasks, events }) {
     setMessages(newMessages);
     setLoading(true);
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const todayStr = today.getFullYear() + "-" + String(today.getMonth()+1).padStart(2,"0") + "-" + String(today.getDate()).padStart(2,"0");
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: buildContext(),
-          messages: newMessages.map(m => ({ role:m.role, content:m.content }))
+          messages: newMessages.filter(m => typeof m.content === "string").map(m => ({ role: m.role, content: m.content })),
+          tasks,
+          events,
+          today: todayStr
         })
       });
       const data = await response.json();
-      const reply = data.content?.[0]?.text || "Sorry, er ging iets mis.";
-      setMessages(m => [...m, { role:"assistant", content:reply }]);
+      if (data.error) throw new Error(data.error);
+      setMessages(m => [...m, { role:"assistant", content: data.reply }]);
+      if (data.actions?.length > 0) await executeActions(data.actions);
     } catch(err) {
-      setMessages(m => [...m, { role:"assistant", content:"Er is een verbindingsfout opgetreden." }]);
+      setMessages(m => [...m, { role:"assistant", content:"Er is een fout opgetreden: " + err.message }]);
     }
     setLoading(false);
   };
@@ -1510,7 +1528,7 @@ export default function App() {
         </div>
         <Splitter onMouseDown={startRight} />
         <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
-          {isCollapsedRight ? <CollapsedLabel label={t(lang, 'assistant')} /> : <AIPanel tasks={tasks} events={events} />}
+          {isCollapsedRight ? <CollapsedLabel label={t(lang, 'assistant')} /> : <AIPanel tasks={tasks} events={events} setTasks={setTasks} setEvents={setEvents} userId={session.user.id} />}
         </div>
       </div>
 
