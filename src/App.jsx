@@ -1724,6 +1724,14 @@ export default function App() {
                 </>
               )}
             </div>
+
+            {/* Privacy */}
+            <div style={{ borderTop:"1px solid #27272a", paddingTop:16, marginTop:4, textAlign:"center" }}>
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ fontSize:11, color:"#52525b", textDecoration:"none" }}>
+                Privacy Policy
+              </a>
+            </div>
+
           </div>
           </div>
         </div>
