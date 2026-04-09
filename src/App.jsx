@@ -978,9 +978,32 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [attachments, setAttachments] = useState([]);
   const bottomRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages]);
+
+  const handleFiles = (files) => {
+    Array.from(files).forEach(file => {
+      const isImage = file.type.startsWith("image/");
+      const isText = file.type === "text/plain" || file.name.endsWith(".md") || file.name.endsWith(".csv");
+      if (!isImage && !isText) return;
+      const reader = new FileReader();
+      if (isImage) {
+        reader.onload = e => {
+          const data = e.target.result.split(",")[1];
+          setAttachments(a => [...a, { type: "image", name: file.name, mediaType: file.type, data, preview: e.target.result }]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        reader.onload = e => {
+          setAttachments(a => [...a, { type: "text", name: file.name, content: e.target.result }]);
+        };
+        reader.readAsText(file);
+      }
+    });
+  };
 
   const executeActions = async (actions) => {
     for (const action of actions) {
@@ -1006,11 +1029,26 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
     }
   };
 
+  const formatMessagesForAPI = (msgs) => msgs.map(m => {
+    if (!m.attachments?.length) return { role: m.role, content: m.content };
+    const content = [];
+    for (const att of m.attachments) {
+      if (att.type === "image") content.push({ type: "image", source: { type: "base64", media_type: att.mediaType, data: att.data } });
+      else if (att.type === "text") content.push({ type: "text", text: `[Bestand: ${att.name}]\n${att.content}` });
+    }
+    if (m.content) content.push({ type: "text", text: m.content });
+    return { role: m.role, content };
+  });
+
   const send = async () => {
-    if (!input.trim() || loading) return;
+    if (!input.trim() && attachments.length === 0) return;
+    if (loading) return;
     const userMsg = input.trim();
+    const currentAttachments = [...attachments];
     setInput("");
-    const newMessages = [...messages, { role:"user", content:userMsg }];
+    setAttachments([]);
+    const newMsg = { role:"user", content:userMsg, attachments: currentAttachments };
+    const newMessages = [...messages, newMsg];
     setMessages(newMessages);
     setLoading(true);
     try {
@@ -1019,7 +1057,7 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: newMessages.filter(m => typeof m.content === "string").map(m => ({ role: m.role, content: m.content })),
+          messages: formatMessagesForAPI(newMessages),
           tasks,
           events,
           today: todayStr
@@ -1044,8 +1082,16 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
       <div style={{ flex:1, overflowY:"auto", padding:"12px 14px", display:"flex", flexDirection:"column", gap:10 }}>
         {messages.map((m, i) => (
           <div key={i} style={{ display:"flex", justifyContent: m.role==="user" ? "flex-end" : "flex-start" }}>
-            <div style={{ maxWidth:"85%", padding:"10px 13px", borderRadius: m.role==="user" ? "12px 12px 2px 12px" : "12px 12px 12px 2px", background: m.role==="user" ? "#2563EB" : "#ffffff", color: m.role==="user" ? "#fff" : "#111827", fontSize:13, lineHeight:1.5, whiteSpace:"pre-wrap", boxShadow:"0 1px 3px rgba(0,0,0,0.08)", border: m.role==="assistant" ? "1px solid #e5e7eb" : "none" }}>
-              {m.content}
+            <div style={{ maxWidth:"85%", display:"flex", flexDirection:"column", gap:4, alignItems: m.role==="user" ? "flex-end" : "flex-start" }}>
+              {m.attachments?.map((att, j) => att.type === "image"
+                ? <img key={j} src={att.preview} alt={att.name} style={{ maxWidth:180, maxHeight:180, borderRadius:8, objectFit:"cover", border:"1px solid #e5e7eb" }} />
+                : <div key={j} style={{ background:"#f3f4f6", borderRadius:8, padding:"6px 10px", fontSize:11, color:"#6b7280" }}>📄 {att.name}</div>
+              )}
+              {m.content && (
+                <div style={{ padding:"10px 13px", borderRadius: m.role==="user" ? "12px 12px 2px 12px" : "12px 12px 12px 2px", background: m.role==="user" ? "#2563EB" : "#ffffff", color: m.role==="user" ? "#fff" : "#111827", fontSize:13, lineHeight:1.5, whiteSpace:"pre-wrap", boxShadow:"0 1px 3px rgba(0,0,0,0.08)", border: m.role==="assistant" ? "1px solid #e5e7eb" : "none" }}>
+                  {m.content}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -1061,11 +1107,29 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
           <button key={q} onClick={() => setInput(q)} style={{ background:"#fff", border:"1px solid #e5e7eb", borderRadius:20, padding:"4px 10px", fontSize:11, cursor:"pointer", color:"#374151", whiteSpace:"nowrap" }}>{q}</button>
         ))}
       </div>
-      <div style={{ padding:"10px 14px", borderTop:"1px solid #e5e7eb", display:"flex", gap:8 }}>
+      {attachments.length > 0 && (
+        <div style={{ padding:"6px 14px", display:"flex", gap:6, flexWrap:"wrap", borderTop:"1px solid #e5e7eb" }}>
+          {attachments.map((att, i) => (
+            <div key={i} style={{ position:"relative", display:"inline-flex" }}>
+              {att.type === "image"
+                ? <img src={att.preview} alt={att.name} style={{ width:48, height:48, objectFit:"cover", borderRadius:6, border:"1px solid #e5e7eb" }} />
+                : <div style={{ background:"#f3f4f6", borderRadius:6, padding:"6px 8px", fontSize:11, color:"#374151", maxWidth:100, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>📄 {att.name}</div>
+              }
+              <button onClick={() => setAttachments(a => a.filter((_, j) => j !== i))}
+                style={{ position:"absolute", top:-4, right:-4, width:16, height:16, borderRadius:"50%", background:"#374151", border:"none", color:"#fff", fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", padding:0 }}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ padding:"10px 14px", borderTop:"1px solid #e5e7eb", display:"flex", gap:8, alignItems:"center" }}>
+        <input ref={fileInputRef} type="file" accept="image/*,.txt,.md,.csv" multiple style={{ display:"none" }} onChange={e => { handleFiles(e.target.files); e.target.value = ""; }} />
+        <button onClick={() => fileInputRef.current?.click()}
+          title="Foto of bestand toevoegen"
+          style={{ width:32, height:32, borderRadius:"50%", background:"#f3f4f6", border:"none", cursor:"pointer", color:"#6b7280", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>📎</button>
         <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key==="Enter" && !e.shiftKey && send()}
           placeholder={t(lang, 'askPlaceholder')}
           style={{ flex:1, border:"1px solid #e5e7eb", borderRadius:20, padding:"8px 14px", fontSize:13, outline:"none", background:"#fff" }} />
-        <button onClick={send} disabled={loading || !input.trim()} style={{ width:36, height:36, borderRadius:"50%", background: input.trim() ? "#2563EB" : "#e5e7eb", border:"none", cursor: input.trim() ? "pointer" : "default", color:"#fff", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>&#8593;</button>
+        <button onClick={send} disabled={loading || (!input.trim() && attachments.length === 0)} style={{ width:36, height:36, borderRadius:"50%", background: (input.trim() || attachments.length > 0) ? "#2563EB" : "#e5e7eb", border:"none", cursor: (input.trim() || attachments.length > 0) ? "pointer" : "default", color:"#fff", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>&#8593;</button>
       </div>
     </div>
   );
