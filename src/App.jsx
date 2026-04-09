@@ -1,6 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "./supabase.js";
 import { loadTasks, loadEvents, loadLists, addTaskDB, updateTaskDB, deleteTaskDB, addEventDB, updateEventDB, deleteEventDB, addListDB, updateListDB, deleteListDB } from "./db.js";
+import { t, LANGUAGES, DAYS_BY_LANG, MONTHS_BY_LANG, MONTHS_SHORT_BY_LANG } from "./i18n.js";
+import { createContext, useContext } from "react";
+const LangContext = createContext('nl');
+const useLang = () => useContext(LangContext);
 
 const today = new Date();
 const getTodayKey = () => {
@@ -9,9 +13,9 @@ const getTodayKey = () => {
 };
 const pad = (n) => String(n).padStart(2, "0");
 const dateKey = (d) => d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
-const DAYS = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
-const MONTHS = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const MONTHS_SHORT = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
+const DAYS_NL = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
+const MONTHS_NL = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
+const MONTHS_SHORT_NL = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);
 
 function getWeekDates(base) {
@@ -21,18 +25,19 @@ function getWeekDates(base) {
   return Array.from({ length: 7 }, (_, i) => { const x = new Date(d); x.setDate(d.getDate()+i); return x; });
 }
 
-function formatDeadline(dk) {
+function formatDeadline(dk, lang) {
   if (!dk) return "—";
   const tk = getTodayKey();
-  if (dk === tk) return "Vandaag";
+  if (dk === tk) return t(lang || 'nl', 'today');
   const tom = new Date(); tom.setDate(tom.getDate()+1);
   const tomKey = dateKey(tom);
   const yes = new Date(); yes.setDate(yes.getDate()-1);
   const yesKey = dateKey(yes);
-  if (dk === tomKey) return "Morgen";
-  if (dk === yesKey) return "Gisteren";
+  if (dk === tomKey) return t(lang || 'nl', 'tomorrow');
+  if (dk === yesKey) return t(lang || 'nl', 'yesterday');
   const d = new Date(dk + "T12:00:00");
-  return d.getDate() + " " + MONTHS_SHORT[d.getMonth()];
+  const ms = MONTHS_SHORT_BY_LANG[lang] || MONTHS_SHORT_NL;
+  return d.getDate() + " " + ms[d.getMonth()];
 }
 
 const PRIO_COLOR = { "": "#9ca3af", hoog: "#DC2626", midden: "#E6B400", laag: "#2563EB" };
@@ -55,6 +60,7 @@ const DEFAULT_LISTS = [
 
 // ── DATE PICKER ──────────────────────────────────────────────────────────────
 function DatePicker({ value, onChange, onClose }) {
+  const lang = useLang();
   const initial = value ? new Date(value + "T12:00:00") : new Date();
   const [viewYear, setViewYear] = useState(initial.getFullYear());
   const [viewMonth, setViewMonth] = useState(initial.getMonth());
@@ -99,7 +105,7 @@ function DatePicker({ value, onChange, onClose }) {
       <div style={{ display:"flex", alignItems:"center", padding:"10px 12px 6px", borderBottom:"1px solid #f3f4f6" }}>
         <button onClick={prevMonth} style={{ background:"none", border:"none", cursor:"pointer", color:"#374151", fontSize:16, padding:"2px 6px" }}>‹</button>
         <div style={{ flex:1, textAlign:"center", fontSize:13, fontWeight:700, color:"#111827" }}>
-          {MONTHS[viewMonth]} {viewYear}
+          {MONTHS_BY_LANG[lang][viewMonth]} {viewYear}
         </div>
         <button onClick={nextMonth} style={{ background:"none", border:"none", cursor:"pointer", color:"#374151", fontSize:16, padding:"2px 6px" }}>›</button>
       </div>
@@ -117,7 +123,7 @@ function DatePicker({ value, onChange, onClose }) {
 
       {/* Day headers */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", padding:"6px 8px 2px" }}>
-        {["Ma","Di","Wo","Do","Vr","Za","Zo"].map(d => (
+        {DAYS_BY_LANG[lang].map(d => (
           <div key={d} style={{ textAlign:"center", fontSize:10, fontWeight:700, color:"#9ca3af", padding:"2px 0" }}>{d}</div>
         ))}
       </div>
@@ -142,7 +148,7 @@ function DatePicker({ value, onChange, onClose }) {
 
       {/* Clear */}
       <div style={{ borderTop:"1px solid #f3f4f6", padding:"6px 12px" }}>
-        <button onClick={clearDate} style={{ fontSize:11, color:"#9ca3af", background:"none", border:"none", cursor:"pointer" }}>Datum wissen</button>
+        <button onClick={clearDate} style={{ fontSize:11, color:"#9ca3af", background:"none", border:"none", cursor:"pointer" }}>{t(lang, 'clearDate')}</button>
       </div>
     </div>
   );
@@ -150,6 +156,7 @@ function DatePicker({ value, onChange, onClose }) {
 
 // ── TASK PANEL ────────────────────────────────────────────────────────────────
 function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, panelWidth }) {
+  const lang = useLang();
   const showSidebar = panelWidth > 400;
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -157,6 +164,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
   const [fadingOut, setFadingOut] = useState({}); // id -> true when animating out
   const [datePickerOpen, setDatePickerOpen] = useState(null); // task id
   const [openNoteId, setOpenNoteId] = useState(null);
+  const [noteValue, setNoteValue] = useState("");
   const [sharedLists, setSharedLists] = useState([
     { id: "lisa", label: "Lisa", color: "#E6B400" },
   ]);
@@ -292,13 +300,13 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
   };
 
   const activeColor = [...lists, ...sharedLists].find(l => l.id===activeList)?.color || "#2563EB";
-  const activeLabel = isTrash ? "Prullebak" : ([...lists, ...sharedLists].find(l => l.id===activeList)?.label || "Taken");
+  const activeLabel = isTrash ? t(lang, 'trash') : ([...lists, ...sharedLists].find(l => l.id===activeList)?.label || t(lang, 'tasks'));
 
   const COL = { name: 200, date: 100, prio: 88, status: 80, del: 28 };
   const TABLE_MIN = COL.name + COL.date + COL.prio + COL.status + COL.del + 41;
   const cb = { borderRight: "1px solid #e5e7eb" };
-  const prioLabel   = (p) => p==="hoog" ? "Hoog" : p==="midden" ? "Gemiddeld" : p==="laag" ? "Laag" : "—";
-  const statusLabel = (s) => s==="open" ? "Open" : s==="bezig" ? "Bezig" : s==="klaar" ? "Klaar" : "—";
+  const prioLabel   = (p) => p==="hoog" ? t(lang,'prioHigh') : p==="midden" ? t(lang,'prioMid') : p==="laag" ? t(lang,'prioLow') : "—";
+  const statusLabel = (s) => s==="open" ? t(lang,'statusOpen') : s==="bezig" ? t(lang,'statusBusy') : s==="klaar" ? t(lang,'statusDone') : "—";
 
   return (
     <div style={{ display:"flex", height:"100%", background:"#ffffff" }}>
@@ -309,7 +317,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
 
       {/* Sidebar */}
       <div style={{ width: showSidebar ? 160 : 0, flexShrink:0, background:"#18181b", display:"flex", flexDirection:"column", borderRight: showSidebar ? "1px solid #27272a" : "none", overflow:"hidden", transition:"width 1.5s ease" }}>
-        <div style={{ padding:"16px 12px 8px", fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2 }}>MIJN LIJSTEN</div>
+        <div style={{ padding:"16px 12px 8px", fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2 }}>{t(lang, 'myLists')}</div>
         {lists.map(l => (
           <div key={l.id} onClick={() => setActiveList(l.id)} style={{
             display:"flex", alignItems:"center", gap:8, padding:"7px 12px", cursor:"pointer", overflow:"hidden",
@@ -324,17 +332,17 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
           <div style={{ padding:"6px 12px" }}>
             <input value={newListName} onChange={e => setNewListName(e.target.value)}
               onKeyDown={e => { if(e.key==="Enter") addList(); if(e.key==="Escape"){ setAddingList(false); setNewListName(""); } }}
-              placeholder="Naam lijst..." autoFocus
+              placeholder={t(lang, 'listNamePlaceholder')} autoFocus
               style={{ width:"100%", background:"#27272a", border:"none", borderBottom:"2px solid #2563EB", color:"#f4f4f5", fontSize:12, padding:"4px", outline:"none", boxSizing:"border-box" }} />
           </div>
         ) : (
           <div onClick={() => setAddingList(true)} style={{ padding:"6px 12px", fontSize:11, color:"#52525b", cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
-            <span style={{ fontSize:14 }}>+</span> Nieuwe lijst
+            {t(lang, 'newList')}
           </div>
         )}
 
         <div style={{ padding:"14px 12px 8px", fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2, marginTop:8, borderTop:"1px solid #27272a", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <span>GEDEELD</span>
+          <span>{t(lang, 'shared')}</span>
           <span onClick={() => setAddingShared(true)} style={{ fontSize:16, color:"#52525b", cursor:"pointer", lineHeight:1 }}
             onMouseEnter={e => e.currentTarget.style.color="#a1a1aa"}
             onMouseLeave={e => e.currentTarget.style.color="#52525b"}>+</span>
@@ -350,7 +358,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
             <div style={{ width:8, height:8, borderRadius:"50%", background:l.color, flexShrink:0 }} />
             <div style={{ minWidth:0, flex:1 }}>
               <div style={{ fontSize:12, color: activeList===l.id ? "#f4f4f5" : "#a1a1aa", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{l.label}</div>
-              <div style={{ fontSize:10, color:"#52525b" }}>gedeeld</div>
+              <div style={{ fontSize:10, color:"#52525b" }}>{t(lang, 'shared').toLowerCase()}</div>
             </div>
             <button className="rm-shared" onClick={e => { e.stopPropagation(); removeShared(l.id); }}
               style={{ opacity:0, background:"none", border:"none", color:"#52525b", cursor:"pointer", fontSize:12, padding:"0 2px", flexShrink:0, transition:"opacity 0.15s" }}>✕</button>
@@ -360,7 +368,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
           <div style={{ padding:"6px 12px" }}>
             <input value={newSharedName} onChange={e => setNewSharedName(e.target.value)} autoFocus
               onKeyDown={e => { if(e.key==="Enter") addShared(); if(e.key==="Escape"){ setAddingShared(false); setNewSharedName(""); } }}
-              placeholder="Naam persoon..."
+              placeholder={t(lang, 'personNamePlaceholder')}
               style={{ width:"100%", background:"#27272a", border:"none", borderBottom:"2px solid #E6B400", color:"#f4f4f5", fontSize:12, padding:"4px", outline:"none", boxSizing:"border-box" }} />
           </div>
         ) : null}
@@ -374,8 +382,8 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
         }}>
           <span style={{ fontSize:14 }}>🗑</span>
           <div style={{ minWidth:0 }}>
-            <div style={{ fontSize:12, color: activeList==="trash" ? "#f4f4f5" : "#71717a" }}>Prullebak</div>
-            {visibleTrash.length > 0 && <div style={{ fontSize:10, color:"#52525b" }}>{visibleTrash.length} voltooid</div>}
+            <div style={{ fontSize:12, color: activeList==="trash" ? "#f4f4f5" : "#71717a" }}>{t(lang, 'trash')}</div>
+            {visibleTrash.length > 0 && <div style={{ fontSize:10, color:"#52525b" }}>{visibleTrash.length} {t(lang, 'completed')}</div>}
           </div>
         </div>
       </div>
@@ -409,10 +417,10 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
               {activeLabel}
             </div>
           )}
-          {isShared && <span style={{ fontSize:10, background:"#f3f4f6", color:"#6b7280", borderRadius:4, padding:"2px 6px", fontWeight:700 }}>GEDEELD</span>}
-          {isTrash && <span style={{ fontSize:11, color:"#9ca3af", marginLeft:4 }}>Taken worden automatisch verwijderd na 1 maand</span>}
+          {isShared && <span style={{ fontSize:10, background:"#f3f4f6", color:"#6b7280", borderRadius:4, padding:"2px 6px", fontWeight:700 }}>{t(lang, 'sharedBadge')}</span>}
+          {isTrash && <span style={{ fontSize:11, color:"#9ca3af", marginLeft:4 }}>{t(lang, 'trashAutoDelete')}</span>}
           {!isTrash && !isShared && lists.length > 1 && (
-            <button onClick={deleteList} title="Lijst verwijderen"
+            <button onClick={deleteList} title={t(lang, 'deleteList')}
               style={{ marginLeft:"auto", background:"none", border:"none", color:"#d1d5db", cursor:"pointer", fontSize:16, lineHeight:1, padding:"2px 4px", borderRadius:3 }}
               onMouseEnter={e => e.currentTarget.style.color="#DC2626"}
               onMouseLeave={e => e.currentTarget.style.color="#d1d5db"}>
@@ -425,18 +433,18 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
         {isTrash ? (
           <div style={{ flex:1, overflowY:"auto" }}>
             {visibleTrash.length === 0 ? (
-              <div style={{ padding:"40px 24px", textAlign:"center", color:"#9ca3af", fontSize:13 }}>Prullebak is leeg</div>
+              <div style={{ padding:"40px 24px", textAlign:"center", color:"#9ca3af", fontSize:13 }}>{t(lang, 'trashEmpty')}</div>
             ) : (
               <div style={{ minWidth:TABLE_MIN }}>
                 <div style={{ display:"flex", alignItems:"stretch", borderBottom:"2px solid #e5e7eb", background:"#f9fafb", position:"sticky", top:0, zIndex:5 }}>
-                  <div style={{ width:COL.name+41, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>NAAM</div>
-                  <div style={{ width:COL.date, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>VOLTOOID OP</div>
-                  <div style={{ width:COL.prio, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", ...cb, background:"#f9fafb" }}>PRIORITEIT</div>
-                  <div style={{ flex:1, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", background:"#f9fafb" }}>ACTIES</div>
+                  <div style={{ width:COL.name+41, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colName')}</div>
+                  <div style={{ width:COL.date, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colCompletedOn')}</div>
+                  <div style={{ width:COL.prio, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", ...cb, background:"#f9fafb" }}>{t(lang, 'colPriority')}</div>
+                  <div style={{ flex:1, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", background:"#f9fafb" }}>{t(lang, 'colActions')}</div>
                 </div>
                 {[...visibleTrash].sort((a,b) => b.completedAt > a.completedAt ? 1 : -1).map(task => {
                   const d = new Date(task.completedAt);
-                  const completedStr = d.getDate() + " " + MONTHS_SHORT[d.getMonth()];
+                  const completedStr = d.getDate() + " " + (MONTHS_SHORT_BY_LANG[lang] || MONTHS_SHORT_NL)[d.getMonth()];
                   return (
                     <div key={task.id} style={{ display:"flex", alignItems:"center", borderBottom:"1px solid #f3f4f6", background:"#fff" }}
                       onMouseEnter={e => e.currentTarget.style.background="#f9fafb"}
@@ -450,8 +458,8 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
                         <span style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:4, background:PRIO_BG[task.priority], color:PRIO_COLOR[task.priority] }}>{prioLabel(task.priority)}</span>
                       </div>
                       <div style={{ flex:1, display:"flex", alignItems:"center", gap:8, padding:"8px 10px" }}>
-                        <button onClick={() => restoreTask(task.id)} style={{ fontSize:11, background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"3px 10px", cursor:"pointer", fontWeight:700 }}>Terugzetten</button>
-                        <button onClick={() => deleteForever(task.id)} style={{ fontSize:11, background:"none", color:"#DC2626", border:"1px solid #DC2626", borderRadius:3, padding:"3px 10px", cursor:"pointer" }}>Verwijder</button>
+                        <button onClick={() => restoreTask(task.id)} style={{ fontSize:11, background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"3px 10px", cursor:"pointer", fontWeight:700 }}>{t(lang, 'restore')}</button>
+                        <button onClick={() => deleteForever(task.id)} style={{ fontSize:11, background:"none", color:"#DC2626", border:"1px solid #DC2626", borderRadius:3, padding:"3px 10px", cursor:"pointer" }}>{t(lang, 'deleteForever')}</button>
                       </div>
                     </div>
                   );
@@ -464,10 +472,10 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
           <div style={{ flex:1, overflowY:"auto", overflowX:"auto" }}>
             <div style={{ minWidth:TABLE_MIN }}>
               <div style={{ display:"flex", alignItems:"stretch", borderBottom:"2px solid #e5e7eb", background:"#f9fafb", position:"sticky", top:0, zIndex:5 }}>
-                <div style={{ width:COL.name+41, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>NAAM</div>
-                <div style={{ width:COL.date, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>VERVALDATUM</div>
-                <div style={{ width:COL.prio, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", ...cb, background:"#f9fafb" }}>PRIORITEIT</div>
-                <div style={{ width:COL.status, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", ...cb, background:"#f9fafb" }}>STATUS</div>
+                <div style={{ width:COL.name+41, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colName')}</div>
+                <div style={{ width:COL.date, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colDeadline')}</div>
+                <div style={{ width:COL.prio, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", ...cb, background:"#f9fafb" }}>{t(lang, 'colPriority')}</div>
+                <div style={{ width:COL.status, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", ...cb, background:"#f9fafb" }}>{t(lang, 'colStatus')}</div>
                 <div style={{ width:COL.del, flexShrink:0, background:"#f9fafb" }} />
               </div>
               {sorted.map(task => {
@@ -484,14 +492,14 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
                     <div style={{ width:41, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", ...cb, alignSelf:"stretch" }}>
                       <button onClick={() => !isShared && completeDone(task.id)} style={{ width:15, height:15, borderRadius:"50%", cursor: isShared ? "default" : "pointer", border:"2px solid #d1d5db", background:"transparent", flexShrink:0 }} />
                     </div>
-                    <div onClick={() => !isShared && setOpenNoteId(openNoteId===task.id ? null : task.id)}
+                    <div onClick={() => { if(!isShared) { const next = openNoteId===task.id ? null : task.id; setOpenNoteId(next); if(next) setNoteValue(task.note||""); } }}
                       style={{ width:COL.name, flexShrink:0, fontSize:13, color:"#111827", padding:"8px 10px", textDecoration: isFading ? "line-through" : "none", opacity: isFading ? 0.4 : 1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", cursor: isShared ? "default" : "pointer", ...cb, display:"flex", alignItems:"center", gap:5 }}>
                       <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{task.title}</span>
                       {task.note && <span title="Notitie aanwezig" style={{ flexShrink:0, fontSize:10, color:"#9ca3af" }}>📝</span>}
                     </div>
                     <div style={{ width:COL.date, flexShrink:0, fontSize:12, padding:"8px 10px", color:dlColor, fontWeight:dlWeight, ...cb, cursor:"pointer", position:"relative" }}
                       onClick={e => { e.stopPropagation(); if(!isShared && !isFading) setDatePickerOpen(datePickerOpen===task.id ? null : task.id); }}>
-                      {formatDeadline(task.deadline)}
+                      {formatDeadline(task.deadline, lang)}
                       {datePickerOpen === task.id && (
                         <DatePicker
                           value={task.deadline}
@@ -514,15 +522,16 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
                       <div style={{ padding:"6px 12px 10px 52px", borderTop:"1px solid #f3f4f6", background:"#fafafa" }}>
                         <textarea
                           autoFocus
-                          value={task.note || ""}
-                          onChange={e => { const note = e.target.value; setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,note}; updateTaskDB(u); return u; })); }}
-                          placeholder="Notitie toevoegen..."
+                          value={noteValue}
+                          onChange={e => setNoteValue(e.target.value)}
+                          onBlur={() => { setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,note:noteValue}; updateTaskDB(u); return u; })); }}
+                          placeholder={t(lang, 'notePlaceholder')}
                           rows={2}
                           style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"6px 8px", fontSize:12, outline:"none", resize:"none", color:"#374151", background:"#fff", fontFamily:"'DM Sans', sans-serif", boxSizing:"border-box", display:"block" }}
                         />
-                        <button onClick={() => setOpenNoteId(null)}
+                        <button onClick={() => { setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,note:noteValue}; updateTaskDB(u); return u; })); setOpenNoteId(null); }}
                           style={{ marginTop:5, background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"3px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                          Opslaan
+                          {t(lang, 'save')}
                         </button>
                       </div>
                     )}
@@ -537,19 +546,19 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
                   <div style={{ width:COL.name, flexShrink:0, padding:"6px 10px", ...cb }}>
                     <input value={newTitle} onChange={e => setNewTitle(e.target.value)}
                       onKeyDown={e => { if(e.key==="Enter") addTask(); if(e.key==="Escape"){ setAdding(false); setNewTitle(""); } }}
-                      placeholder="Taaknaam..." autoFocus
+                      placeholder={t(lang, 'taskNamePlaceholder')} autoFocus
                       style={{ width:"100%", border:"none", borderBottom:"2px solid "+activeColor, fontSize:13, outline:"none", padding:"2px 0", color:"#111827" }} />
                   </div>
                   <div style={{ flex:1, padding:"6px 10px", display:"flex", gap:8, alignItems:"center" }}>
-                    <button onClick={addTask} style={{ fontSize:11, background:activeColor, color:"#fff", border:"none", borderRadius:3, padding:"3px 8px", cursor:"pointer" }}>+ Voeg toe</button>
-                    <button onClick={() => { setAdding(false); setNewTitle(""); }} style={{ fontSize:11, background:"none", color:"#9ca3af", border:"none", cursor:"pointer" }}>Annuleer</button>
+                    <button onClick={addTask} style={{ fontSize:11, background:activeColor, color:"#fff", border:"none", borderRadius:3, padding:"3px 8px", cursor:"pointer" }}>{t(lang, 'addBtn')}</button>
+                    <button onClick={() => { setAdding(false); setNewTitle(""); }} style={{ fontSize:11, background:"none", color:"#9ca3af", border:"none", cursor:"pointer" }}>{t(lang, 'cancel')}</button>
                   </div>
                 </div>
               ) : (
                 <div onClick={() => setAdding(true)} style={{ padding:"7px 12px 8px 52px", fontSize:12, color:"#9ca3af", cursor:"pointer", borderBottom:"1px solid #f3f4f6" }}
                   onMouseEnter={e => { e.currentTarget.style.color=activeColor; e.currentTarget.style.background="#f9fafb"; }}
                   onMouseLeave={e => { e.currentTarget.style.color="#9ca3af"; e.currentTarget.style.background="transparent"; }}>
-                  + Taak toevoegen
+                  {t(lang, 'addTask')}
                 </div>
               ))}
             </div>
@@ -562,6 +571,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
 
 // ── CALENDAR PANEL ────────────────────────────────────────────────────────────
 function CalendarPanel({ events, setEvents, userId, panelWidth }) {
+  const lang = useLang();
   const showSidebar = panelWidth > 400;
   const [weekBase, setWeekBase] = useState(new Date(today));
   const [adding, setAdding] = useState(null);
@@ -679,14 +689,14 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
           <button onClick={() => openAdding(getTodayKey(), 9)} style={{ width:"100%", background:"#27272a", border:"none", borderRadius:5, color:"#f4f4f5", fontSize:12, fontWeight:700, padding:"8px 0", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}
             onMouseEnter={e => e.currentTarget.style.background="#3f3f46"}
             onMouseLeave={e => e.currentTarget.style.background="#27272a"}>
-            <span style={{ fontSize:16, lineHeight:1 }}>+</span> Maken
+            {t(lang, 'make')}
           </button>
         </div>
 
         {/* Mijn agenda's */}
         <div style={{ borderTop:"1px solid #27272a" }}>
           <div onClick={() => setMyOpen(o => !o)} style={{ padding:"10px 12px 6px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
-            <span style={{ fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2 }}>MIJN AGENDA&apos;S</span>
+            <span style={{ fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2 }}>{t(lang, 'myCalendars')}</span>
             <span style={{ fontSize:10, color:"#52525b" }}>{myOpen ? "▲" : "▼"}</span>
           </div>
           {myOpen && myAgendas.map(a => (
@@ -705,7 +715,7 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
         {/* Andere agenda's */}
         <div style={{ borderTop:"1px solid #27272a", marginTop:4 }}>
           <div onClick={() => setOtherOpen(o => !o)} style={{ padding:"10px 12px 6px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
-            <span style={{ fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2 }}>ANDERE AGENDA&apos;S</span>
+            <span style={{ fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2 }}>{t(lang, 'otherCalendars')}</span>
             <span style={{ fontSize:10, color:"#52525b" }}>{otherOpen ? "▲" : "▼"}</span>
           </div>
           {otherOpen && otherAgendas.map(a => (
@@ -723,14 +733,14 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
             <div style={{ padding:"6px 12px" }}>
               <input value={newAgendaName} onChange={e => setNewAgendaName(e.target.value)} autoFocus
                 onKeyDown={e => { if(e.key==="Enter") addAgenda(); if(e.key==="Escape"){ setAddingAgenda(false); setNewAgendaName(""); } }}
-                placeholder="Naam..." 
+                placeholder={t(lang, 'namePlaceholder')}
                 style={{ width:"100%", background:"#27272a", border:"none", borderBottom:"2px solid #2563EB", color:"#f4f4f5", fontSize:12, padding:"4px", outline:"none", boxSizing:"border-box" }} />
             </div>
           ) : (
             <div onClick={() => setAddingAgenda(true)} style={{ padding:"5px 12px 10px", fontSize:11, color:"#52525b", cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}
               onMouseEnter={e => e.currentTarget.style.color="#a1a1aa"}
               onMouseLeave={e => e.currentTarget.style.color="#52525b"}>
-              <span>+</span> Agenda toevoegen
+              {t(lang, 'addCalendar')}
             </div>
           )}
         </div>
@@ -744,11 +754,11 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
         <div style={{ position:"relative" }}>
           <span onClick={e => { e.stopPropagation(); setMonthPickerOpen(o => !o); setYearPickerOpen(false); }}
             style={{ fontFamily:"'DM Sans', sans-serif", fontSize:18, color:"#111827", cursor:"pointer", borderBottom: monthPickerOpen ? "2px solid #2563EB" : "2px solid transparent", paddingBottom:1 }}>
-            {MONTHS[currentMonth]}
+            {MONTHS_BY_LANG[lang][currentMonth]}
           </span>
           {monthPickerOpen && (
             <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", left:0, zIndex:50, background:"#fff", border:"1px solid #e5e7eb", borderRadius:8, boxShadow:"0 8px 24px rgba(0,0,0,0.12)", width:140, maxHeight:260, overflowY:"auto", padding:"4px 0" }}>
-              {MONTHS.map((m, i) => (
+              {MONTHS_BY_LANG[lang].map((m, i) => (
                 <div key={i} onClick={() => goToMonth(i)} style={{
                   padding:"7px 14px", fontSize:13, cursor:"pointer",
                   fontWeight: i===currentMonth ? 700 : 400,
@@ -791,7 +801,7 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
 
         <div style={{ marginLeft:"auto", display:"flex", gap:4 }}>
           <button onClick={prevWeek} style={{ background:"none", border:"1px solid #e5e7eb", borderRadius:3, width:28, height:28, cursor:"pointer", color:"#374151", fontSize:14 }}>‹</button>
-          <button onClick={() => setWeekBase(new Date(today))} style={{ background:"none", border:"1px solid #e5e7eb", borderRadius:3, padding:"0 8px", height:28, cursor:"pointer", color:"#374151", fontSize:11, fontWeight:700 }}>NU</button>
+          <button onClick={() => setWeekBase(new Date(today))} style={{ background:"none", border:"1px solid #e5e7eb", borderRadius:3, padding:"0 8px", height:28, cursor:"pointer", color:"#374151", fontSize:11, fontWeight:700 }}>{t(lang, 'now')}</button>
           <button onClick={nextWeek} style={{ background:"none", border:"1px solid #e5e7eb", borderRadius:3, width:28, height:28, cursor:"pointer", color:"#374151", fontSize:14 }}>›</button>
         </div>
       </div>
@@ -801,7 +811,7 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
           const isToday = dateKey(d) === getTodayKey();
           return (
             <div key={i} style={{ flex:1, textAlign:"center", padding:"6px 0" }}>
-              <div style={{ fontSize:10, color:"#9ca3af", fontWeight:700, letterSpacing:1 }}>{DAYS[i]}</div>
+              <div style={{ fontSize:10, color:"#9ca3af", fontWeight:700, letterSpacing:1 }}>{DAYS_BY_LANG[lang][i]}</div>
               <div style={{ fontSize:16, fontWeight:700, width:28, height:28, lineHeight:"28px", borderRadius:"50%", margin:"2px auto 0", background: isToday ? "#2563EB" : "transparent", color: isToday ? "#fff" : "#111827" }}>{d.getDate()}</div>
             </div>
           );
@@ -858,7 +868,7 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
               }
               <button onClick={() => setEditMode(m => !m)}
                 style={{ flexShrink:0, background: editMode ? "#DBEAFE" : "#f3f4f6", border:"none", borderRadius:4, padding:"3px 8px", fontSize:11, fontWeight:700, cursor:"pointer", color: editMode ? "#2563EB" : "#6b7280" }}>
-                {editMode ? "✕ Annuleer" : "✎ Bewerk"}
+                {editMode ? t(lang, 'cancelEdit') : t(lang, 'editBtn')}
               </button>
             </div>
 
@@ -866,15 +876,15 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
             {editMode ? (
               <div style={{ display:"flex", flexDirection:"column", gap:6, margin:"10px 0 14px" }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:12, color:"#6b7280", width:36 }}>Van</span>
+                  <span style={{ fontSize:12, color:"#6b7280", width:36 }}>{t(lang, 'from')}</span>
                   <TimeSelect h={editStartH} m={editStartM} onChangeH={setEditStartH} onChangeM={setEditStartM} />
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:12, color:"#6b7280", width:36 }}>Tot</span>
+                  <span style={{ fontSize:12, color:"#6b7280", width:36 }}>{t(lang, 'to')}</span>
                   <TimeSelect h={editEndH} m={editEndM} onChangeH={setEditEndH} onChangeM={setEditEndM} />
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:4 }}>
-                  <span style={{ fontSize:12, color:"#6b7280", width:36 }}>Kleur</span>
+                  <span style={{ fontSize:12, color:"#6b7280", width:36 }}>{t(lang, 'color')}</span>
                   {[["blue","#2563EB"],["red","#DC2626"],["yellow","#E6B400"]].map(([key, hex]) => (
                     <div key={key} onClick={() => setEditColor(key)} style={{ width:20, height:20, borderRadius:"50%", background:hex, cursor:"pointer", border: editColor===key ? "3px solid #111827" : "3px solid transparent", boxSizing:"border-box" }} />
                   ))}
@@ -886,7 +896,7 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
                   setSelectedEvent(updated);
                   setEditMode(false);
                 }} style={{ marginTop:4, background:"#2563EB", color:"#fff", border:"none", borderRadius:4, padding:"7px", fontSize:12, fontWeight:700, cursor:"pointer" }}>
-                  Wijzigingen opslaan
+                  {t(lang, 'saveChanges')}
                 </button>
               </div>
             ) : (
@@ -896,23 +906,23 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
             )}
 
             {/* Note */}
-            <div style={{ fontSize:12, fontWeight:700, color:"#374151", marginBottom:6 }}>Notitie</div>
+            <div style={{ fontSize:12, fontWeight:700, color:"#374151", marginBottom:6 }}>{t(lang, 'note')}</div>
             <div style={{ marginBottom:12 }}>
               <textarea value={editNote} onChange={e => setEditNote(e.target.value)}
-                placeholder="Voeg een notitie toe..."
+                placeholder={t(lang, 'notePlaceholderAdd')}
                 rows={3}
                 style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"8px 10px", fontSize:12, outline:"none", boxSizing:"border-box", resize:"none", color:"#374151", fontFamily:"'DM Sans', sans-serif", display:"block" }} />
               <button onClick={() => { const updated = {...selectedEvent, note: editNote}; updateEventDB(updated); setEvents(evs => evs.map(x => x.id===selectedEvent.id ? updated : x)); setSelectedEvent(null); }}
                 style={{ marginTop:6, background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"4px 12px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                Opslaan
+                {t(lang, 'save')}
               </button>
             </div>
 
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={() => { deleteEventDB(selectedEvent.id); setEvents(evs => evs.filter(x => x.id!==selectedEvent.id)); setSelectedEvent(null); }}
-                style={{ flex:1, background:"#FEE2E2", color:"#DC2626", border:"none", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:13, fontWeight:700 }}>Verwijder</button>
+                style={{ flex:1, background:"#FEE2E2", color:"#DC2626", border:"none", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:13, fontWeight:700 }}>{t(lang, 'delete')}</button>
               <button onClick={() => setSelectedEvent(null)}
-                style={{ background:"#f3f4f6", color:"#374151", border:"none", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:13 }}>Sluit</button>
+                style={{ background:"#f3f4f6", color:"#374151", border:"none", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:13 }}>{t(lang, 'close')}</button>
             </div>
           </div>
         </div>
@@ -920,23 +930,23 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
       {adding && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", zIndex:50, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <div style={{ background:"#fff", borderRadius:8, padding:20, width:300, boxShadow:"0 20px 40px rgba(0,0,0,0.15)" }}>
-            <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:"#111827" }}>Afspraak toevoegen</div>
+            <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:"#111827" }}>{t(lang, 'addEvent')}</div>
             <input value={newTitle} onChange={e => setNewTitle(e.target.value)} onKeyDown={e => e.key==="Enter" && addEvent()}
-              placeholder="Titel..." autoFocus
+              placeholder={t(lang, 'titlePlaceholder')} autoFocus
               style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"8px 10px", fontSize:13, outline:"none", boxSizing:"border-box", marginBottom:14 }} />
             <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <span style={{ fontSize:12, color:"#6b7280", width:36 }}>Van</span>
+                <span style={{ fontSize:12, color:"#6b7280", width:36 }}>{t(lang, 'from')}</span>
                 <TimeSelect h={modalStartH} m={modalStartM} onChangeH={setModalStartH} onChangeM={setModalStartM} />
               </div>
               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <span style={{ fontSize:12, color:"#6b7280", width:36 }}>Tot</span>
+                <span style={{ fontSize:12, color:"#6b7280", width:36 }}>{t(lang, 'to')}</span>
                 <TimeSelect h={modalEndH} m={modalEndM} onChangeH={setModalEndH} onChangeM={setModalEndM} />
               </div>
             </div>
             {/* Color picker */}
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-              <span style={{ fontSize:12, color:"#6b7280", width:36 }}>Kleur</span>
+              <span style={{ fontSize:12, color:"#6b7280", width:36 }}>{t(lang, 'color')}</span>
               {[["blue","#2563EB"],["red","#DC2626"],["yellow","#E6B400"]].map(([key, hex]) => (
                 <div key={key} onClick={() => setModalColor(key)} style={{ width:22, height:22, borderRadius:"50%", background:hex, cursor:"pointer", border: modalColor===key ? "3px solid #111827" : "3px solid transparent", boxSizing:"border-box" }} />
               ))}
@@ -944,13 +954,13 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
             {/* Note */}
             <div style={{ marginBottom:14 }}>
               <textarea value={modalNote} onChange={e => setModalNote(e.target.value)}
-                placeholder="Notitie (optioneel)..."
+                placeholder={t(lang, 'notePlaceholderOptional')}
                 rows={3}
                 style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"8px 10px", fontSize:12, outline:"none", boxSizing:"border-box", resize:"none", color:"#374151", fontFamily:"'DM Sans', sans-serif", display:"block" }} />
             </div>
             <div style={{ display:"flex", gap:8 }}>
-              <button onClick={addEvent} style={{ flex:1, background:"#2563EB", color:"#fff", border:"none", borderRadius:4, padding:"8px", cursor:"pointer", fontSize:13, fontWeight:700 }}>Toevoegen</button>
-              <button onClick={() => setAdding(null)} style={{ background:"#f3f4f6", color:"#374151", border:"none", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:13 }}>Annuleer</button>
+              <button onClick={addEvent} style={{ flex:1, background:"#2563EB", color:"#fff", border:"none", borderRadius:4, padding:"8px", cursor:"pointer", fontSize:13, fontWeight:700 }}>{t(lang, 'add')}</button>
+              <button onClick={() => setAdding(null)} style={{ background:"#f3f4f6", color:"#374151", border:"none", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:13 }}>{t(lang, 'cancel2')}</button>
             </div>
           </div>
         </div>
@@ -962,8 +972,9 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
 
 // ── AI PANEL ──────────────────────────────────────────────────────────────────
 function AIPanel({ tasks, events }) {
+  const lang = useLang();
   const [messages, setMessages] = useState([
-    { role: "assistant", content: "Goeiedag! Ik ben je planningsassistent.\n\nIk zie je taken en agenda. Ik kan je helpen:\n- Taken inplannen op vrije momenten\n- Goede voornemens slim verdelen\n- Je week overzichtelijker maken\n\nWat wil je aanpakken?" }
+    { role: "assistant", content: t('nl', 'aiGreeting') }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -972,10 +983,11 @@ function AIPanel({ tasks, events }) {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages]);
 
   const buildContext = () => {
-    const taskList = tasks.map(t => "- " + t.title + " (" + t.priority + " prioriteit, " + t.status + (t.deadline ? ", deadline: " + t.deadline : "") + ")").join("\n");
-    const eventList = events.map(e => "- " + e.title + " op " + e.date + " van " + pad(e.startH) + ":" + pad(e.startM) + " tot " + pad(e.endH) + ":" + pad(e.endM)).join("\n");
-    const todayStr = today.getDate() + " " + MONTHS[today.getMonth()] + " " + today.getFullYear();
-    return "Je bent een slimme, vriendelijke planningsassistent. Je helpt de gebruiker hun agenda en taken beheren.\n\nVandaag is het: " + todayStr + "\n\nTAKEN VAN DE GEBRUIKER:\n" + (taskList || "Geen taken") + "\n\nAFSPRAKEN VAN DE GEBRUIKER:\n" + (eventList || "Geen afspraken") + "\n\nGeef concrete, praktische adviezen. Hou antwoorden kort en duidelijk. Spreek Nederlands.";
+    const taskList = tasks.map(task => "- " + task.title + " (" + task.priority + ", " + task.status + (task.deadline ? ", deadline: " + task.deadline : "") + ")").join("\n");
+    const eventList = events.map(e => "- " + e.title + " " + e.date + " " + pad(e.startH) + ":" + pad(e.startM) + "-" + pad(e.endH) + ":" + pad(e.endM)).join("\n");
+    const todayStr = today.getDate() + " " + (MONTHS_BY_LANG[lang] || MONTHS_NL)[today.getMonth()] + " " + today.getFullYear();
+    const systemPrompt = t(lang, 'aiSystemPrompt')(todayStr);
+    return systemPrompt + "\n\n" + t(lang, 'aiTasks').toUpperCase() + ":\n" + (taskList || "-") + "\n\n" + t(lang, 'aiEvents').toUpperCase() + ":\n" + (eventList || "-");
   };
 
   const send = async () => {
@@ -1008,8 +1020,8 @@ function AIPanel({ tasks, events }) {
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%", background:"#fafafa" }}>
       <div style={{ padding:"18px 16px 12px", borderBottom:"1px solid #e5e7eb" }}>
-        <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:18, color:"#111827" }}>Assistent</div>
-        <div style={{ fontSize:11, color:"#9ca3af", marginTop:2 }}>{tasks.length} taken - {events.length} afspraken</div>
+        <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:18, color:"#111827" }}>{t(lang, 'assistant')}</div>
+        <div style={{ fontSize:11, color:"#9ca3af", marginTop:2 }}>{tasks.length} {t(lang, 'aiTasks')} - {events.length} {t(lang, 'aiEvents')}</div>
       </div>
       <div style={{ flex:1, overflowY:"auto", padding:"12px 14px", display:"flex", flexDirection:"column", gap:10 }}>
         {messages.map((m, i) => (
@@ -1027,13 +1039,13 @@ function AIPanel({ tasks, events }) {
         <div ref={bottomRef} />
       </div>
       <div style={{ padding:"6px 14px", display:"flex", gap:6, flexWrap:"wrap", borderTop:"1px solid #e5e7eb" }}>
-        {["Plan mijn taken in","Vrije momenten deze week","Goede voornemens inplannen"].map(q => (
+        {[t(lang,'quickQ1'), t(lang,'quickQ2'), t(lang,'quickQ3')].map(q => (
           <button key={q} onClick={() => setInput(q)} style={{ background:"#fff", border:"1px solid #e5e7eb", borderRadius:20, padding:"4px 10px", fontSize:11, cursor:"pointer", color:"#374151", whiteSpace:"nowrap" }}>{q}</button>
         ))}
       </div>
       <div style={{ padding:"10px 14px", borderTop:"1px solid #e5e7eb", display:"flex", gap:8 }}>
         <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key==="Enter" && !e.shiftKey && send()}
-          placeholder="Vraag iets aan je assistent..."
+          placeholder={t(lang, 'askPlaceholder')}
           style={{ flex:1, border:"1px solid #e5e7eb", borderRadius:20, padding:"8px 14px", fontSize:13, outline:"none", background:"#fff" }} />
         <button onClick={send} disabled={loading || !input.trim()} style={{ width:36, height:36, borderRadius:"50%", background: input.trim() ? "#2563EB" : "#e5e7eb", border:"none", cursor: input.trim() ? "pointer" : "default", color:"#fff", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>&#8593;</button>
       </div>
@@ -1233,6 +1245,7 @@ function ResetPasswordPage({ onDone }) {
 }
 
 export default function App() {
+  const [lang, setLang]           = useState(() => localStorage.getItem('jmp_lang') || 'nl');
   const [session, setSession]     = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [resetMode, setResetMode] = useState(false);
@@ -1279,6 +1292,8 @@ export default function App() {
     initAuth();
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => { localStorage.setItem('jmp_lang', lang); }, [lang]);
 
   useEffect(() => {
     if (!session) return;
@@ -1460,6 +1475,7 @@ export default function App() {
   if (resetMode) return <ResetPasswordPage onDone={() => setResetMode(false)} />;
 
   return (
+    <LangContext.Provider value={lang}>
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -1474,7 +1490,7 @@ export default function App() {
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#E6B400" }} />
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#2563EB" }} />
         <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:12 }}>
-          <span style={{ fontSize:12, color:"#9ca3af" }}>{today.getDate()} {MONTHS[today.getMonth()]} {today.getFullYear()}</span>
+          <span style={{ fontSize:12, color:"#9ca3af" }}>{today.getDate()} {(MONTHS_BY_LANG[lang] || MONTHS_NL)[today.getMonth()]} {today.getFullYear()}</span>
           <button onClick={() => setShowSettings(true)}
             title="Instellingen"
             style={{ background:"none", border:"none", cursor:"pointer", color:"#9ca3af", fontSize:18, padding:"4px 6px", display:"flex", alignItems:"center", borderRadius:6, transition:"color 0.15s" }}
@@ -1486,15 +1502,15 @@ export default function App() {
       </div>
       <div ref={containerRef} style={{ display:"flex", height:"calc(100vh - 44px)", overflow:"hidden" }}>
         <div style={{ width: widths[0] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
-          {isCollapsedLeft ? <CollapsedLabel label="Taken" /> : <TaskPanel tasks={tasks} setTasks={setTasks} trash={trash} setTrash={setTrash} lists={lists} setLists={setLists} userId={session.user.id} panelWidth={widths[0]??320} />}
+          {isCollapsedLeft ? <CollapsedLabel label={t(lang, 'tasks')} /> : <TaskPanel tasks={tasks} setTasks={setTasks} trash={trash} setTrash={setTrash} lists={lists} setLists={setLists} userId={session.user.id} panelWidth={widths[0]??320} />}
         </div>
         <Splitter onMouseDown={startLeft} />
         <div style={{ width: widths[1] ?? 200, flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.12s ease" }}>
-          {isCollapsedMid ? <CollapsedLabel label="Agenda" /> : <CalendarPanel events={events} setEvents={setEvents} userId={session.user.id} panelWidth={widths[1]??200} />}
+          {isCollapsedMid ? <CollapsedLabel label={t(lang, 'calendar')} /> : <CalendarPanel events={events} setEvents={setEvents} userId={session.user.id} panelWidth={widths[1]??200} />}
         </div>
         <Splitter onMouseDown={startRight} />
         <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
-          {isCollapsedRight ? <CollapsedLabel label="Assistent" /> : <AIPanel tasks={tasks} events={events} />}
+          {isCollapsedRight ? <CollapsedLabel label={t(lang, 'assistant')} /> : <AIPanel tasks={tasks} events={events} />}
         </div>
       </div>
 
@@ -1506,7 +1522,7 @@ export default function App() {
 
             {/* Header */}
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24 }}>
-              <span style={{ color:"#f9fafb", fontSize:17, fontWeight:700 }}>⚙ Instellingen</span>
+              <span style={{ color:"#f9fafb", fontSize:17, fontWeight:700 }}>{t(lang, 'settings')}</span>
               <button onClick={() => setShowSettings(false)} style={{ background:"none", border:"none", color:"#9ca3af", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
           </div>
@@ -1514,11 +1530,11 @@ export default function App() {
 
             {/* Account sectie */}
             <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>Account</div>
+              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>{t(lang, 'accountSection')}</div>
               <div style={{ fontSize:13, color:"#9ca3af", marginBottom:12 }}>{session.user.email}</div>
               <button onClick={() => { supabase.auth.signOut(); setShowSettings(false); }}
                 style={{ width:"100%", padding:"9px 0", borderRadius:8, border:"1px solid #3f3f46", background:"none", color:"#f87171", fontSize:13, fontWeight:600, cursor:"pointer" }}>
-                Uitloggen
+                {t(lang, 'logout')}
               </button>
             </div>
 
@@ -1526,13 +1542,13 @@ export default function App() {
 
             {/* API sectie */}
             <div>
-              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>API Toegang</div>
+              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>{t(lang, 'apiSection')}</div>
               <div style={{ fontSize:12, color:"#6b7280", marginBottom:12, lineHeight:1.5 }}>
-                Gebruik je API key om je taken en agenda op te vragen vanuit andere apps of Claude.
+                {t(lang, 'apiDesc')}
               </div>
 
               {/* API Key */}
-              <div style={{ fontSize:11, color:"#6b7280", marginBottom:4 }}>API Key</div>
+              <div style={{ fontSize:11, color:"#6b7280", marginBottom:4 }}>{t(lang, 'apiKeyLabel')}</div>
               {apiKey ? (
                 <>
                   <div style={{ background:"#111827", borderRadius:6, padding:"8px 10px", fontSize:11, color:"#60a5fa", fontFamily:"monospace", marginBottom:8, wordBreak:"break-all" }}>
@@ -1541,24 +1557,24 @@ export default function App() {
                   <div style={{ display:"flex", gap:8 }}>
                     <button onClick={() => navigator.clipboard.writeText(apiKey)}
                       style={{ flex:1, padding:"8px 0", borderRadius:6, border:"1px solid #3f3f46", background:"none", color:"#f9fafb", fontSize:12, cursor:"pointer" }}>
-                      Kopieer
+                      {t(lang, 'copy')}
                     </button>
                     <button onClick={generateApiKey}
                       style={{ flex:1, padding:"8px 0", borderRadius:6, border:"none", background:"#27272a", color:"#9ca3af", fontSize:12, cursor:"pointer" }}>
-                      Vernieuwen
+                      {t(lang, 'renew')}
                     </button>
                   </div>
                 </>
               ) : (
                 <button onClick={generateApiKey}
                   style={{ width:"100%", padding:"9px 0", borderRadius:8, border:"none", background:"#2563EB", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
-                  Genereer API key
+                  {t(lang, 'generate')}
                 </button>
               )}
 
               {apiKey && (
                 <div style={{ fontSize:11, color:"#6b7280", marginTop:12, lineHeight:1.5 }}>
-                  Gebruik header: <code style={{ color:"#9ca3af" }}>Authorization: Bearer {apiKey.slice(0,12)}...</code>
+                  {t(lang, 'apiUsage')} <code style={{ color:"#9ca3af" }}>Authorization: Bearer {apiKey.slice(0,12)}...</code>
                 </div>
               )}
             </div>
@@ -1567,18 +1583,18 @@ export default function App() {
 
             {/* ── Delen sectie ── */}
             <div>
-              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:14 }}>Delen</div>
+              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:14 }}>{t(lang, 'shareSection')}</div>
 
               {/* Uitgedeeld aan */}
-              <div style={{ fontSize:12, color:"#9ca3af", marginBottom:8, fontWeight:600 }}>Gedeeld door mij</div>
+              <div style={{ fontSize:12, color:"#9ca3af", marginBottom:8, fontWeight:600 }}>{t(lang, 'sharedByMe')}</div>
               {outgoingShares.length === 0 && (
-                <div style={{ fontSize:12, color:"#3f3f46", marginBottom:12 }}>Nog niemand uitgenodigd</div>
+                <div style={{ fontSize:12, color:"#3f3f46", marginBottom:12 }}>{t(lang, 'noInvites')}</div>
               )}
               {outgoingShares.map(s => (
                 <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, background:"#111827", borderRadius:8, padding:"8px 10px" }}>
                   <span style={{ flex:1, fontSize:12, color:"#9ca3af", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.invited_email}</span>
                   <span style={{ fontSize:10, color: s.status === "accepted" ? "#4ade80" : "#6b7280", marginRight:4 }}>
-                    {s.status === "accepted" ? "actief" : "wacht..."}
+                    {s.status === "accepted" ? t(lang, 'active') : t(lang, 'waiting')}
                   </span>
                   {/* Permissie toggle */}
                   <button onClick={() => updateSharePermission(s.id, s.permission === "view" ? "edit" : "view")}
@@ -1631,5 +1647,6 @@ export default function App() {
         </div>
       )}
     </>
+    </LangContext.Provider>
   );
 }
