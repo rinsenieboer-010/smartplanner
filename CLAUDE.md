@@ -1,4 +1,4 @@
-# justmyplan — Project Context
+# Just My Plan — Project Context
 
 ## Wat is dit?
 justmyplan is een React productiviteitsapp met drie panelen: Taken (links), Agenda (midden), AI-assistent (rechts). De panelen zijn versleepbaar met splitters die snappen naar 5%, 50% of 95%.

@@ -165,9 +165,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
   const [datePickerOpen, setDatePickerOpen] = useState(null); // task id
   const [openNoteId, setOpenNoteId] = useState(null);
   const [noteValue, setNoteValue] = useState("");
-  const [sharedLists, setSharedLists] = useState([
-    { id: "lisa", label: "Lisa", color: "#E6B400" },
-  ]);
+  const [sharedLists, setSharedLists] = useState([]);
   const [addingShared, setAddingShared] = useState(false);
   const [newSharedName, setNewSharedName] = useState("");
 
@@ -183,10 +181,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
     setSharedLists(l => l.filter(x => x.id !== id));
     if (activeList === id) setActiveList("mine");
   };
-  const sharedDemoTasks = [
-    { id: 9001, title: "Samen boodschappen", priority: "midden", status: "open", deadline: getTodayKey(), list: "lisa" },
-    { id: 9002, title: "Verjaardag cadeau",  priority: "hoog",   status: "open", deadline: null, list: "lisa" },
-  ];
+  const sharedDemoTasks = [];
   const [addingList, setAddingList] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [editingListName, setEditingListName] = useState(false);
@@ -341,37 +336,22 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
           </div>
         )}
 
-        <div style={{ padding:"14px 12px 8px", fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2, marginTop:8, borderTop:"1px solid #27272a", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ padding:"14px 12px 8px", fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2, marginTop:8, borderTop:"1px solid #27272a" }}>
           <span>{t(lang, 'shared')}</span>
-          <span onClick={() => setAddingShared(true)} style={{ fontSize:16, color:"#52525b", cursor:"pointer", lineHeight:1 }}
-            onMouseEnter={e => e.currentTarget.style.color="#a1a1aa"}
-            onMouseLeave={e => e.currentTarget.style.color="#52525b"}>+</span>
         </div>
         {sharedLists.map(l => (
           <div key={l.id} onClick={() => setActiveList(l.id)} style={{
             display:"flex", alignItems:"center", gap:8, padding:"7px 12px", cursor:"pointer", overflow:"hidden",
             background: activeList===l.id ? "#27272a" : "transparent",
             borderLeft: activeList===l.id ? "3px solid "+l.color : "3px solid transparent"
-          }}
-            onMouseEnter={e => e.currentTarget.querySelector(".rm-shared").style.opacity="1"}
-            onMouseLeave={e => e.currentTarget.querySelector(".rm-shared").style.opacity="0"}>
+          }}>
             <div style={{ width:8, height:8, borderRadius:"50%", background:l.color, flexShrink:0 }} />
             <div style={{ minWidth:0, flex:1 }}>
               <div style={{ fontSize:12, color: activeList===l.id ? "#f4f4f5" : "#a1a1aa", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{l.label}</div>
               <div style={{ fontSize:10, color:"#52525b" }}>{t(lang, 'shared').toLowerCase()}</div>
             </div>
-            <button className="rm-shared" onClick={e => { e.stopPropagation(); removeShared(l.id); }}
-              style={{ opacity:0, background:"none", border:"none", color:"#52525b", cursor:"pointer", fontSize:12, padding:"0 2px", flexShrink:0, transition:"opacity 0.15s" }}>✕</button>
           </div>
         ))}
-        {addingShared ? (
-          <div style={{ padding:"6px 12px" }}>
-            <input value={newSharedName} onChange={e => setNewSharedName(e.target.value)} autoFocus
-              onKeyDown={e => { if(e.key==="Enter") addShared(); if(e.key==="Escape"){ setAddingShared(false); setNewSharedName(""); } }}
-              placeholder={t(lang, 'personNamePlaceholder')}
-              style={{ width:"100%", background:"#27272a", border:"none", borderBottom:"2px solid #E6B400", color:"#f4f4f5", fontSize:12, padding:"4px", outline:"none", boxSizing:"border-box" }} />
-          </div>
-        ) : null}
 
         {/* Trash — pinned to bottom */}
         <div style={{ flex:1 }} />
@@ -605,9 +585,7 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
   const [myAgendas, setMyAgendas] = useState([
     { id: "rinse", label: "Rinse N", color: "#2563EB", on: true },
   ]);
-  const [otherAgendas, setOtherAgendas] = useState([
-    { id: "lisa", label: "Lisa", color: "#DC2626", on: true },
-  ]);
+  const [otherAgendas, setOtherAgendas] = useState([]);
   const [myOpen, setMyOpen]     = useState(true);
   const [otherOpen, setOtherOpen] = useState(true);
   const [addingAgenda, setAddingAgenda] = useState(false);
@@ -729,20 +707,6 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
               <span style={{ fontSize:12, color: a.on ? "#f4f4f5" : "#52525b", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{a.label}</span>
             </div>
           ))}
-          {addingAgenda ? (
-            <div style={{ padding:"6px 12px" }}>
-              <input value={newAgendaName} onChange={e => setNewAgendaName(e.target.value)} autoFocus
-                onKeyDown={e => { if(e.key==="Enter") addAgenda(); if(e.key==="Escape"){ setAddingAgenda(false); setNewAgendaName(""); } }}
-                placeholder={t(lang, 'namePlaceholder')}
-                style={{ width:"100%", background:"#27272a", border:"none", borderBottom:"2px solid #2563EB", color:"#f4f4f5", fontSize:12, padding:"4px", outline:"none", boxSizing:"border-box" }} />
-            </div>
-          ) : (
-            <div onClick={() => setAddingAgenda(true)} style={{ padding:"5px 12px 10px", fontSize:11, color:"#52525b", cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}
-              onMouseEnter={e => e.currentTarget.style.color="#a1a1aa"}
-              onMouseLeave={e => e.currentTarget.style.color="#52525b"}>
-              {t(lang, 'addCalendar')}
-            </div>
-          )}
         </div>
       </div>
 
@@ -973,14 +937,38 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
 // ── AI PANEL ──────────────────────────────────────────────────────────────────
 function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
   const lang = useLang();
-  const [messages, setMessages] = useState([
-    { role: "assistant", content: t('nl', 'aiGreeting') }
-  ]);
+  const STORAGE_KEY = `jmp_chat_${userId}`;
+  const MEMORY_KEY  = `jmp_memory_${userId}`;
+  const THREE_WEEKS = 21 * 24 * 60 * 60 * 1000;
+
+  const loadMessages = () => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      const cutoff = Date.now() - THREE_WEEKS;
+      const recent = stored.filter(m => !m.ts || m.ts > cutoff);
+      if (recent.length > 0) return recent;
+    } catch {}
+    return [{ role: "assistant", content: t('nl', 'aiGreeting'), ts: Date.now() }];
+  };
+
+  const [messages, setMessages] = useState(loadMessages);
+  const [memory, setMemory] = useState(() => {
+    try { return localStorage.getItem(MEMORY_KEY) || ''; } catch { return ''; }
+  });
+  const saveMemory = (content) => {
+    setMemory(content);
+    try { localStorage.setItem(MEMORY_KEY, content); } catch {}
+  };
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // Sla berichten op in localStorage bij elke wijziging
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)); } catch {}
+  }, [messages]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages]);
 
@@ -1047,7 +1035,7 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
     const currentAttachments = [...attachments];
     setInput("");
     setAttachments([]);
-    const newMsg = { role:"user", content:userMsg, attachments: currentAttachments };
+    const newMsg = { role:"user", content:userMsg, attachments: currentAttachments, ts: Date.now() };
     const newMessages = [...messages, newMsg];
     setMessages(newMessages);
     setLoading(true);
@@ -1060,15 +1048,17 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
           messages: formatMessagesForAPI(newMessages),
           tasks,
           events,
-          today: todayStr
+          today: todayStr,
+          memory,
         })
       });
       const data = await response.json();
       if (data.error) throw new Error(data.error);
-      setMessages(m => [...m, { role:"assistant", content: data.reply }]);
+      setMessages(m => [...m, { role:"assistant", content: data.reply, ts: Date.now() }]);
+      if (data.newMemory !== undefined) saveMemory(data.newMemory);
       if (data.actions?.length > 0) await executeActions(data.actions);
     } catch(err) {
-      setMessages(m => [...m, { role:"assistant", content:"Er is een fout opgetreden: " + err.message }]);
+      setMessages(m => [...m, { role:"assistant", content:"Er is een fout opgetreden: " + err.message, ts: Date.now() }]);
     }
     setLoading(false);
   };
@@ -1081,8 +1071,8 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
       </div>
       <div style={{ flex:1, overflowY:"auto", padding:"12px 14px", display:"flex", flexDirection:"column", gap:10 }}>
         {messages.map((m, i) => (
-          <div key={i} style={{ display:"flex", justifyContent: m.role==="user" ? "flex-end" : "flex-start" }}>
-            <div style={{ maxWidth:"85%", display:"flex", flexDirection:"column", gap:4, alignItems: m.role==="user" ? "flex-end" : "flex-start" }}>
+          <div key={i} style={{ display:"flex", justifyContent: m.role==="user" ? "flex-end" : "center" }}>
+            <div style={{ width: m.role==="user" ? "auto" : "100%", maxWidth: m.role==="user" ? "85%" : "100%", display:"flex", flexDirection:"column", gap:4, alignItems: m.role==="user" ? "flex-end" : "flex-start" }}>
               {m.attachments?.map((att, j) => att.type === "image"
                 ? <img key={j} src={att.preview} alt={att.name} style={{ maxWidth:180, maxHeight:180, borderRadius:8, objectFit:"cover", border:"1px solid #e5e7eb" }} />
                 : <div key={j} style={{ background:"#f3f4f6", borderRadius:8, padding:"6px 10px", fontSize:11, color:"#6b7280" }}>📄 {att.name}</div>
@@ -1622,6 +1612,19 @@ export default function App() {
 
             <div style={{ height:1, background:"#27272a", marginBottom:20 }} />
 
+            {/* Taal sectie */}
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>{t(lang, 'langSection')}</div>
+              <select value={lang} onChange={e => { setLang(e.target.value); localStorage.setItem('jmp_lang', e.target.value); }}
+                style={{ width:"100%", padding:"9px 10px", borderRadius:8, border:"1px solid #3f3f46", background:"#111827", color:"#f9fafb", fontSize:13, cursor:"pointer", outline:"none" }}>
+                {LANGUAGES.map(l => (
+                  <option key={l.code} value={l.code}>{l.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ height:1, background:"#27272a", marginBottom:20 }} />
+
             {/* API sectie */}
             <div>
               <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>{t(lang, 'apiSection')}</div>
@@ -1661,72 +1664,61 @@ export default function App() {
               )}
             </div>
 
-            <div style={{ height:1, background:"#27272a", margin:"20px 0" }} />
-
-            {/* ── Delen sectie ── */}
-            <div>
-              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:14 }}>{t(lang, 'shareSection')}</div>
-
-              {/* Uitgedeeld aan */}
-              <div style={{ fontSize:12, color:"#9ca3af", marginBottom:8, fontWeight:600 }}>{t(lang, 'sharedByMe')}</div>
-              {outgoingShares.length === 0 && (
-                <div style={{ fontSize:12, color:"#3f3f46", marginBottom:12 }}>{t(lang, 'noInvites')}</div>
-              )}
-              {outgoingShares.map(s => (
-                <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, background:"#111827", borderRadius:8, padding:"8px 10px" }}>
-                  <span style={{ flex:1, fontSize:12, color:"#9ca3af", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.invited_email}</span>
-                  <span style={{ fontSize:10, color: s.status === "accepted" ? "#4ade80" : "#6b7280", marginRight:4 }}>
-                    {s.status === "accepted" ? t(lang, 'active') : t(lang, 'waiting')}
-                  </span>
-                  {/* Permissie toggle */}
-                  <button onClick={() => updateSharePermission(s.id, s.permission === "view" ? "edit" : "view")}
-                    title={s.permission === "view" ? "Bekijken — klik voor bewerken" : "Bewerken — klik voor bekijken"}
-                    style={{ background:"#27272a", border:"none", borderRadius:6, padding:"3px 8px", cursor:"pointer", fontSize:14 }}>
-                    {s.permission === "view" ? "👁" : "✏️"}
-                  </button>
-                  <button onClick={() => removeShare(s.id)}
-                    style={{ background:"none", border:"none", cursor:"pointer", color:"#6b7280", fontSize:14, padding:2 }}>✕</button>
-                </div>
-              ))}
+            {/* Delen */}
+            <div style={{ borderTop:"1px solid #27272a", paddingTop:20, marginTop:20 }}>
+              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Delen</div>
 
               {/* Uitnodigen */}
-              <div style={{ display:"flex", gap:6, marginTop:10 }}>
-                <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+              <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+                <input
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && invitePerson()}
                   placeholder="e-mailadres..."
-                  style={{ flex:1, background:"#111827", border:"1px solid #3f3f46", borderRadius:6, padding:"7px 10px", fontSize:12, color:"#f9fafb", outline:"none" }} />
-                <button onClick={() => setInvitePermission(p => p === "view" ? "edit" : "view")}
-                  title={invitePermission === "view" ? "Bekijken" : "Bewerken"}
-                  style={{ background:"#27272a", border:"1px solid #3f3f46", borderRadius:6, padding:"6px 10px", cursor:"pointer", fontSize:14 }}>
-                  {invitePermission === "view" ? "👁" : "✏️"}
-                </button>
+                  style={{ flex:1, background:"#111827", border:"1px solid #3f3f46", borderRadius:6, color:"#f9fafb", fontSize:12, padding:"7px 10px", outline:"none" }}
+                />
                 <button onClick={invitePerson}
-                  style={{ background:"#2563EB", border:"none", borderRadius:6, padding:"6px 12px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                  style={{ background:"#2563EB", border:"none", borderRadius:6, color:"#fff", fontSize:12, fontWeight:600, padding:"0 14px", cursor:"pointer" }}>
                   Uitnodigen
                 </button>
               </div>
 
-              {/* Binnenkomende uitnodigingen */}
-              {incomingShares.length > 0 && (
-                <>
-                  <div style={{ height:1, background:"#27272a", margin:"16px 0 12px" }} />
-                  <div style={{ fontSize:12, color:"#9ca3af", marginBottom:8, fontWeight:600 }}>Uitnodigingen</div>
-                  {incomingShares.map(s => (
-                    <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, background:"#111827", borderRadius:8, padding:"8px 10px" }}>
-                      <span style={{ fontSize:14 }}>{s.permission === "view" ? "👁" : "✏️"}</span>
-                      <span style={{ flex:1, fontSize:12, color:"#9ca3af", overflow:"hidden", textOverflow:"ellipsis" }}>{s.owner_email}</span>
-                      <button onClick={() => acceptInvitation(s.id)}
-                        style={{ background:"#166534", border:"none", borderRadius:6, padding:"3px 8px", color:"#4ade80", fontSize:12, cursor:"pointer" }}>✓</button>
-                      <button onClick={() => declineInvitation(s.id)}
-                        style={{ background:"none", border:"none", cursor:"pointer", color:"#6b7280", fontSize:14 }}>✕</button>
+              {/* Gedeeld door mij */}
+              {outgoingShares.length > 0 && (
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:11, color:"#52525b", marginBottom:6 }}>Gedeeld met</div>
+                  {outgoingShares.map(s => (
+                    <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, background:"#111827", borderRadius:6, padding:"7px 10px", marginBottom:4 }}>
+                      <span style={{ flex:1, fontSize:11, color:"#9ca3af", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.invited_email}</span>
+                      <span style={{ fontSize:10, color: s.status === "accepted" ? "#4ade80" : "#6b7280" }}>
+                        {s.status === "accepted" ? "actief" : "wacht..."}
+                      </span>
+                      <button onClick={() => removeShare(s.id)} style={{ background:"none", border:"none", color:"#6b7280", cursor:"pointer", fontSize:13, padding:"0 2px" }}>✕</button>
                     </div>
                   ))}
-                </>
+                </div>
+              )}
+
+              {/* Inkomende uitnodigingen */}
+              {incomingShares.length > 0 && (
+                <div>
+                  <div style={{ fontSize:11, color:"#52525b", marginBottom:6 }}>Uitnodigingen</div>
+                  {incomingShares.map(s => (
+                    <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, background:"#111827", borderRadius:6, padding:"7px 10px", marginBottom:4 }}>
+                      <span style={{ flex:1, fontSize:11, color:"#9ca3af", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.owner_email}</span>
+                      <button onClick={() => acceptInvitation(s.id)} style={{ background:"#166534", border:"none", borderRadius:4, color:"#4ade80", fontSize:11, padding:"3px 8px", cursor:"pointer" }}>✓</button>
+                      <button onClick={() => declineInvitation(s.id)} style={{ background:"none", border:"none", color:"#6b7280", cursor:"pointer", fontSize:13, padding:"0 2px" }}>✕</button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 
-            {/* Privacy */}
-            <div style={{ borderTop:"1px solid #27272a", paddingTop:16, marginTop:4, textAlign:"center" }}>
+            {/* Support + Privacy */}
+            <div style={{ borderTop:"1px solid #27272a", paddingTop:16, marginTop:20, display:"flex", justifyContent:"center", gap:20 }}>
+              <a href="https://rjnieboer.com/support/justmyplan" target="_blank" rel="noopener noreferrer" style={{ fontSize:11, color:"#52525b", textDecoration:"none" }}>
+                Support
+              </a>
               <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ fontSize:11, color:"#52525b", textDecoration:"none" }}>
                 Privacy Policy
               </a>

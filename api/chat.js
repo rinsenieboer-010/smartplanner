@@ -42,6 +42,17 @@ const TOOLS = [
       },
       required: ["task_id"]
     }
+  },
+  {
+    name: "update_memory",
+    description: "Sla een werkwijze, voorkeur of concept op voor toekomstige gesprekken. Gebruik dit wanneer de gebruiker iets uitlegt dat ook later relevant is. Schrijf de volledige bijgewerkte inhoud — voeg toe aan het bestaande geheugen, verwijder niets zonder toestemming.",
+    input_schema: {
+      type: "object",
+      properties: {
+        content: { type: "string", description: "De volledige bijgewerkte inhoud van het geheugen." }
+      },
+      required: ["content"]
+    }
   }
 ];
 
@@ -52,7 +63,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Alleen POST toegestaan' });
 
-  const { messages, tasks, events, today } = req.body;
+  const { messages, tasks, events, today, memory } = req.body;
 
   const pad = n => String(n).padStart(2, '0');
   const taskList = (tasks || []).map(t =>
@@ -68,6 +79,9 @@ Vandaag is het: ${today}
 
 Je hebt tools om direct taken en afspraken aan te maken of bij te werken. Gebruik ze proactief wanneer de gebruiker vraagt om iets in te plannen — vraag niet of je het mag, doe het gewoon en bevestig daarna.
 
+WERKWIJZE (onthoud dit altijd):
+${memory || 'Nog geen werkwijze opgeslagen.'}
+
 TAKEN (gebruik de ID bij update_task):
 ${taskList || 'Geen taken'}
 
@@ -79,11 +93,13 @@ Regels:
 - Geef korte, concrete antwoorden
 - Bevestig na elke actie wat je hebt gedaan
 - Plan taken op logische tijden (niet 's nachts)
-- Gebruik de taak-ID's correct bij update_task`;
+- Gebruik de taak-ID's correct bij update_task
+- Gebruik update_memory zodra de gebruiker een voorkeur of werkwijze uitlegt die je moet onthouden`;
 
   try {
     let apiMessages = messages.map(m => ({ role: m.role, content: m.content }));
     const actions = [];
+    let newMemory = undefined;
 
     // Tool use loop
     let continueLoop = true;
@@ -115,15 +131,15 @@ Regels:
         const toolResults = [];
 
         for (const toolUse of toolUseBlocks) {
-          actions.push({ type: toolUse.name, data: toolUse.input });
-          toolResults.push({
-            type: 'tool_result',
-            tool_use_id: toolUse.id,
-            content: 'Actie succesvol uitgevoerd.'
-          });
+          if (toolUse.name === 'update_memory') {
+            newMemory = toolUse.input.content;
+            toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: 'Werkwijze opgeslagen.' });
+          } else {
+            actions.push({ type: toolUse.name, data: toolUse.input });
+            toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: 'Actie succesvol uitgevoerd.' });
+          }
         }
 
-        // Add assistant message + tool results to continue the loop
         apiMessages = [
           ...apiMessages,
           { role: 'assistant', content: data.content },
@@ -131,7 +147,7 @@ Regels:
         ];
       } else {
         const reply = data.content?.find(b => b.type === 'text')?.text || 'Sorry, er ging iets mis.';
-        return res.status(200).json({ reply, actions });
+        return res.status(200).json({ reply, actions, ...(newMemory !== undefined && { newMemory }) });
         continueLoop = false;
       }
     }
