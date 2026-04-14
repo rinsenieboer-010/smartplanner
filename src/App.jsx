@@ -1078,7 +1078,7 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
                 : <div key={j} style={{ background:"#f3f4f6", borderRadius:8, padding:"6px 10px", fontSize:11, color:"#6b7280" }}>📄 {att.name}</div>
               )}
               {m.content && (
-                <div style={{ padding:"10px 13px", borderRadius: m.role==="user" ? "12px 12px 2px 12px" : "12px 12px 12px 2px", background: m.role==="user" ? "#2563EB" : "#ffffff", color: m.role==="user" ? "#fff" : "#111827", fontSize:13, lineHeight:1.5, whiteSpace:"pre-wrap", boxShadow:"0 1px 3px rgba(0,0,0,0.08)", border: m.role==="assistant" ? "1px solid #e5e7eb" : "none" }}>
+                <div style={{ padding:"10px 13px", borderRadius: m.role==="user" ? "12px 12px 2px 12px" : "12px", background: m.role==="user" ? "#2563EB" : "#ffffff", color: m.role==="user" ? "#fff" : "#111827", fontSize:13, lineHeight:1.5, whiteSpace:"pre-wrap", boxShadow:"0 1px 3px rgba(0,0,0,0.08)", border: m.role==="assistant" ? "1px solid #e5e7eb" : "none", width: m.role==="assistant" ? "100%" : "auto", boxSizing:"border-box" }}>
                   {m.content}
                 </div>
               )}
