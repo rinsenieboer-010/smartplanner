@@ -550,7 +550,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
 }
 
 // ── CALENDAR PANEL ────────────────────────────────────────────────────────────
-function CalendarPanel({ events, setEvents, userId, panelWidth }) {
+function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
   const lang = useLang();
   const showSidebar = panelWidth > 400;
   const [weekBase, setWeekBase] = useState(new Date(today));
@@ -781,6 +781,38 @@ function CalendarPanel({ events, setEvents, userId, panelWidth }) {
           );
         })}
       </div>
+      {/* All-day tasks row */}
+      {(tasks||[]).some(t => weekDates.some(d => dateKey(d) === t.deadline)) && (
+        <div style={{ display:"flex", borderBottom:"1px solid #e5e7eb" }}>
+          <div style={{ width:44, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"flex-end", paddingRight:6 }}>
+            <span style={{ fontSize:9, color:"#9ca3af", fontWeight:700, letterSpacing:0.5 }}>taken</span>
+          </div>
+          {weekDates.map((d, i) => {
+            const dk = dateKey(d);
+            const dayTasks = (tasks||[]).filter(t => t.deadline === dk);
+            return (
+              <div key={i} style={{ flex:1, borderLeft:"1px solid #f3f4f6", padding:"3px 2px", display:"flex", flexDirection:"column", gap:2, minHeight:10 }}>
+                {dayTasks.map(task => (
+                  <div key={task.id} style={{
+                    background: PRIO_BG[task.priority] || "#f3f4f6",
+                    borderLeft: "2px solid " + (PRIO_COLOR[task.priority] || "#9ca3af"),
+                    borderRadius:2,
+                    padding:"1px 4px",
+                    fontSize:10,
+                    fontWeight:600,
+                    color: PRIO_COLOR[task.priority] || "#6b7280",
+                    overflow:"hidden",
+                    textOverflow:"ellipsis",
+                    whiteSpace:"nowrap",
+                  }}>
+                    {task.title}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
       <div style={{ flex:1, overflowY:"auto", position:"relative" }}>
         <div style={{ display:"flex", minHeight: HOURS.length * HOUR_H }}>
           <div style={{ width:44, flexShrink:0 }}>
@@ -1578,7 +1610,7 @@ export default function App() {
         </div>
         <Splitter onMouseDown={startLeft} />
         <div style={{ width: widths[1] ?? 200, flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.12s ease" }}>
-          {isCollapsedMid ? <CollapsedLabel label={t(lang, 'calendar')} /> : <CalendarPanel events={events} setEvents={setEvents} userId={session.user.id} panelWidth={widths[1]??200} />}
+          {isCollapsedMid ? <CollapsedLabel label={t(lang, 'calendar')} /> : <CalendarPanel events={events} setEvents={setEvents} tasks={tasks} userId={session.user.id} panelWidth={widths[1]??200} />}
         </div>
         <Splitter onMouseDown={startRight} />
         <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
