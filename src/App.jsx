@@ -783,7 +783,7 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
       </div>
       {/* All-day tasks row */}
       {(tasks||[]).some(t => weekDates.some(d => dateKey(d) === t.deadline)) && (
-        <div style={{ display:"flex", borderBottom:"1px solid #e5e7eb" }}>
+        <div style={{ display:"flex", borderBottom:"1px solid #e5e7eb", paddingRight:17 }}>
           <div style={{ width:44, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"flex-end", paddingRight:6 }}>
             <span style={{ fontSize:9, color:"#9ca3af", fontWeight:700, letterSpacing:0.5 }}>taken</span>
           </div>
@@ -791,9 +791,9 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
             const dk = dateKey(d);
             const dayTasks = (tasks||[]).filter(t => t.deadline === dk);
             return (
-              <div key={i} style={{ flex:1, borderLeft:"1px solid #f3f4f6", padding:"3px 2px", display:"flex", flexDirection:"column", gap:2, minHeight:10 }}>
+              <div key={i} style={{ flex:1, minWidth:0, borderLeft:"1px solid #f3f4f6", padding:"3px 2px", display:"flex", flexDirection:"column", gap:2, minHeight:10 }}>
                 {dayTasks.map(task => (
-                  <div key={task.id} style={{
+                  <div key={task.id} title={task.title} style={{
                     background: PRIO_BG[task.priority] || "#f3f4f6",
                     borderLeft: "2px solid " + (PRIO_COLOR[task.priority] || "#9ca3af"),
                     borderRadius:2,
@@ -804,6 +804,7 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
                     overflow:"hidden",
                     textOverflow:"ellipsis",
                     whiteSpace:"nowrap",
+                    minWidth:0,
                   }}>
                     {task.title}
                   </div>
