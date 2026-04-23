@@ -825,7 +825,7 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
                                 alignItems:"center",
                                 minWidth:0,
                               }}>
-                                {task.title}
+                                <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", minWidth:0, flex:1 }}>{task.title}</span>
                               </div>
                             ))}
                           </div>
