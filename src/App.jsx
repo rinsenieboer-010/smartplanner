@@ -800,7 +800,7 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
                 const dayTasks = (tasks||[]).filter(t => t.deadline === dk);
                 const dayEvents = events.filter(e => e.date===dk);
                 return (
-                  <div key={di} style={{ flex:1, position:"relative", borderLeft:"1px solid #f3f4f6" }}>
+                  <div key={di} style={{ flex:1, minWidth:0, overflow:"hidden", position:"relative", borderLeft:"1px solid #f3f4f6" }}>
                     {HOURS.map(h => (
                       <div key={h} onClick={() => openAdding(dk, h)}
                         style={{ height: h === HOURS[0] ? HOUR_H + extraH : HOUR_H, borderBottom:"1px solid #f3f4f6", cursor:"pointer" }}
