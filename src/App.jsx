@@ -823,6 +823,7 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
                                 whiteSpace:"nowrap",
                                 display:"flex",
                                 alignItems:"center",
+                                minWidth:0,
                               }}>
                                 {task.title}
                               </div>
