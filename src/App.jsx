@@ -814,13 +814,15 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
                                 background: PRIO_BG[task.priority] || "#f3f4f6",
                                 borderLeft: "2px solid " + (PRIO_COLOR[task.priority] || "#9ca3af"),
                                 borderRadius:2,
-                                padding:"1px 4px",
+                                padding:"0 4px",
                                 fontSize:10,
                                 fontWeight:600,
                                 color: PRIO_COLOR[task.priority] || "#6b7280",
                                 overflow:"hidden",
                                 textOverflow:"ellipsis",
                                 whiteSpace:"nowrap",
+                                display:"flex",
+                                alignItems:"center",
                               }}>
                                 {task.title}
                               </div>
