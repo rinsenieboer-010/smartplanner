@@ -781,56 +781,53 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
           );
         })}
       </div>
-      {/* Gutter + columns wrapper — shares column widths between all-day row and time grid */}
-      <div style={{ flex:1, display:"flex", overflow:"hidden" }}>
-        {/* Left gutter */}
-        <div style={{ width:44, flexShrink:0, display:"flex", flexDirection:"column" }}>
-          {(tasks||[]).some(t => weekDates.some(d => dateKey(d) === t.deadline)) && (
-            <div style={{ borderBottom:"1px solid #e5e7eb", display:"flex", alignItems:"center", justifyContent:"flex-end", paddingRight:6, paddingTop:3, paddingBottom:3 }}>
-              <span style={{ fontSize:9, color:"#9ca3af", fontWeight:700, letterSpacing:0.5 }}>taken</span>
-            </div>
-          )}
-          <div style={{ flex:1, overflowY:"auto" }}>
+      {/* All-day tasks row */}
+      {(tasks||[]).some(t => weekDates.some(d => dateKey(d) === t.deadline)) && (
+        <div style={{ display:"flex", borderBottom:"1px solid #f3f4f6" }}>
+          <div style={{ width:44, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"flex-end", paddingRight:6 }}>
+            <span style={{ fontSize:9, color:"#9ca3af", fontWeight:700, letterSpacing:0.5 }}>taken</span>
+          </div>
+          {weekDates.map((d, i) => {
+            const dk = dateKey(d);
+            const dayTasks = (tasks||[]).filter(t => t.deadline === dk);
+            return (
+              <div key={i} style={{ flex:1, minWidth:0, borderLeft:"1px solid #f3f4f6", padding:"3px 2px", display:"flex", flexDirection:"column", gap:2 }}>
+                {dayTasks.map(task => (
+                  <div key={task.id} title={task.title} style={{
+                    background: PRIO_BG[task.priority] || "#f3f4f6",
+                    borderLeft: "2px solid " + (PRIO_COLOR[task.priority] || "#9ca3af"),
+                    borderRadius:2,
+                    padding:"1px 4px",
+                    fontSize:10,
+                    fontWeight:600,
+                    color: PRIO_COLOR[task.priority] || "#6b7280",
+                    overflow:"hidden",
+                    textOverflow:"ellipsis",
+                    whiteSpace:"nowrap",
+                  }}>
+                    {task.title}
+                  </div>
+                ))}
+                {dayTasks.length === 0 && <div style={{ height:4 }} />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div style={{ flex:1, overflowY:"scroll", scrollbarGutter:"stable", position:"relative" }}>
+        <div style={{ display:"flex", minHeight: HOURS.length * HOUR_H }}>
+          <div style={{ width:44, flexShrink:0 }}>
             {HOURS.map(h => (
               <div key={h} style={{ height:HOUR_H, borderBottom:"1px solid #f3f4f6", paddingRight:6, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
                 <span style={{ fontSize:10, color:"#9ca3af", paddingTop:4 }}>{pad(h)}:00</span>
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Day columns */}
-        {weekDates.map((d, di) => {
-          const dk = dateKey(d);
-          const dayTasks = (tasks||[]).filter(t => t.deadline === dk);
-          const dayEvents = events.filter(e => e.date===dk);
-          const hasAllDay = (tasks||[]).some(t => weekDates.some(wd => dateKey(wd) === t.deadline));
-          return (
-            <div key={di} style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", borderLeft:"1px solid #f3f4f6" }}>
-              {/* All-day chip row — always rendered if any day has tasks, keeps columns aligned */}
-              {hasAllDay && (
-                <div style={{ borderBottom:"1px solid #e5e7eb", padding:"3px 2px", display:"flex", flexDirection:"column", gap:2 }}>
-                  {dayTasks.map(task => (
-                    <div key={task.id} title={task.title} style={{
-                      background: PRIO_BG[task.priority] || "#f3f4f6",
-                      borderLeft: "2px solid " + (PRIO_COLOR[task.priority] || "#9ca3af"),
-                      borderRadius:2,
-                      padding:"1px 4px",
-                      fontSize:10,
-                      fontWeight:600,
-                      color: PRIO_COLOR[task.priority] || "#6b7280",
-                      overflow:"hidden",
-                      textOverflow:"ellipsis",
-                      whiteSpace:"nowrap",
-                    }}>
-                      {task.title}
-                    </div>
-                  ))}
-                  {dayTasks.length === 0 && <div style={{ height:4 }} />}
-                </div>
-              )}
-              {/* Time grid */}
-              <div style={{ flex:1, overflowY:"auto", position:"relative" }}>
+          {weekDates.map((d, di) => {
+            const dk = dateKey(d);
+            const dayEvents = events.filter(e => e.date===dk);
+            return (
+              <div key={di} style={{ flex:1, position:"relative", borderLeft:"1px solid #f3f4f6" }}>
                 {HOURS.map(h => (
                   <div key={h} onClick={() => openAdding(dk, h)}
                     style={{ height:HOUR_H, borderBottom:"1px solid #f3f4f6", cursor:"pointer" }}
@@ -849,9 +846,9 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
                   );
                 })}
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
       {selectedEvent && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", zIndex:60, display:"flex", alignItems:"center", justifyContent:"center" }}
