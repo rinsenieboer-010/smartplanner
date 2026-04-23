@@ -781,74 +781,71 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
           );
         })}
       </div>
-      {/* All-day tasks row */}
-      {(tasks||[]).some(t => weekDates.some(d => dateKey(d) === t.deadline)) && (
-        <div style={{ display:"flex", borderBottom:"1px solid #f3f4f6" }}>
-          <div style={{ width:44, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"flex-end", paddingRight:6 }}>
-            <span style={{ fontSize:9, color:"#9ca3af", fontWeight:700, letterSpacing:0.5 }}>taken</span>
-          </div>
-          {weekDates.map((d, i) => {
-            const dk = dateKey(d);
-            const dayTasks = (tasks||[]).filter(t => t.deadline === dk);
-            return (
-              <div key={i} style={{ flex:1, minWidth:0, borderLeft:"1px solid #f3f4f6", padding:"3px 2px", display:"flex", flexDirection:"column", gap:2 }}>
-                {dayTasks.map(task => (
-                  <div key={task.id} title={task.title} style={{
-                    background: PRIO_BG[task.priority] || "#f3f4f6",
-                    borderLeft: "2px solid " + (PRIO_COLOR[task.priority] || "#9ca3af"),
-                    borderRadius:2,
-                    padding:"1px 4px",
-                    fontSize:10,
-                    fontWeight:600,
-                    color: PRIO_COLOR[task.priority] || "#6b7280",
-                    overflow:"hidden",
-                    textOverflow:"ellipsis",
-                    whiteSpace:"nowrap",
-                  }}>
-                    {task.title}
+      <div style={{ flex:1, overflowY:"scroll", scrollbarGutter:"stable", position:"relative" }}>
+        {(() => {
+          const CHIP_H = 18;
+          const maxTasks = Math.max(0, ...weekDates.map(d => (tasks||[]).filter(t => t.deadline === dateKey(d)).length));
+          const extraH = maxTasks * CHIP_H;
+          return (
+            <div style={{ display:"flex", minHeight: HOURS.length * HOUR_H + extraH }}>
+              <div style={{ width:44, flexShrink:0 }}>
+                {HOURS.map(h => (
+                  <div key={h} style={{ height: h === HOURS[0] ? HOUR_H + extraH : HOUR_H, borderBottom:"1px solid #f3f4f6", paddingRight:6, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
+                    <span style={{ fontSize:10, color:"#9ca3af", paddingTop:4 }}>{pad(h)}:00</span>
                   </div>
                 ))}
-                {dayTasks.length === 0 && <div style={{ height:4 }} />}
               </div>
-            );
-          })}
-        </div>
-      )}
-      <div style={{ flex:1, overflowY:"scroll", scrollbarGutter:"stable", position:"relative" }}>
-        <div style={{ display:"flex", minHeight: HOURS.length * HOUR_H }}>
-          <div style={{ width:44, flexShrink:0 }}>
-            {HOURS.map(h => (
-              <div key={h} style={{ height:HOUR_H, borderBottom:"1px solid #f3f4f6", paddingRight:6, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
-                <span style={{ fontSize:10, color:"#9ca3af", paddingTop:4 }}>{pad(h)}:00</span>
-              </div>
-            ))}
-          </div>
-          {weekDates.map((d, di) => {
-            const dk = dateKey(d);
-            const dayEvents = events.filter(e => e.date===dk);
-            return (
-              <div key={di} style={{ flex:1, position:"relative", borderLeft:"1px solid #f3f4f6" }}>
-                {HOURS.map(h => (
-                  <div key={h} onClick={() => openAdding(dk, h)}
-                    style={{ height:HOUR_H, borderBottom:"1px solid #f3f4f6", cursor:"pointer" }}
-                    onMouseEnter={e => e.currentTarget.style.background="#f9fafb"}
-                    onMouseLeave={e => e.currentTarget.style.background="transparent"} />
-                ))}
-                {dayEvents.map(ev => {
-                  const top = (ev.startH - HOURS[0] + ev.startM/60) * HOUR_H;
-                  const height = ((ev.endH - ev.startH) + (ev.endM - ev.startM)/60) * HOUR_H - 2;
-                  return (
-                    <div key={ev.id} onClick={e => { e.stopPropagation(); setSelectedEvent(ev); setEditNote(ev.note||""); setEditMode(false); setEditTitle(ev.title); setEditStartH(ev.startH); setEditStartM(ev.startM); setEditEndH(ev.endH); setEditEndM(ev.endM); setEditColor(ev.color||'blue'); }}
-                      style={{ position:"absolute", top, left:2, right:2, height, background: EVENT_BG[ev.color]||"#DBEAFE", borderLeft:"3px solid "+(EVENT_BORDER[ev.color]||"#2563EB"), borderRadius:3, padding:"3px 5px", overflow:"hidden", zIndex:2, cursor:"pointer" }}>
-                      <div style={{ fontSize:11, fontWeight:700, color: EVENT_BORDER[ev.color]||"#2563EB", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
-                      <div style={{ fontSize:10, color:"#6b7280" }}>{pad(ev.startH)}:{pad(ev.startM)}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
+              {weekDates.map((d, di) => {
+                const dk = dateKey(d);
+                const dayTasks = (tasks||[]).filter(t => t.deadline === dk);
+                const dayEvents = events.filter(e => e.date===dk);
+                return (
+                  <div key={di} style={{ flex:1, position:"relative", borderLeft:"1px solid #f3f4f6" }}>
+                    {HOURS.map(h => (
+                      <div key={h} onClick={() => openAdding(dk, h)}
+                        style={{ height: h === HOURS[0] ? HOUR_H + extraH : HOUR_H, borderBottom:"1px solid #f3f4f6", cursor:"pointer" }}
+                        onMouseEnter={e => e.currentTarget.style.background="#f9fafb"}
+                        onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                        {h === HOURS[0] && extraH > 0 && (
+                          <div style={{ display:"flex", flexDirection:"column", gap:2, padding:"2px 2px 0" }} onClick={e => e.stopPropagation()}>
+                            {dayTasks.map(task => (
+                              <div key={task.id} title={task.title} style={{
+                                height: CHIP_H - 2,
+                                background: PRIO_BG[task.priority] || "#f3f4f6",
+                                borderLeft: "2px solid " + (PRIO_COLOR[task.priority] || "#9ca3af"),
+                                borderRadius:2,
+                                padding:"1px 4px",
+                                fontSize:10,
+                                fontWeight:600,
+                                color: PRIO_COLOR[task.priority] || "#6b7280",
+                                overflow:"hidden",
+                                textOverflow:"ellipsis",
+                                whiteSpace:"nowrap",
+                              }}>
+                                {task.title}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {dayEvents.map(ev => {
+                      const top = extraH + (ev.startH - HOURS[0] + ev.startM/60) * HOUR_H;
+                      const height = ((ev.endH - ev.startH) + (ev.endM - ev.startM)/60) * HOUR_H - 2;
+                      return (
+                        <div key={ev.id} onClick={e => { e.stopPropagation(); setSelectedEvent(ev); setEditNote(ev.note||""); setEditMode(false); setEditTitle(ev.title); setEditStartH(ev.startH); setEditStartM(ev.startM); setEditEndH(ev.endH); setEditEndM(ev.endM); setEditColor(ev.color||'blue'); }}
+                          style={{ position:"absolute", top, left:2, right:2, height, background: EVENT_BG[ev.color]||"#DBEAFE", borderLeft:"3px solid "+(EVENT_BORDER[ev.color]||"#2563EB"), borderRadius:3, padding:"3px 5px", overflow:"hidden", zIndex:2, cursor:"pointer" }}>
+                          <div style={{ fontSize:11, fontWeight:700, color: EVENT_BORDER[ev.color]||"#2563EB", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
+                          <div style={{ fontSize:10, color:"#6b7280" }}>{pad(ev.startH)}:{pad(ev.startM)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
       {selectedEvent && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", zIndex:60, display:"flex", alignItems:"center", justifyContent:"center" }}
