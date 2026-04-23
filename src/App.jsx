@@ -807,7 +807,7 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
                         onMouseEnter={e => e.currentTarget.style.background="#f9fafb"}
                         onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                         {h === HOURS[0] && extraH > 0 && (
-                          <div style={{ display:"flex", flexDirection:"column", gap:2, padding:"2px 2px 0" }} onClick={e => e.stopPropagation()}>
+                          <div style={{ display:"flex", flexDirection:"column", gap:2, padding:"2px 2px 0", overflow:"hidden", width:"100%" }} onClick={e => e.stopPropagation()}>
                             {dayTasks.map(task => (
                               <div key={task.id} title={task.title} style={{
                                 height: CHIP_H - 2,
