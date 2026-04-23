@@ -1747,8 +1747,22 @@ export default function App() {
               )}
             </div>
 
+            {/* App Store */}
+            <div style={{ borderTop:"1px solid #27272a", paddingTop:16, marginTop:20, display:"flex", justifyContent:"center" }}>
+              <a href="https://apps.apple.com/app/justmyplan/id6761423591" target="_blank" rel="noopener noreferrer"
+                style={{ display:"flex", alignItems:"center", gap:7, background:"#111827", border:"1px solid #3f3f46", borderRadius:8, padding:"7px 14px", textDecoration:"none" }}>
+                <svg width="16" height="16" viewBox="0 0 814 1000" fill="#f9fafb" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-43.4-150.3-107.1C27.1 742 0 624.5 0 510.5c0-212.5 138.4-324.7 274.4-324.7 73.4 0 134.4 48.4 179.4 48.4 43.2 0 111.4-51.5 193.4-51.5 31.2 0 108.2 2.6 168.7 75.7zm-234-181.5c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z"/>
+                </svg>
+                <div>
+                  <div style={{ fontSize:9, color:"#6b7280", lineHeight:1.2 }}>Download in de</div>
+                  <div style={{ fontSize:12, color:"#f9fafb", fontWeight:600, lineHeight:1.2 }}>App Store</div>
+                </div>
+              </a>
+            </div>
+
             {/* Support + Privacy */}
-            <div style={{ borderTop:"1px solid #27272a", paddingTop:16, marginTop:20, display:"flex", justifyContent:"center", gap:20 }}>
+            <div style={{ paddingTop:14, display:"flex", justifyContent:"center", gap:20 }}>
               <a href="https://rjnieboer.com/support/justmyplan" target="_blank" rel="noopener noreferrer" style={{ fontSize:11, color:"#52525b", textDecoration:"none" }}>
                 Support
               </a>
