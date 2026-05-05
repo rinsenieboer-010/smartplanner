@@ -67,7 +67,7 @@ export default async function handler(req, res) {
 
   const pad = n => String(n).padStart(2, '0');
   const taskList = (tasks || []).map(t =>
-    `- [ID:${t.id}] ${t.title} (${t.priority || 'geen prioriteit'}, ${t.status || 'geen status'}${t.deadline ? ', deadline: ' + t.deadline : ''})`
+    `- task_id="${t.id}" | ${t.title} | ${t.priority || 'geen prioriteit'} | ${t.status || 'geen status'}${t.deadline ? ' | deadline: ' + t.deadline : ''}`
   ).join('\n');
   const eventList = (events || []).map(e =>
     `- ${e.title} op ${e.date} ${pad(e.startH)}:${pad(e.startM)}-${pad(e.endH)}:${pad(e.endM)}`
