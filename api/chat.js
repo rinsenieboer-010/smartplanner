@@ -120,6 +120,8 @@ Regels:
     let continueLoop = true;
     while (continueLoop && iterations < 10) {
       iterations++;
+      // Eerste call: forceer tool gebruik. Vervolg-calls: auto (AI mag vrij bevestigen)
+      const toolChoice = iterations === 1 ? { type: 'any' } : { type: 'auto' };
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -129,10 +131,10 @@ Regels:
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 1024,
+          max_tokens: 4096,
           system: systemPrompt,
           tools: TOOLS,
-          tool_choice: { type: 'any' },
+          tool_choice: toolChoice,
           messages: apiMessages
         })
       });
@@ -166,7 +168,8 @@ Regels:
           { role: 'user', content: toolResults }
         ];
       } else {
-        const reply = data.content?.find(b => b.type === 'text')?.text || 'Sorry, er ging iets mis.';
+        const reply = data.content?.find(b => b.type === 'text')?.text
+          || (actions.length > 0 ? `Gedaan. ${actions.length} item${actions.length > 1 ? 's' : ''} bijgewerkt.` : 'Sorry, er ging iets mis.');
         return res.status(200).json({ reply, actions, ...(newMemory !== undefined && { newMemory }) });
       }
     }
