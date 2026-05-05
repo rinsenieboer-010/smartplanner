@@ -1,40 +1,29 @@
 const TOOLS = [
   {
-    name: "no_action",
-    description: "Gebruik dit UITSLUITEND voor pure gespreksvragen waarbij er absoluut niets aangepast hoeft te worden in taken of agenda. VERBOD: gebruik no_action NOOIT om te bevestigen dat je taken hebt bijgewerkt — een bevestiging mag alleen komen nádat je update_task daadwerkelijk hebt aangeroepen. Als je dit toch doet, is dat een hallucination en dat is niet toegestaan.",
-    input_schema: {
-      type: "object",
-      properties: {
-        reply: { type: "string", description: "Jouw antwoord aan de gebruiker in het Nederlands" }
-      },
-      required: ["reply"]
-    }
-  },
-  {
     name: "create_event",
-    description: "Plan een afspraak of taak in de agenda van de gebruiker. Gebruik dit wanneer de gebruiker iets wil inplannen.",
+    description: "Plan een afspraak in de agenda van de gebruiker.",
     input_schema: {
       type: "object",
       properties: {
-        title:   { type: "string",  description: "Titel van de afspraak" },
-        date:    { type: "string",  description: "Datum in YYYY-MM-DD formaat" },
-        start_h: { type: "integer", description: "Startuur (0-23)" },
-        start_m: { type: "integer", description: "Startminuten (0 of 30)" },
-        end_h:   { type: "integer", description: "Einduur (0-23)" },
-        end_m:   { type: "integer", description: "Eindminuten (0 of 30)" },
-        color:   { type: "string",  enum: ["blue", "red", "yellow", "green", "purple"], description: "Kleur van de afspraak" }
+        title:   { type: "string" },
+        date:    { type: "string", description: "YYYY-MM-DD" },
+        start_h: { type: "integer" },
+        start_m: { type: "integer" },
+        end_h:   { type: "integer" },
+        end_m:   { type: "integer" },
+        color:   { type: "string", enum: ["blue", "red", "yellow", "green", "purple"] }
       },
       required: ["title", "date", "start_h", "start_m", "end_h", "end_m"]
     }
   },
   {
     name: "create_task",
-    description: "Maak een nieuwe taak aan voor de gebruiker.",
+    description: "Maak een nieuwe taak aan.",
     input_schema: {
       type: "object",
       properties: {
-        title:    { type: "string", description: "Titel van de taak" },
-        deadline: { type: "string", description: "Deadline in YYYY-MM-DD formaat (optioneel)" },
+        title:    { type: "string" },
+        deadline: { type: "string", description: "YYYY-MM-DD" },
         priority: { type: "string", enum: ["", "hoog", "midden", "laag"] }
       },
       required: ["title"]
@@ -42,25 +31,43 @@ const TOOLS = [
   },
   {
     name: "update_task",
-    description: "Update de status, deadline of prioriteit van een bestaande taak. Gebruik de task_id uit de takenlijst.",
+    description: "Update één taak. Gebruik dit voor wijzigingen aan een enkele taak.",
     input_schema: {
       type: "object",
       properties: {
-        task_id:  { type: "string", description: "ID van de taak (uit de takenlijst)" },
+        task_id:  { type: "string" },
         status:   { type: "string", enum: ["", "open", "bezig", "klaar"] },
-        deadline: { type: "string", description: "Nieuwe deadline in YYYY-MM-DD" },
+        deadline: { type: "string", description: "YYYY-MM-DD" },
         priority: { type: "string", enum: ["", "hoog", "midden", "laag"] }
       },
       required: ["task_id"]
     }
   },
   {
-    name: "update_memory",
-    description: "Sla een werkwijze, voorkeur of concept op voor toekomstige gesprekken. Gebruik dit wanneer de gebruiker iets uitlegt dat ook later relevant is. Schrijf de volledige bijgewerkte inhoud — voeg toe aan het bestaande geheugen, verwijder niets zonder toestemming.",
+    name: "batch_update_tasks",
+    description: "Update meerdere taken tegelijk met dezelfde wijziging. Gebruik dit wanneer je meerdere taken dezelfde deadline, status of prioriteit moet geven. Geef ALLE overeenkomende task_ids mee in één aanroep.",
     input_schema: {
       type: "object",
       properties: {
-        content: { type: "string", description: "De volledige bijgewerkte inhoud van het geheugen." }
+        task_ids: {
+          type: "array",
+          items: { type: "string" },
+          description: "Lijst van alle task_ids die bijgewerkt moeten worden"
+        },
+        deadline: { type: "string", description: "YYYY-MM-DD" },
+        status:   { type: "string", enum: ["", "open", "bezig", "klaar"] },
+        priority: { type: "string", enum: ["", "hoog", "midden", "laag"] }
+      },
+      required: ["task_ids"]
+    }
+  },
+  {
+    name: "update_memory",
+    description: "Sla een werkwijze of voorkeur op voor toekomstige gesprekken.",
+    input_schema: {
+      type: "object",
+      properties: {
+        content: { type: "string" }
       },
       required: ["content"]
     }
@@ -91,11 +98,10 @@ Vandaag is het: ${today}
 GEDRAGSREGEL — je gebruikt ALTIJD een tool, zonder uitzondering:
 - Gebruiker vraagt een actie (taak/afspraak aanmaken of wijzigen)? → gebruik de actie-tool direct
 - Gebruiker stelt een vraag of voert gesprek? → gebruik no_action met je antwoord
-- Meerdere taken tegelijk bijwerken? → roep ALLE benodigde update_task tools aan in dezelfde response, ook al zijn het er 30 of 40. Er is geen limiet.
+- Meerdere taken met dezelfde wijziging? → gebruik batch_update_tasks met alle task_ids in één aanroep
+- Eén taak wijzigen? → gebruik update_task
 
-ABSOLUUT VERBOD:
-1. Zeg NOOIT "ik ga X doen" of "ik doe X nu" — doe het via de tool of doe het niet.
-2. Gebruik no_action NOOIT als bevestiging van iets wat je "zojuist hebt gedaan" — dat is hallucination. no_action mag alleen bij pure gespreksvragen.
+VERBOD: Zeg NOOIT dat je iets hebt gedaan zonder de bijbehorende tool aan te roepen.
 
 WERKWIJZE:
 ${memory || 'Nog geen werkwijze opgeslagen.'}
@@ -108,7 +114,7 @@ ${eventList || 'Geen afspraken'}
 
 Regels:
 - Spreek altijd Nederlands
-- Geef korte, concrete antwoorden via no_action of als bevestiging na een actie
+- Geef korte, concrete antwoorden als bevestiging na een actie
 - Gebruik de task_id exact zoals hij in de lijst staat, niets toevoegen of weglaten
 - Gebruik update_memory zodra de gebruiker een voorkeur uitlegt`;
 
@@ -122,8 +128,6 @@ Regels:
     let continueLoop = true;
     while (continueLoop && iterations < 10) {
       iterations++;
-      // Eerste call: forceer tool gebruik. Vervolg-calls: auto (AI mag vrij bevestigen)
-      const toolChoice = iterations === 1 ? { type: 'any' } : { type: 'auto' };
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -136,7 +140,6 @@ Regels:
           max_tokens: 8192,
           system: systemPrompt,
           tools: TOOLS,
-          tool_choice: toolChoice,
           messages: apiMessages
         })
       });
@@ -152,15 +155,24 @@ Regels:
         const toolResults = [];
 
         for (const toolUse of toolUseBlocks) {
-          if (toolUse.name === 'no_action') {
-            // Directe tekstreply, geen verdere loop nodig
-            return res.status(200).json({ reply: toolUse.input.reply, actions, ...(newMemory !== undefined && { newMemory }) });
-          } else if (toolUse.name === 'update_memory') {
+          if (toolUse.name === 'update_memory') {
             newMemory = toolUse.input.content;
-            toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: 'Werkwijze opgeslagen.' });
+            toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: 'Opgeslagen.' });
+          } else if (toolUse.name === 'batch_update_tasks') {
+            // Zet batch om naar losse update_task actions voor de frontend
+            const d = toolUse.input;
+            for (const taskId of (d.task_ids || [])) {
+              actions.push({ type: 'update_task', data: {
+                task_id: taskId,
+                ...(d.deadline !== undefined && { deadline: d.deadline }),
+                ...(d.status   !== undefined && { status:   d.status }),
+                ...(d.priority !== undefined && { priority: d.priority }),
+              }});
+            }
+            toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: `${d.task_ids?.length || 0} taken bijgewerkt.` });
           } else {
             actions.push({ type: toolUse.name, data: toolUse.input });
-            toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: 'Actie succesvol uitgevoerd.' });
+            toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: 'Uitgevoerd.' });
           }
         }
 
