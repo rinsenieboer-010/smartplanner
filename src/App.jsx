@@ -1042,14 +1042,16 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
         setTasks(t => [...t, saved]);
       } else if (action.type === "update_task") {
         const d = action.data;
-        let updatedTask = null;
-        setTasks(t => t.map(x => {
-          if (x.id !== d.task_id) return x;
-          const updated = { ...x, ...(d.status !== undefined && { status: d.status }), ...(d.deadline !== undefined && { deadline: d.deadline }), ...(d.priority !== undefined && { priority: d.priority }) };
-          updatedTask = updated;
-          return updated;
-        }));
-        if (updatedTask) await updateTaskDB(updatedTask);
+        const existing = tasks.find(x => x.id === d.task_id);
+        if (!existing) continue;
+        const updated = {
+          ...existing,
+          ...(d.status   !== undefined && { status:   d.status }),
+          ...(d.deadline !== undefined && { deadline: d.deadline }),
+          ...(d.priority !== undefined && { priority: d.priority }),
+        };
+        setTasks(t => t.map(x => x.id === d.task_id ? updated : x));
+        await updateTaskDB(updated);
       }
     }
   };
