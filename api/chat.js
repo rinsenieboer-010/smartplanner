@@ -77,7 +77,8 @@ export default async function handler(req, res) {
 
 Vandaag is het: ${today}
 
-Je hebt tools om direct taken en afspraken aan te maken of bij te werken. Gebruik ze proactief wanneer de gebruiker vraagt om iets in te plannen — vraag niet of je het mag, doe het gewoon en bevestig daarna.
+KRITIEKE REGEL — TOOLS ALTIJD UITVOEREN:
+Wanneer de gebruiker vraagt om een taak of afspraak aan te maken, bij te werken of te verplaatsen, gebruik je ALTIJD direct de bijbehorende tool. Je belooft NOOIT dat je iets gaat doen zonder ook direct de tool aan te roepen. Zeg NOOIT "ik ga het nu doen" of "ik doe het direct" zonder tegelijk de tool ook echt te gebruiken. Als je meerdere taken tegelijk moet bijwerken, roep je meerdere update_task tools aan in dezelfde response.
 
 WERKWIJZE (onthoud dit altijd):
 ${memory || 'Nog geen werkwijze opgeslagen.'}
@@ -91,9 +92,9 @@ ${eventList || 'Geen afspraken'}
 Regels:
 - Spreek altijd Nederlands
 - Geef korte, concrete antwoorden
-- Bevestig na elke actie wat je hebt gedaan
+- Bevestig na elke actie WELKE taken/afspraken je hebt bijgewerkt
 - Plan taken op logische tijden (niet 's nachts)
-- Gebruik de taak-ID's correct bij update_task
+- Gebruik de taak-ID's correct bij update_task — alleen het ID zelf, zonder "ID:" ervoor
 - Gebruik update_memory zodra de gebruiker een voorkeur of werkwijze uitlegt die je moet onthouden`;
 
   try {
@@ -101,9 +102,11 @@ Regels:
     const actions = [];
     let newMemory = undefined;
 
-    // Tool use loop
+    // Tool use loop (max 10 iteraties om infinite loops te voorkomen)
+    let iterations = 0;
     let continueLoop = true;
-    while (continueLoop) {
+    while (continueLoop && iterations < 10) {
+      iterations++;
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -148,7 +151,6 @@ Regels:
       } else {
         const reply = data.content?.find(b => b.type === 'text')?.text || 'Sorry, er ging iets mis.';
         return res.status(200).json({ reply, actions, ...(newMemory !== undefined && { newMemory }) });
-        continueLoop = false;
       }
     }
   } catch (err) {

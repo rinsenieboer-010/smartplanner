@@ -994,6 +994,7 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
   };
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState("");
   const [attachments, setAttachments] = useState([]);
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -1040,12 +1041,14 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
         setTasks(t => [...t, saved]);
       } else if (action.type === "update_task") {
         const d = action.data;
+        let updatedTask = null;
         setTasks(t => t.map(x => {
           if (x.id !== d.task_id) return x;
           const updated = { ...x, ...(d.status !== undefined && { status: d.status }), ...(d.deadline !== undefined && { deadline: d.deadline }), ...(d.priority !== undefined && { priority: d.priority }) };
-          updateTaskDB(updated);
+          updatedTask = updated;
           return updated;
         }));
+        if (updatedTask) await updateTaskDB(updatedTask);
       }
     }
   };
@@ -1072,6 +1075,7 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
     const newMessages = [...messages, newMsg];
     setMessages(newMessages);
     setLoading(true);
+    setLoadingStatus("Denkt na...");
     try {
       const todayStr = today.getFullYear() + "-" + String(today.getMonth()+1).padStart(2,"0") + "-" + String(today.getDate()).padStart(2,"0");
       const response = await fetch("/api/chat", {
@@ -1089,11 +1093,15 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
       if (data.error) throw new Error(data.error);
       setMessages(m => [...m, { role:"assistant", content: data.reply, ts: Date.now() }]);
       if (data.newMemory !== undefined) saveMemory(data.newMemory);
-      if (data.actions?.length > 0) await executeActions(data.actions);
+      if (data.actions?.length > 0) {
+        setLoadingStatus(`Voert ${data.actions.length} actie${data.actions.length > 1 ? "s" : ""} uit...`);
+        await executeActions(data.actions);
+      }
     } catch(err) {
       setMessages(m => [...m, { role:"assistant", content:"Er is een fout opgetreden: " + err.message, ts: Date.now() }]);
     }
     setLoading(false);
+    setLoadingStatus("");
   };
 
   return (
@@ -1119,8 +1127,11 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
           </div>
         ))}
         {loading && (
-          <div style={{ display:"flex", gap:4, padding:"10px 13px", background:"#fff", borderRadius:"12px 12px 12px 2px", width:"fit-content", border:"1px solid #e5e7eb" }}>
-            {[0,1,2].map(i => <div key={i} style={{ width:6, height:6, borderRadius:"50%", background:"#2563EB", animation:"bounce 1.2s infinite", animationDelay:(i*0.2)+"s" }} />)}
+          <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 14px", background:"#fff", borderRadius:"12px 12px 12px 2px", width:"fit-content", border:"1px solid #e5e7eb", boxShadow:"0 1px 3px rgba(0,0,0,0.08)" }}>
+            <div style={{ display:"flex", gap:4 }}>
+              {[0,1,2].map(i => <div key={i} style={{ width:7, height:7, borderRadius:"50%", background:"#2563EB", animation:"bounce 1.2s infinite", animationDelay:(i*0.2)+"s" }} />)}
+            </div>
+            {loadingStatus && <span style={{ fontSize:12, color:"#6b7280", fontFamily:"'DM Sans', sans-serif" }}>{loadingStatus}</span>}
           </div>
         )}
         <div ref={bottomRef} />
