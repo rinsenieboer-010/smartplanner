@@ -132,7 +132,7 @@ Regels:
           max_tokens: 1024,
           system: systemPrompt,
           tools: TOOLS,
-          tool_choice: { type: 'required' },
+          tool_choice: { type: 'any' },
           messages: apiMessages
         })
       });
