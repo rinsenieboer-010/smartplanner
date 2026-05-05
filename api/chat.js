@@ -44,21 +44,17 @@ const TOOLS = [
     }
   },
   {
-    name: "batch_update_tasks",
-    description: "Update meerdere taken tegelijk met dezelfde wijziging. Gebruik dit wanneer je meerdere taken dezelfde deadline, status of prioriteit moet geven. Geef ALLE overeenkomende task_ids mee in één aanroep.",
+    name: "filter_and_update_tasks",
+    description: "Zoek taken op basis van een zoekwoord in de taaknaam en pas ze allemaal tegelijk aan. Gebruik dit voor opdrachten zoals 'alle stage-taken op donderdag zetten'.",
     input_schema: {
       type: "object",
       properties: {
-        task_ids: {
-          type: "array",
-          items: { type: "string" },
-          description: "Lijst van alle task_ids die bijgewerkt moeten worden"
-        },
+        keyword:  { type: "string", description: "Zoekwoord dat in de taaknaam moet voorkomen (hoofdletterongevoelig)" },
         deadline: { type: "string", description: "YYYY-MM-DD" },
         status:   { type: "string", enum: ["", "open", "bezig", "klaar"] },
         priority: { type: "string", enum: ["", "hoog", "midden", "laag"] }
       },
-      required: ["task_ids"]
+      required: ["keyword"]
     }
   },
   {
@@ -98,8 +94,8 @@ Vandaag is het: ${today}
 GEDRAGSREGEL — je gebruikt ALTIJD een tool, zonder uitzondering:
 - Gebruiker vraagt een actie (taak/afspraak aanmaken of wijzigen)? → gebruik de actie-tool direct
 - Gebruiker stelt een vraag of voert gesprek? → gebruik no_action met je antwoord
-- Meerdere taken met dezelfde wijziging? → gebruik batch_update_tasks met alle task_ids in één aanroep
-- Eén taak wijzigen? → gebruik update_task
+- Meerdere taken wijzigen op basis van een woord in de naam? → gebruik filter_and_update_tasks met het zoekwoord
+- Eén specifieke taak wijzigen? → gebruik update_task met de task_id
 
 VERBOD: Zeg NOOIT dat je iets hebt gedaan zonder de bijbehorende tool aan te roepen.
 
@@ -158,18 +154,20 @@ Regels:
           if (toolUse.name === 'update_memory') {
             newMemory = toolUse.input.content;
             toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: 'Opgeslagen.' });
-          } else if (toolUse.name === 'batch_update_tasks') {
-            // Zet batch om naar losse update_task actions voor de frontend
+          } else if (toolUse.name === 'filter_and_update_tasks') {
+            // Server filtert taken op keyword en maakt losse update_task actions
             const d = toolUse.input;
-            for (const taskId of (d.task_ids || [])) {
+            const keyword = (d.keyword || '').toLowerCase();
+            const matched = (tasks || []).filter(t => t.title?.toLowerCase().includes(keyword));
+            for (const task of matched) {
               actions.push({ type: 'update_task', data: {
-                task_id: taskId,
+                task_id: task.id,
                 ...(d.deadline !== undefined && { deadline: d.deadline }),
                 ...(d.status   !== undefined && { status:   d.status }),
                 ...(d.priority !== undefined && { priority: d.priority }),
               }});
             }
-            toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: `${d.task_ids?.length || 0} taken bijgewerkt.` });
+            toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: `${matched.length} taken met "${d.keyword}" gevonden en bijgewerkt.` });
           } else {
             actions.push({ type: toolUse.name, data: toolUse.input });
             toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: 'Uitgevoerd.' });
