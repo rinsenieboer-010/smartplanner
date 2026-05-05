@@ -1,5 +1,16 @@
 const TOOLS = [
   {
+    name: "no_action",
+    description: "Gebruik dit wanneer de gebruiker geen taak of afspraak wil aanmaken of wijzigen — alleen een vraag stelt, informatie opvraagt of gesprek voert. Geef je antwoord via de reply parameter.",
+    input_schema: {
+      type: "object",
+      properties: {
+        reply: { type: "string", description: "Jouw antwoord aan de gebruiker in het Nederlands" }
+      },
+      required: ["reply"]
+    }
+  },
+  {
     name: "create_event",
     description: "Plan een afspraak of taak in de agenda van de gebruiker. Gebruik dit wanneer de gebruiker iets wil inplannen.",
     input_schema: {
@@ -73,17 +84,21 @@ export default async function handler(req, res) {
     `- ${e.title} op ${e.date} ${pad(e.startH)}:${pad(e.startM)}-${pad(e.endH)}:${pad(e.endM)}`
   ).join('\n');
 
-  const systemPrompt = `Je bent een slimme, proactieve dagelijkse planningsassistent voor justmyplan. Je helpt de gebruiker taken inplannen in de agenda en hun dag/week te organiseren.
+  const systemPrompt = `Je bent een slimme planningsassistent voor justmyplan.
 
 Vandaag is het: ${today}
 
-KRITIEKE REGEL — TOOLS ALTIJD UITVOEREN:
-Wanneer de gebruiker vraagt om een taak of afspraak aan te maken, bij te werken of te verplaatsen, gebruik je ALTIJD direct de bijbehorende tool. Je belooft NOOIT dat je iets gaat doen zonder ook direct de tool aan te roepen. Zeg NOOIT "ik ga het nu doen" of "ik doe het direct" zonder tegelijk de tool ook echt te gebruiken. Als je meerdere taken tegelijk moet bijwerken, roep je meerdere update_task tools aan in dezelfde response.
+GEDRAGSREGEL — je gebruikt ALTIJD een tool, zonder uitzondering:
+- Gebruiker vraagt een actie (taak/afspraak aanmaken of wijzigen)? → gebruik de actie-tool direct
+- Gebruiker stelt een vraag of voert gesprek? → gebruik no_action met je antwoord
+- Meerdere taken tegelijk bijwerken? → roep meerdere update_task tools aan in dezelfde response
 
-WERKWIJZE (onthoud dit altijd):
+VERBOD: Zeg NOOIT "ik ga X doen" of "ik doe X nu" — doe het gewoon via de tool.
+
+WERKWIJZE:
 ${memory || 'Nog geen werkwijze opgeslagen.'}
 
-TAKEN (gebruik de ID bij update_task):
+TAKEN:
 ${taskList || 'Geen taken'}
 
 AGENDA:
@@ -91,11 +106,9 @@ ${eventList || 'Geen afspraken'}
 
 Regels:
 - Spreek altijd Nederlands
-- Geef korte, concrete antwoorden
-- Bevestig na elke actie WELKE taken/afspraken je hebt bijgewerkt
-- Plan taken op logische tijden (niet 's nachts)
-- Gebruik de taak-ID's correct bij update_task — alleen het ID zelf, zonder "ID:" ervoor
-- Gebruik update_memory zodra de gebruiker een voorkeur of werkwijze uitlegt die je moet onthouden`;
+- Geef korte, concrete antwoorden via no_action of als bevestiging na een actie
+- Gebruik de task_id exact zoals hij in de lijst staat, niets toevoegen of weglaten
+- Gebruik update_memory zodra de gebruiker een voorkeur uitlegt`;
 
   try {
     let apiMessages = messages.map(m => ({ role: m.role, content: m.content }));
@@ -119,6 +132,7 @@ Regels:
           max_tokens: 1024,
           system: systemPrompt,
           tools: TOOLS,
+          tool_choice: { type: 'required' },
           messages: apiMessages
         })
       });
@@ -134,7 +148,10 @@ Regels:
         const toolResults = [];
 
         for (const toolUse of toolUseBlocks) {
-          if (toolUse.name === 'update_memory') {
+          if (toolUse.name === 'no_action') {
+            // Directe tekstreply, geen verdere loop nodig
+            return res.status(200).json({ reply: toolUse.input.reply, actions, ...(newMemory !== undefined && { newMemory }) });
+          } else if (toolUse.name === 'update_memory') {
             newMemory = toolUse.input.content;
             toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: 'Werkwijze opgeslagen.' });
           } else {

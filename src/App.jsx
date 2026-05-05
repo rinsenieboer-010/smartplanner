@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { supabase } from "./supabase.js";
 import { loadTasks, loadEvents, loadLists, addTaskDB, updateTaskDB, deleteTaskDB, addEventDB, updateEventDB, deleteEventDB, addListDB, updateListDB, deleteListDB } from "./db.js";
 import { t, LANGUAGES, DAYS_BY_LANG, MONTHS_BY_LANG, MONTHS_SHORT_BY_LANG } from "./i18n.js";
@@ -1091,17 +1092,29 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
       });
       const data = await response.json();
       if (data.error) throw new Error(data.error);
-      setMessages(m => [...m, { role:"assistant", content: data.reply, ts: Date.now() }]);
-      if (data.newMemory !== undefined) saveMemory(data.newMemory);
+
+      // Toon het antwoord direct zichtbaar, stop "Denkt na..."
+      flushSync(() => {
+        setMessages(m => [...m, { role:"assistant", content: data.reply, ts: Date.now() }]);
+        if (data.newMemory !== undefined) saveMemory(data.newMemory);
+        if (data.actions?.length > 0) {
+          setLoadingStatus(`Voert ${data.actions.length} actie${data.actions.length > 1 ? "s" : ""} uit...`);
+        } else {
+          setLoading(false);
+          setLoadingStatus("");
+        }
+      });
+
       if (data.actions?.length > 0) {
-        setLoadingStatus(`Voert ${data.actions.length} actie${data.actions.length > 1 ? "s" : ""} uit...`);
         await executeActions(data.actions);
+        setLoading(false);
+        setLoadingStatus("");
       }
     } catch(err) {
       setMessages(m => [...m, { role:"assistant", content:"Er is een fout opgetreden: " + err.message, ts: Date.now() }]);
+      setLoading(false);
+      setLoadingStatus("");
     }
-    setLoading(false);
-    setLoadingStatus("");
   };
 
   return (
