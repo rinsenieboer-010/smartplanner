@@ -1,7 +1,7 @@
 const TOOLS = [
   {
     name: "no_action",
-    description: "Gebruik dit wanneer de gebruiker geen taak of afspraak wil aanmaken of wijzigen — alleen een vraag stelt, informatie opvraagt of gesprek voert. Geef je antwoord via de reply parameter.",
+    description: "Gebruik dit UITSLUITEND voor pure gespreksvragen waarbij er absoluut niets aangepast hoeft te worden in taken of agenda. VERBOD: gebruik no_action NOOIT om te bevestigen dat je taken hebt bijgewerkt — een bevestiging mag alleen komen nádat je update_task daadwerkelijk hebt aangeroepen. Als je dit toch doet, is dat een hallucination en dat is niet toegestaan.",
     input_schema: {
       type: "object",
       properties: {
@@ -91,9 +91,11 @@ Vandaag is het: ${today}
 GEDRAGSREGEL — je gebruikt ALTIJD een tool, zonder uitzondering:
 - Gebruiker vraagt een actie (taak/afspraak aanmaken of wijzigen)? → gebruik de actie-tool direct
 - Gebruiker stelt een vraag of voert gesprek? → gebruik no_action met je antwoord
-- Meerdere taken tegelijk bijwerken? → roep meerdere update_task tools aan in dezelfde response
+- Meerdere taken tegelijk bijwerken? → roep ALLE benodigde update_task tools aan in dezelfde response, ook al zijn het er 30 of 40. Er is geen limiet.
 
-VERBOD: Zeg NOOIT "ik ga X doen" of "ik doe X nu" — doe het gewoon via de tool.
+ABSOLUUT VERBOD:
+1. Zeg NOOIT "ik ga X doen" of "ik doe X nu" — doe het via de tool of doe het niet.
+2. Gebruik no_action NOOIT als bevestiging van iets wat je "zojuist hebt gedaan" — dat is hallucination. no_action mag alleen bij pure gespreksvragen.
 
 WERKWIJZE:
 ${memory || 'Nog geen werkwijze opgeslagen.'}
@@ -131,7 +133,7 @@ Regels:
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 4096,
+          max_tokens: 8192,
           system: systemPrompt,
           tools: TOOLS,
           tool_choice: toolChoice,
