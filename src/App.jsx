@@ -474,8 +474,8 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
                       <button onClick={() => !isShared && completeDone(task.id)} style={{ width:15, height:15, borderRadius:"50%", cursor: isShared ? "default" : "pointer", border:"2px solid #d1d5db", background:"transparent", flexShrink:0 }} />
                     </div>
                     <div onClick={() => { if(!isShared) { const next = openNoteId===task.id ? null : task.id; setOpenNoteId(next); if(next) setNoteValue(task.note||""); } }}
-                      style={{ width:COL.name, flexShrink:0, fontSize:13, color:"#111827", padding:"8px 10px", textDecoration: isFading ? "line-through" : "none", opacity: isFading ? 0.4 : 1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", cursor: isShared ? "default" : "pointer", ...cb, display:"flex", alignItems:"center", gap:5 }}>
-                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{task.title}</span>
+                      style={{ width:COL.name, flexShrink:0, fontSize:13, color:"#111827", padding:"8px 10px", textDecoration: isFading ? "line-through" : "none", opacity: isFading ? 0.4 : 1, overflow: openNoteId===task.id ? "visible" : "hidden", textOverflow: openNoteId===task.id ? "clip" : "ellipsis", whiteSpace: openNoteId===task.id ? "normal" : "nowrap", cursor: isShared ? "default" : "pointer", ...cb, display:"flex", alignItems: openNoteId===task.id ? "flex-start" : "center", gap:5 }}>
+                      <span style={{ overflow: openNoteId===task.id ? "visible" : "hidden", textOverflow: openNoteId===task.id ? "clip" : "ellipsis", whiteSpace: openNoteId===task.id ? "normal" : "nowrap" }}>{task.title}</span>
                       {task.note && <span title="Notitie aanwezig" style={{ flexShrink:0, fontSize:10, color:"#9ca3af" }}>📝</span>}
                     </div>
                     <div style={{ width:COL.date, flexShrink:0, fontSize:12, padding:"8px 10px", color:dlColor, fontWeight:dlWeight, ...cb, cursor:"pointer", position:"relative" }}
@@ -501,6 +501,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
                     </div>
                     {openNoteId === task.id && !isShared && (
                       <div style={{ padding:"6px 12px 10px 52px", borderTop:"1px solid #f3f4f6", background:"#fafafa" }}>
+                        <div style={{ fontSize:13, fontWeight:600, color:"#111827", marginBottom:6, wordBreak:"break-word", lineHeight:1.4 }}>{task.title}</div>
                         <textarea
                           autoFocus
                           value={noteValue}
@@ -1383,7 +1384,7 @@ export default function App() {
   const [tasks, setTasks]         = useState([]);
   const [events, setEvents]       = useState([]);
   const [lists, setLists]         = useState(DEFAULT_LISTS);
-  const [trash, setTrash]         = useState([]);
+  const [trash, setTrash]         = useState(() => { try { return JSON.parse(localStorage.getItem('jmp_trash') || '[]'); } catch { return []; } });
   const [widths, setWidths]       = useState([320, null, 320]);
   const [apiKey, setApiKey]               = useState(null);
   const [showSettings, setShowSettings]   = useState(false);
@@ -1425,6 +1426,7 @@ export default function App() {
   }, []);
 
   useEffect(() => { localStorage.setItem('jmp_lang', lang); }, [lang]);
+  useEffect(() => { localStorage.setItem('jmp_trash', JSON.stringify(trash)); }, [trash]);
 
   useEffect(() => {
     if (!session) return;
