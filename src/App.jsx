@@ -1707,24 +1707,26 @@ export default function App() {
 
       setWidths(prev => {
         if (side === "left") {
-          // Left splitter: Tasks ↔ Calendar; AI and Agents fixed
-          const rawLeft = Math.max(min, Math.min(cursor, total - min * 3 - 18));
-          const w   = snap ? snapOnRelease(rawLeft, total) : rawLeft;
-          const mid = Math.max(min, total - w - prev[2] - prev[3] - 18);
-          return [w, mid, prev[2], prev[3]];
+          // Tasks ↔ Calendar; AI and Agents fixed — available = total minus fixed panels+splitters
+          const avail = total - prev[2] - prev[3] - 18;
+          const raw = Math.max(min, Math.min(cursor, avail - min));
+          let w = snap ? snapOnRelease(raw, total) : raw;
+          w = Math.max(min, Math.min(w, avail - min));
+          return [w, avail - w, prev[2], prev[3]];
         } else if (side === "mid") {
-          // Mid splitter: Calendar ↔ AI; Tasks and Agents fixed
-          const leftEdge = prev[0] + 6;
-          const raw = Math.max(min, Math.min(cursor - leftEdge, total - prev[0] - prev[3] - min - 18));
-          const cal = snap ? snapOnRelease(raw, total) : raw;
-          const ai  = Math.max(min, total - prev[0] - cal - prev[3] - 18);
-          return [prev[0], cal, ai, prev[3]];
+          // Calendar ↔ AI; Tasks and Agents fixed
+          const avail = total - prev[0] - prev[3] - 18;
+          const raw = Math.max(min, Math.min(cursor - prev[0] - 6, avail - min));
+          let cal = snap ? snapOnRelease(raw, total) : raw;
+          cal = Math.max(min, Math.min(cal, avail - min));
+          return [prev[0], cal, avail - cal, prev[3]];
         } else {
-          // Agent splitter: AI ↔ Agents; Tasks and Calendar fixed
-          const agentRaw = Math.max(0, total - cursor - 3);
-          const agent = snap ? snapOnRelease(agentRaw, total) : agentRaw;
-          const ai    = Math.max(min, total - prev[0] - prev[1] - agent - 18);
-          return [prev[0], prev[1], ai, agent];
+          // AI ↔ Agents; Tasks and Calendar fixed
+          const avail = total - prev[0] - prev[1] - 18;
+          const raw = Math.max(min, Math.min(total - cursor - 3, avail - min));
+          let agent = snap ? snapOnRelease(raw, total) : raw;
+          agent = Math.max(min, Math.min(agent, avail - min));
+          return [prev[0], prev[1], avail - agent, agent];
         }
       });
     };
