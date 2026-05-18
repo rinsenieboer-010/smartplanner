@@ -1721,12 +1721,33 @@ export default function App() {
           cal = Math.max(min, Math.min(cal, avail - min));
           return [prev[0], cal, avail - cal, prev[3]];
         } else {
-          // AI ↔ Agents; Tasks and Calendar fixed
-          const avail = total - prev[0] - prev[1] - 18;
-          const raw = Math.max(min, Math.min(total - cursor - 3, avail - min));
-          let agent = snap ? snapOnRelease(raw, total) : raw;
-          agent = Math.max(min, Math.min(agent, avail - min));
-          return [prev[0], prev[1], avail - agent, agent];
+          // AI ↔ Agents with cascade push: agents growing pushes assistant → calendar → tasks
+          const agentRaw = total - cursor - 3;
+          let agent = snap ? snapOnRelease(Math.max(min, agentRaw), total) : agentRaw;
+          agent = Math.max(min, Math.min(agent, total - 3 * min));
+
+          const leftBudget = total - agent - 18;
+          let t = prev[0], c = prev[1], a;
+
+          if (leftBudget - t - c >= min) {
+            // assistant absorbs it all
+            a = leftBudget - t - c;
+          } else if (leftBudget - t >= 2 * min) {
+            // cascade into calendar
+            a = min;
+            c = leftBudget - t - min;
+          } else if (leftBudget >= 3 * min) {
+            // cascade into tasks
+            a = min;
+            c = min;
+            t = leftBudget - 2 * min;
+          } else {
+            a = min;
+            c = min;
+            t = min;
+          }
+
+          return [t, c, a, agent];
         }
       });
     };
