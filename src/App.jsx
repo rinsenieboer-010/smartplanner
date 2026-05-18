@@ -1538,7 +1538,11 @@ export default function App() {
   const [events, setEvents]       = useState([]);
   const [lists, setLists]         = useState(DEFAULT_LISTS);
   const [trash, setTrash]         = useState(() => { try { return JSON.parse(localStorage.getItem('jmp_trash') || '[]'); } catch { return []; } });
-  const [widths, setWidths]       = useState([320, null, 320, 0]);
+  const [widths, setWidths]       = useState([320, null, 320, 44]);
+  const [visiblePanels, setVisiblePanels] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('jmp_panels')) || { tasks:true, calendar:true, assistant:true, agents:true }; }
+    catch { return { tasks:true, calendar:true, assistant:true, agents:true }; }
+  });
   const [apiKey, setApiKey]               = useState(null);
   const [showSettings, setShowSettings]   = useState(false);
   const [outgoingShares, setOutgoingShares] = useState([]);
@@ -1665,8 +1669,11 @@ export default function App() {
     const update = () => {
       if (containerRef.current) {
         totalRef.current = containerRef.current.offsetWidth;
-        const mid = totalRef.current - 320 - 320 - 18;
-        setWidths([320, Math.max(200, mid), 320, 0]);
+        setWidths(prev => {
+          const agentW = prev[3] ?? 44;
+          const mid = totalRef.current - 320 - 320 - agentW - 18;
+          return [320, Math.max(200, mid), 320, agentW];
+        });
       }
     };
     if (session) {
@@ -1742,6 +1749,29 @@ export default function App() {
   const startMid   = (e) => startDrag(e, "mid");
   const startAgent = (e) => startDrag(e, "agent");
 
+  const togglePanel = (key) => {
+    setVisiblePanels(prev => {
+      const nowVisible = !prev[key];
+      const next = { ...prev, [key]: nowVisible };
+      localStorage.setItem('jmp_panels', JSON.stringify(next));
+      const idxMap = { tasks: 0, calendar: 1, assistant: 2, agents: 3 };
+      const idx = idxMap[key];
+      setWidths(w => {
+        const nw = [...w];
+        if (!nowVisible) {
+          nw[1] = (nw[1] || 200) + nw[idx] + 6;
+          nw[idx] = 0;
+        } else {
+          const grant = Math.min(280, Math.max(0, (nw[1] || 200) - 100));
+          nw[1] = Math.max(100, (nw[1] || 200) - grant - 6);
+          nw[idx] = grant || 280;
+        }
+        return nw;
+      });
+      return next;
+    });
+  };
+
   const total = totalRef.current;
   const min   = Math.max(40, Math.round(total * 0.05));
   const isCollapsedLeft  = widths[0] <= min + 10;
@@ -1792,21 +1822,21 @@ export default function App() {
         </div>
       </div>
       <div ref={containerRef} style={{ display:"flex", height:"calc(100vh - 44px)", overflow:"hidden" }}>
-        <div style={{ width: widths[0] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
+        {visiblePanels.tasks && <div style={{ width: widths[0] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
           {isCollapsedLeft ? <CollapsedLabel label={t(lang, 'tasks')} /> : <TaskPanel tasks={tasks} setTasks={setTasks} trash={trash} setTrash={setTrash} lists={lists} setLists={setLists} userId={session.user.id} panelWidth={widths[0]??320} />}
-        </div>
-        <Splitter onMouseDown={startLeft} />
-        <div style={{ width: widths[1] ?? 200, flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.12s ease" }}>
+        </div>}
+        {visiblePanels.tasks && (visiblePanels.calendar || visiblePanels.assistant || visiblePanels.agents) && <Splitter onMouseDown={startLeft} />}
+        {visiblePanels.calendar && <div style={{ width: widths[1] ?? 200, flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.12s ease" }}>
           {isCollapsedMid ? <CollapsedLabel label={t(lang, 'calendar')} /> : <CalendarPanel events={events} setEvents={setEvents} tasks={tasks} userId={session.user.id} panelWidth={widths[1]??200} />}
-        </div>
-        <Splitter onMouseDown={startMid} />
-        <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
+        </div>}
+        {visiblePanels.calendar && (visiblePanels.assistant || visiblePanels.agents) && <Splitter onMouseDown={startMid} />}
+        {visiblePanels.assistant && <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
           {isCollapsedRight ? <CollapsedLabel label={t(lang, 'assistant')} /> : <AIPanel tasks={tasks} events={events} setTasks={setTasks} setEvents={setEvents} userId={session.user.id} />}
-        </div>
-        <Splitter onMouseDown={startAgent} />
-        <div style={{ width: widths[3] ?? 0, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
+        </div>}
+        {visiblePanels.assistant && visiblePanels.agents && <Splitter onMouseDown={startAgent} />}
+        {visiblePanels.agents && <div style={{ width: widths[3] ?? 44, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
           {isCollapsedAgent ? <CollapsedLabel label="Agents" /> : <AgentsPanel session={session} />}
-        </div>
+        </div>}
       </div>
 
       {/* ── Instellingen modal ── */}
@@ -1885,6 +1915,28 @@ export default function App() {
                   {t(lang, 'apiUsage')} <code style={{ color:"#9ca3af" }}>Authorization: Bearer {apiKey.slice(0,12)}...</code>
                 </div>
               )}
+            </div>
+
+            <div style={{ height:1, background:"#27272a", margin:"20px 0" }} />
+
+            {/* Panelen sectie */}
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:14 }}>Panelen</div>
+              {[
+                { key:"tasks",     label:"Taken",           emoji:"✅" },
+                { key:"calendar",  label:"Agenda",          emoji:"📅" },
+                { key:"assistant", label:"Assistent",       emoji:"🤖" },
+                { key:"agents",    label:"Agent Management",emoji:"⚡" },
+              ].map(({ key, label, emoji }) => (
+                <div key={key} onClick={() => togglePanel(key)}
+                  style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", cursor:"pointer", borderBottom:"1px solid #27272a" }}>
+                  <div style={{ width:20, height:20, borderRadius:4, border:`2px solid ${visiblePanels[key] ? "#2563EB" : "#3f3f46"}`, background: visiblePanels[key] ? "#2563EB" : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"all 0.15s" }}>
+                    {visiblePanels[key] && <span style={{ color:"#fff", fontSize:12, lineHeight:1 }}>✓</span>}
+                  </div>
+                  <span style={{ fontSize:14 }}>{emoji}</span>
+                  <span style={{ fontSize:13, color: visiblePanels[key] ? "#f9fafb" : "#6b7280", flex:1 }}>{label}</span>
+                </div>
+              ))}
             </div>
 
             {/* Delen */}
