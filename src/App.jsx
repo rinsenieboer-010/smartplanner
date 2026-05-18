@@ -58,6 +58,24 @@ const DEFAULT_LISTS = [
   { id: "werk",       label: "Werk",        color: "#DC2626" },
 ];
 
+const HARDCODED_AGENTS = [
+  { id: "bart",        name: "Bart",        role: "Centrale dispatcher",     model: "sonnet", emoji: "📬" },
+  { id: "teacher",     name: "Teacher",     role: "Verbetert alle agents",   model: "opus",   emoji: "📚" },
+  { id: "agent-maker", name: "Agent Maker", role: "Bouwt nieuwe agents",     model: "opus",   emoji: "🔨" },
+  { id: "piet",        name: "Piet",        role: "Portfolio manager",        model: "opus",   emoji: "📈" },
+  { id: "alex",        name: "Alex",        role: "Accountant & adviseur",   model: "sonnet", emoji: "💼" },
+  { id: "dick",        name: "Dick",        role: "Advocaat",                model: "opus",   emoji: "⚖️" },
+  { id: "scott",       name: "Scott",       role: "Verkenner & onderzoeker", model: "sonnet", emoji: "🔭" },
+  { id: "ivo",         name: "Ivo",         role: "Tech & AI monitor",       model: "sonnet", emoji: "📡" },
+  { id: "bram",        name: "Bram",        role: "Brand manager",           model: "sonnet", emoji: "✍️" },
+  { id: "wes",         name: "Wes",         role: "Website manager",         model: "sonnet", emoji: "🌐" },
+  { id: "baby",        name: "Baby",        role: "Ontwikkelingsagent",      model: "haiku",  emoji: "👶" },
+  { id: "chris",       name: "Chris",       role: "Kritisch adviseur",       model: "opus",   emoji: "🎯" },
+  { id: "handy",       name: "Handy",       role: "Tips & werkwijzen",       model: "haiku",  emoji: "💡" },
+  { id: "stage",       name: "Stage",       role: "Stageplek zoeker",        model: "opus",   emoji: "🎓" },
+];
+const MODEL_BADGE_COLOR = { opus: "#7c3aed", sonnet: "#2563EB", haiku: "#059669" };
+
 
 // ── DATE PICKER ──────────────────────────────────────────────────────────────
 function DatePicker({ value, onChange, onClose }) {
@@ -1186,6 +1204,141 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
 }
 
 // ── SPLITTER ──────────────────────────────────────────────────────────────────
+// ── AGENTS PANEL ─────────────────────────────────────────────────────────────
+function AgentsPanel({ session }) {
+  const [agents]          = useState(HARDCODED_AGENTS);
+  const [agentRuns, setAgentRuns] = useState([]);
+  const [selected, setSelected]   = useState(null);
+  const [input, setInput]         = useState("");
+  const [running, setRunning]     = useState(false);
+  const [output, setOutput]       = useState(null);
+
+  useEffect(() => {
+    supabase.from('agent_runs').select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false })
+      .limit(100)
+      .then(({ data }) => { if (data) setAgentRuns(data); });
+  }, [session]);
+
+  const getLastRun = (id) => agentRuns.find(r => r.agent_id === id);
+  const statusDot  = (id) => {
+    const run = getLastRun(id);
+    if (!run) return "#6b7280";
+    const age = Date.now() - new Date(run.created_at).getTime();
+    if (age < 3_600_000)  return "#22c55e";
+    if (age < 86_400_000) return "#f59e0b";
+    return "#6b7280";
+  };
+
+  const trigger = async () => {
+    if (!selected || !input.trim()) return;
+    setRunning(true); setOutput(null);
+    try {
+      const res  = await fetch('/api/agent-run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ agent_id: selected.id, message: input }),
+      });
+      const data = await res.json();
+      setOutput(data.reply || data.error || 'Geen response');
+      // Refresh runs if table exists
+      supabase.from('agent_runs').select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(100)
+        .then(({ data: d }) => { if (d) setAgentRuns(d); });
+    } catch (err) {
+      setOutput('Fout: ' + err.message);
+    }
+    setRunning(false);
+  };
+
+  const headerStyle = { padding:"12px 14px", borderBottom:"2px solid #27272a", background:"#18181b", flexShrink:0, display:"flex", alignItems:"center", gap:10 };
+
+  if (selected) {
+    const recentRuns = agentRuns.filter(r => r.agent_id === selected.id).slice(0, 5);
+    return (
+      <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:"'DM Sans', sans-serif" }}>
+        <div style={headerStyle}>
+          <button onClick={() => { setSelected(null); setOutput(null); setInput(""); }}
+            style={{ background:"none", border:"none", color:"#9ca3af", cursor:"pointer", fontSize:16, padding:"2px 4px", lineHeight:1 }}>←</button>
+          <span style={{ fontSize:18, lineHeight:1 }}>{selected.emoji}</span>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:"#f9fafb", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{selected.name}</div>
+            <div style={{ fontSize:11, color:"#6b7280", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{selected.role}</div>
+          </div>
+          <span style={{ fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:4, background: MODEL_BADGE_COLOR[selected.model] || "#374151", color:"#fff", flexShrink:0 }}>
+            {selected.model}
+          </span>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"12px 14px" }}>
+          {recentRuns.length > 0 && (
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:10, color:"#9ca3af", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:8 }}>Recente runs</div>
+              {recentRuns.map(run => (
+                <div key={run.id} style={{ marginBottom:6, padding:"7px 9px", background:"#f9fafb", borderRadius:5, borderLeft:`3px solid ${run.status==='done' ? '#22c55e' : run.status==='error' ? '#ef4444' : '#9ca3af'}` }}>
+                  <div style={{ fontSize:10, color:"#9ca3af", marginBottom:2 }}>
+                    {new Date(run.created_at).toLocaleString('nl-NL', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                  </div>
+                  <div style={{ fontSize:12, color:"#374151", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{run.input}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {output && (
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:10, color:"#9ca3af", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:8 }}>Response</div>
+              <div style={{ padding:"10px 12px", background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:6, fontSize:13, color:"#166534", lineHeight:1.6, whiteSpace:"pre-wrap", wordBreak:"break-word" }}>{output}</div>
+            </div>
+          )}
+          {running && (
+            <div style={{ display:"flex", alignItems:"center", gap:8, color:"#9ca3af", fontSize:12 }}>
+              <span style={{ animation:"bounce 1.2s infinite" }}>●</span> Agent is bezig...
+            </div>
+          )}
+        </div>
+        <div style={{ padding:"12px 14px", borderTop:"1px solid #e5e7eb", background:"#fafafa", flexShrink:0 }}>
+          <textarea value={input} onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) trigger(); }}
+            placeholder={`Stuur een bericht naar ${selected.name}...`} rows={3}
+            style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:6, padding:"8px 10px", fontSize:12, outline:"none", resize:"none", color:"#111827", background:"#fff", fontFamily:"'DM Sans', sans-serif", boxSizing:"border-box", display:"block" }} />
+          <button onClick={trigger} disabled={running || !input.trim()}
+            style={{ marginTop:8, width:"100%", padding:"8px 0", background: running || !input.trim() ? "#e5e7eb" : "#2563EB", color: running || !input.trim() ? "#9ca3af" : "#fff", border:"none", borderRadius:6, fontSize:13, fontWeight:700, cursor: running || !input.trim() ? "default" : "pointer" }}>
+            {running ? "Bezig..." : "Verstuur"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:"'DM Sans', sans-serif" }}>
+      <div style={{ padding:"8px 14px", borderBottom:"2px solid #e5e7eb", background:"#f9fafb", flexShrink:0 }}>
+        <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, textTransform:"uppercase" }}>Agents</div>
+      </div>
+      <div style={{ flex:1, overflowY:"auto" }}>
+        {agents.map(agent => (
+          <div key={agent.id} onClick={() => setSelected(agent)}
+            style={{ display:"flex", alignItems:"center", gap:9, padding:"9px 14px", borderBottom:"1px solid #f3f4f6", cursor:"pointer", background:"#fff" }}
+            onMouseEnter={e => e.currentTarget.style.background="#f9fafb"}
+            onMouseLeave={e => e.currentTarget.style.background="#fff"}>
+            <div style={{ width:7, height:7, borderRadius:"50%", background: statusDot(agent.id), flexShrink:0 }} />
+            <span style={{ fontSize:15, flexShrink:0, lineHeight:1 }}>{agent.emoji}</span>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:13, fontWeight:600, color:"#111827", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{agent.name}</div>
+              <div style={{ fontSize:11, color:"#6b7280", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{agent.role}</div>
+            </div>
+            <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:3, background: MODEL_BADGE_COLOR[agent.model] || "#374151", color:"#fff", flexShrink:0 }}>
+              {agent.model.toUpperCase()}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Splitter({ onMouseDown }) {
   return (
     <div
@@ -1385,7 +1538,7 @@ export default function App() {
   const [events, setEvents]       = useState([]);
   const [lists, setLists]         = useState(DEFAULT_LISTS);
   const [trash, setTrash]         = useState(() => { try { return JSON.parse(localStorage.getItem('jmp_trash') || '[]'); } catch { return []; } });
-  const [widths, setWidths]       = useState([320, null, 320]);
+  const [widths, setWidths]       = useState([320, null, 320, 0]);
   const [apiKey, setApiKey]               = useState(null);
   const [showSettings, setShowSettings]   = useState(false);
   const [outgoingShares, setOutgoingShares] = useState([]);
@@ -1512,8 +1665,8 @@ export default function App() {
     const update = () => {
       if (containerRef.current) {
         totalRef.current = containerRef.current.offsetWidth;
-        const mid = totalRef.current - 320 - 320 - 12;
-        setWidths([320, Math.max(200, mid), 320]);
+        const mid = totalRef.current - 320 - 320 - 18;
+        setWidths([320, Math.max(200, mid), 320, 0]);
       }
     };
     if (session) {
@@ -1540,28 +1693,31 @@ export default function App() {
     let isDown = true;
 
     const applyDrag = (ev, snap) => {
-      const rect  = containerRef.current.getBoundingClientRect();
-      const total = totalRef.current;
-      const min   = Math.max(40, Math.round(total * 0.05));
-      const cursorFromLeft = ev.clientX - rect.left;
+      const rect   = containerRef.current.getBoundingClientRect();
+      const total  = totalRef.current;
+      const min    = Math.max(40, Math.round(total * 0.05));
+      const cursor = ev.clientX - rect.left;
 
       setWidths(prev => {
         if (side === "left") {
-          // Left splitter: left grows/shrinks, middle absorbs, right fixed
-          const rawLeft = Math.max(min, Math.min(cursorFromLeft, total - min - min - 12));
-          const w    = snap ? snapOnRelease(rawLeft, total) : rawLeft;
-          const mid  = Math.max(min, total - w - prev[2] - 12);
-          return [w, mid, prev[2]];
+          // Left splitter: Tasks ↔ Calendar; AI and Agents fixed
+          const rawLeft = Math.max(min, Math.min(cursor, total - min * 3 - 18));
+          const w   = snap ? snapOnRelease(rawLeft, total) : rawLeft;
+          const mid = Math.max(min, total - w - prev[2] - prev[3] - 18);
+          return [w, mid, prev[2], prev[3]];
+        } else if (side === "mid") {
+          // Mid splitter: Calendar ↔ AI; Tasks and Agents fixed
+          const leftEdge = prev[0] + 6;
+          const raw = Math.max(min, Math.min(cursor - leftEdge, total - prev[0] - prev[3] - min - 18));
+          const cal = snap ? snapOnRelease(raw, total) : raw;
+          const ai  = Math.max(min, total - prev[0] - cal - prev[3] - 18);
+          return [prev[0], cal, ai, prev[3]];
         } else {
-          // Right splitter: right grows/shrinks leftward
-          // Middle absorbs first; if middle hits min, left absorbs too
-          const rawRight = Math.max(min, Math.min(total - cursorFromLeft - 6, total - min - min - 12));
-          const w    = snap ? snapOnRelease(rawRight, total) : rawRight;
-          const remaining = total - w - 12; // space for left + mid
-          // distribute: keep left fixed if possible, shrink mid first
-          const mid  = Math.max(min, remaining - prev[0] - 12);
-          const left = Math.max(min, remaining - mid - 12);
-          return [left, mid, w];
+          // Agent splitter: AI ↔ Agents; Tasks and Calendar fixed
+          const agentRaw = Math.max(0, total - cursor - 3);
+          const agent = snap ? snapOnRelease(agentRaw, total) : agentRaw;
+          const ai    = Math.max(min, total - prev[0] - prev[1] - agent - 18);
+          return [prev[0], prev[1], ai, agent];
         }
       });
     };
@@ -1583,13 +1739,15 @@ export default function App() {
   };
 
   const startLeft  = (e) => startDrag(e, "left");
-  const startRight = (e) => startDrag(e, "right");
+  const startMid   = (e) => startDrag(e, "mid");
+  const startAgent = (e) => startDrag(e, "agent");
 
   const total = totalRef.current;
   const min   = Math.max(40, Math.round(total * 0.05));
   const isCollapsedLeft  = widths[0] <= min + 10;
   const isCollapsedMid   = widths[1] !== null && widths[1] <= min + 10;
   const isCollapsedRight = widths[2] <= min + 10;
+  const isCollapsedAgent = widths[3] <= min + 10;
 
   const CollapsedLabel = ({ label }) => (
     <div style={{ width:"100%", height:"100%", background:"#ffffff", display:"flex", alignItems:"center", justifyContent:"center", borderRight:"1px solid #e5e7eb" }}>
@@ -1641,9 +1799,13 @@ export default function App() {
         <div style={{ width: widths[1] ?? 200, flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.12s ease" }}>
           {isCollapsedMid ? <CollapsedLabel label={t(lang, 'calendar')} /> : <CalendarPanel events={events} setEvents={setEvents} tasks={tasks} userId={session.user.id} panelWidth={widths[1]??200} />}
         </div>
-        <Splitter onMouseDown={startRight} />
+        <Splitter onMouseDown={startMid} />
         <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
           {isCollapsedRight ? <CollapsedLabel label={t(lang, 'assistant')} /> : <AIPanel tasks={tasks} events={events} setTasks={setTasks} setEvents={setEvents} userId={session.user.id} />}
+        </div>
+        <Splitter onMouseDown={startAgent} />
+        <div style={{ width: widths[3] ?? 0, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
+          {isCollapsedAgent ? <CollapsedLabel label="Agents" /> : <AgentsPanel session={session} />}
         </div>
       </div>
 
