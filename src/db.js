@@ -7,8 +7,32 @@ export async function loadTasks(userId) {
     .from("tasks")
     .select("*")
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: true });
   return (data || []).map(dbToTask);
+}
+
+// Prullenbak: zachte verwijdering — taken met een deleted_at zijn "weggegooid"
+export async function loadTrash(userId) {
+  const { data } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("user_id", userId)
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false });
+  return (data || []).map(dbToTask);
+}
+
+// Verplaats naar prullenbak (zacht verwijderen) en bewaar het moment
+export async function trashTaskDB(id) {
+  const completedAt = new Date().toISOString();
+  await supabase.from("tasks").update({ deleted_at: completedAt }).eq("id", id);
+  return completedAt;
+}
+
+// Terughalen uit de prullenbak
+export async function restoreTaskDB(id) {
+  await supabase.from("tasks").update({ deleted_at: null }).eq("id", id);
 }
 
 export async function addTaskDB(userId, task) {
@@ -49,6 +73,7 @@ function dbToTask(r) {
     status:   r.status || "",
     list:     r.list_id || "mine",
     note:     r.note || "",
+    completedAt: r.deleted_at || null,
   };
 }
 

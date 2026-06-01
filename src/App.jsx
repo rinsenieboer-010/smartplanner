@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { flushSync } from "react-dom";
 import { supabase } from "./supabase.js";
-import { loadTasks, loadEvents, loadLists, addTaskDB, updateTaskDB, deleteTaskDB, addEventDB, updateEventDB, deleteEventDB, addListDB, updateListDB, deleteListDB } from "./db.js";
+import { loadTasks, loadTrash, trashTaskDB, restoreTaskDB, loadEvents, loadLists, addTaskDB, updateTaskDB, deleteTaskDB, addEventDB, updateEventDB, deleteEventDB, addListDB, updateListDB, deleteListDB } from "./db.js";
 import { t, LANGUAGES, DAYS_BY_LANG, MONTHS_BY_LANG, MONTHS_SHORT_BY_LANG } from "./i18n.js";
 import { createContext, useContext } from "react";
 const LangContext = createContext('nl');
@@ -216,11 +216,16 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
 
   const allTasks = [...tasks.map(t => ({ ...t, list: t.list || "mine" })), ...sharedDemoTasks];
   const visibleTasks = allTasks.filter(t => t.list === activeList);
+  // Eerst op datum (vroegste boven, geen datum onderaan), dan binnen elke
+  // datumgroep op prioriteit: hoog → midden → laag → geen prioriteit
+  const PRIO_RANK = { hoog: 0, midden: 1, laag: 2, "": 3 };
   const sorted = [...visibleTasks].sort((a, b) => {
-    if (!a.deadline && !b.deadline) return 0;
-    if (!a.deadline) return 1;
-    if (!b.deadline) return -1;
-    return a.deadline < b.deadline ? -1 : 1;
+    if (a.deadline && b.deadline) {
+      if (a.deadline !== b.deadline) return a.deadline < b.deadline ? -1 : 1;
+    } else if (a.deadline && !b.deadline) return -1;
+    else if (!a.deadline && b.deadline) return 1;
+    // zelfde datum (of beide zonder datum) → op prioriteit
+    return (PRIO_RANK[a.priority] ?? 3) - (PRIO_RANK[b.priority] ?? 3);
   });
 
   const completeDone = (id) => {
@@ -228,8 +233,9 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
     setTimeout(() => {
       const task = tasks.find(t => t.id === id);
       if (task) {
-        deleteTaskDB(id);
-        setTrash(tr => [...tr, { ...task, completedAt: new Date().toISOString() }]);
+        const completedAt = new Date().toISOString();
+        trashTaskDB(id); // zacht verwijderen: blijft in Supabase met deleted_at
+        setTrash(tr => [...tr, { ...task, completedAt }]);
         setTasks(t => t.filter(x => x.id !== id));
       }
       setFadingOut(f => { const n = { ...f }; delete n[id]; return n; });
@@ -239,16 +245,17 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
   const restoreTask = (id) => {
     const task = visibleTrash.find(t => t.id === id);
     if (task) {
+      restoreTaskDB(id); // zelfde rij terug, behoudt id/datum/prioriteit
       const { completedAt, ...restored } = task;
-      const newTask = { ...restored, status: "open" };
-      addTaskDB(userId, newTask).then(saved => {
-        setTasks(t => [...t, saved]);
-      });
+      setTasks(t => [...t, restored]);
       setTrash(tr => tr.filter(t => t.id !== id));
     }
   };
 
-  const deleteForever = (id) => setTrash(tr => tr.filter(t => t.id !== id));
+  const deleteForever = (id) => {
+    deleteTaskDB(id); // definitief uit Supabase verwijderen
+    setTrash(tr => tr.filter(t => t.id !== id));
+  };
 
   const addTask = () => {
     if (!newTitle.trim()) return;
@@ -1537,7 +1544,7 @@ export default function App() {
   const [tasks, setTasks]         = useState([]);
   const [events, setEvents]       = useState([]);
   const [lists, setLists]         = useState(DEFAULT_LISTS);
-  const [trash, setTrash]         = useState(() => { try { return JSON.parse(localStorage.getItem('jmp_trash') || '[]'); } catch { return []; } });
+  const [trash, setTrash]         = useState([]); // geladen uit Supabase (zacht verwijderde taken)
   const [widths, setWidths]       = useState([320, null, 320, 44]);
   const [visiblePanels, setVisiblePanels] = useState(() => {
     try { return JSON.parse(localStorage.getItem('jmp_panels')) || { tasks:true, calendar:true, assistant:true, agents:true }; }
@@ -1583,7 +1590,6 @@ export default function App() {
   }, []);
 
   useEffect(() => { localStorage.setItem('jmp_lang', lang); }, [lang]);
-  useEffect(() => { localStorage.setItem('jmp_trash', JSON.stringify(trash)); }, [trash]);
 
   useEffect(() => {
     if (!session) return;
@@ -1646,10 +1652,11 @@ export default function App() {
     const uid = session.user.id;
 
     const reloadAll = () =>
-      Promise.all([loadTasks(uid), loadEvents(uid), loadLists(uid)]).then(([t, ev, ls]) => {
+      Promise.all([loadTasks(uid), loadEvents(uid), loadLists(uid), loadTrash(uid)]).then(([t, ev, ls, tr]) => {
         setTasks(t);
         setEvents(ev);
         if (ls) setLists(ls);
+        setTrash(tr);
       });
 
     reloadAll();

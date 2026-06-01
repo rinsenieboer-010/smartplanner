@@ -6,7 +6,12 @@
       "Read(//c/Users/RJNie/Documents/**)",
       "Bash(npx create-expo-app@latest \"smartplanner tel\" --template blank)",
       "Bash(npx create-expo-app@latest \"smartplanner-tel\" --template blank)",
-      "Bash(npx expo:*)"
+      "Bash(npx expo:*)",
+      "Bash(magick identify:*)",
+      "Bash(identify \"C:/Users/RJNie/OneDrive/Afbeeldingen/logo jmp.png\")",
+      "Bash(powershell -Command \"Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\('C:\\\\Users\\\\RJNie\\\\OneDrive\\\\Afbeeldingen\\\\logo jmp.png'\\); Write-Host $img.Width 'x' $img.Height; $img.Dispose\\(\\)\")",
+      "Bash(powershell -Command \"\nAdd-Type -AssemblyName System.Drawing\n\\\\$img = [System.Drawing.Image]::FromFile\\('C:\\\\\\\\Users\\\\\\\\RJNie\\\\\\\\OneDrive\\\\\\\\Afbeeldingen\\\\\\\\logo jmp.png'\\)\nWrite-Host \\\\$img.Width 'x' \\\\$img.Height\n\\\\$img.Dispose\\(\\)\n\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\RJNie\\\\Downloads\\\\resize.ps1\")"
     ]
   }
 }
