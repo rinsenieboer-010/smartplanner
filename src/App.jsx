@@ -181,6 +181,9 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
   const [newTitle, setNewTitle] = useState("");
   const [activeList, setActiveList] = useState("mine");
   const [fadingOut, setFadingOut] = useState({}); // id -> true when animating out
+  const [frozenPrio, setFrozenPrio] = useState({}); // id -> priority used for sorting (lags real value while editing)
+  const [prioSettling, setPrioSettling] = useState({}); // id -> true during the brief fade before re-sorting
+  const prioTimers = useRef({}); // id -> debounce timeout handle
   const [datePickerOpen, setDatePickerOpen] = useState(null); // task id
   const [openNoteId, setOpenNoteId] = useState(null);
   const [noteValue, setNoteValue] = useState("");
@@ -224,8 +227,11 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
       if (a.deadline !== b.deadline) return a.deadline < b.deadline ? -1 : 1;
     } else if (a.deadline && !b.deadline) return -1;
     else if (!a.deadline && b.deadline) return 1;
-    // zelfde datum (of beide zonder datum) → op prioriteit
-    return (PRIO_RANK[a.priority] ?? 3) - (PRIO_RANK[b.priority] ?? 3);
+    // zelfde datum (of beide zonder datum) → op prioriteit.
+    // frozenPrio houdt de oude positie vast terwijl je nog doorklikt.
+    const pa = frozenPrio[a.id] !== undefined ? frozenPrio[a.id] : a.priority;
+    const pb = frozenPrio[b.id] !== undefined ? frozenPrio[b.id] : b.priority;
+    return (PRIO_RANK[pa] ?? 3) - (PRIO_RANK[pb] ?? 3);
   });
 
   const completeDone = (id) => {
@@ -273,8 +279,25 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
       if (x.id !== id) return x;
       const updated = { ...x, priority: next[x.priority] };
       updateTaskDB(updated);
+      // Bevries de huidige (oude) sorteer-prioriteit zodat de taak op zijn
+      // plek blijft staan terwijl je doorklikt — alleen de eerste klik in
+      // een reeks legt het beginpunt vast.
+      setFrozenPrio(f => (f[id] !== undefined ? f : { ...f, [id]: x.priority }));
       return updated;
     }));
+    // Reset de debounce: pas ~2,5s na de láátste klik schuift de taak weg.
+    if (prioTimers.current[id]) clearTimeout(prioTimers.current[id]);
+    setPrioSettling(s => { if (!s[id]) return s; const n = { ...s }; delete n[id]; return n; });
+    prioTimers.current[id] = setTimeout(() => {
+      // Stap 1: laat de taak rustig vervagen op zijn oude plek.
+      setPrioSettling(s => ({ ...s, [id]: true }));
+      setTimeout(() => {
+        // Stap 2: geef de echte prioriteit vrij → hij sorteert naar de nieuwe plek en komt weer op.
+        setFrozenPrio(f => { const n = { ...f }; delete n[id]; return n; });
+        setPrioSettling(s => { const n = { ...s }; delete n[id]; return n; });
+        delete prioTimers.current[id];
+      }, 450);
+    }, 2500);
   };
   const cycleStatus = (id) => {
     const next = { "":"open", open:"bezig", bezig:"klaar", klaar:"" };
@@ -489,9 +512,10 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
                 const dlColor = !task.deadline ? "#9ca3af" : task.deadline < tk ? "#DC2626" : task.deadline===tk ? "#2563EB" : "#111827";
                 const dlWeight = task.deadline && task.deadline <= tk ? 700 : 400;
                 const isFading = fadingOut[task.id];
+                const isSettling = prioSettling[task.id];
                 return (
                   <div key={task.id} className={isFading ? "fading-task" : ""}
-                    style={{ borderBottom:"1px solid #f3f4f6", background:"#fff" }}
+                    style={{ borderBottom:"1px solid #f3f4f6", background:"#fff", opacity: isSettling ? 0.25 : 1, transition:"opacity 0.45s ease" }}
                     onMouseEnter={e => { if(!isFading) e.currentTarget.firstChild.style.background="#f9fafb"; }}
                     onMouseLeave={e => { if(e.currentTarget.firstChild) e.currentTarget.firstChild.style.background="#fff"; }}>
                     <div style={{ display:"flex", alignItems:"center", background:"inherit" }}>
