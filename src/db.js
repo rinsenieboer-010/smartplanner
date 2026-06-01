@@ -144,6 +144,14 @@ export async function loadLists(userId) {
   return data && data.length > 0 ? data.map(dbToList) : null;
 }
 
+// Zaai de standaardlijsten één keer in de database voor een nieuwe gebruiker,
+// zodat hernoemen/kleur/verwijderen daarna echt opgeslagen wordt.
+export async function seedDefaultListsDB(userId, lists) {
+  const rows = lists.map(l => ({ id: l.id, user_id: userId, label: l.label, color: l.color }));
+  const { data } = await supabase.from("lists").insert(rows).select();
+  return data && data.length > 0 ? data.map(dbToList) : lists;
+}
+
 export async function addListDB(userId, list) {
   const { data } = await supabase
     .from("lists")

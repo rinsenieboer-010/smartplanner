@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { flushSync } from "react-dom";
 import { supabase } from "./supabase.js";
-import { loadTasks, loadTrash, trashTaskDB, restoreTaskDB, loadEvents, loadLists, addTaskDB, updateTaskDB, deleteTaskDB, addEventDB, updateEventDB, deleteEventDB, addListDB, updateListDB, deleteListDB } from "./db.js";
+import { loadTasks, loadTrash, trashTaskDB, restoreTaskDB, loadEvents, loadLists, addTaskDB, updateTaskDB, deleteTaskDB, addEventDB, updateEventDB, deleteEventDB, addListDB, updateListDB, deleteListDB, seedDefaultListsDB } from "./db.js";
 import { t, LANGUAGES, DAYS_BY_LANG, MONTHS_BY_LANG, MONTHS_SHORT_BY_LANG } from "./i18n.js";
 import { createContext, useContext } from "react";
 const LangContext = createContext('nl');
@@ -1568,6 +1568,7 @@ export default function App() {
   const [tasks, setTasks]         = useState([]);
   const [events, setEvents]       = useState([]);
   const [lists, setLists]         = useState(DEFAULT_LISTS);
+  const seededLists               = useRef(false); // voorkomt dubbel zaaien van standaardlijsten
   const [trash, setTrash]         = useState([]); // geladen uit Supabase (zacht verwijderde taken)
   const [widths, setWidths]       = useState([320, null, 320, 44]);
   const [visiblePanels, setVisiblePanels] = useState(() => {
@@ -1679,8 +1680,15 @@ export default function App() {
       Promise.all([loadTasks(uid), loadEvents(uid), loadLists(uid), loadTrash(uid)]).then(([t, ev, ls, tr]) => {
         setTasks(t);
         setEvents(ev);
-        if (ls) setLists(ls);
         setTrash(tr);
+        if (ls) {
+          setLists(ls);
+        } else if (!seededLists.current) {
+          // Nieuwe gebruiker zonder lijsten in de database: zaai de standaardlijsten
+          // één keer, zodat hernoemen/kleur/verwijderen daarna bewaard blijft.
+          seededLists.current = true;
+          seedDefaultListsDB(uid, DEFAULT_LISTS).then(seeded => setLists(seeded));
+        }
       });
 
     reloadAll();
