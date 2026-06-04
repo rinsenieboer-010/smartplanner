@@ -347,7 +347,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
   const activeLabel = isTrash ? t(lang, 'trash') : ([...lists, ...sharedLists].find(l => l.id===activeList)?.label || t(lang, 'tasks'));
 
   const COL = { name: 200, date: 100, prio: 88, status: 80, del: 28 };
-  const TABLE_MIN = COL.name + COL.date + COL.prio + COL.status + COL.del + 41;
+  const TABLE_MIN = COL.name + COL.date + COL.prio + COL.del + 41;
   const cb = { borderRight: "1px solid #e5e7eb" };
   const prioLabel   = (p) => p==="hoog" ? t(lang,'prioHigh') : p==="midden" ? t(lang,'prioMid') : p==="laag" ? t(lang,'prioLow') : "—";
   const statusLabel = (s) => s==="open" ? t(lang,'statusOpen') : s==="bezig" ? t(lang,'statusBusy') : s==="klaar" ? t(lang,'statusDone') : "—";
@@ -504,7 +504,6 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
                 <div style={{ width:COL.name+41, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colName')}</div>
                 <div style={{ width:COL.date, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colDeadline')}</div>
                 <div style={{ width:COL.prio, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", ...cb, background:"#f9fafb" }}>{t(lang, 'colPriority')}</div>
-                <div style={{ width:COL.status, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", ...cb, background:"#f9fafb" }}>{t(lang, 'colStatus')}</div>
                 <div style={{ width:COL.del, flexShrink:0, background:"#f9fafb" }} />
               </div>
               {sorted.map(task => {
@@ -540,9 +539,6 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
                     </div>
                     <div style={{ width:COL.prio, flexShrink:0, display:"flex", justifyContent:"center", padding:"8px 6px", ...cb }}>
                       <span onClick={() => !isShared && cyclePrio(task.id)} style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:4, cursor: isShared ? "default" : "pointer", background:PRIO_BG[task.priority], color:PRIO_COLOR[task.priority], userSelect:"none" }}>{prioLabel(task.priority)}</span>
-                    </div>
-                    <div style={{ width:COL.status, flexShrink:0, display:"flex", justifyContent:"center", padding:"8px 6px", ...cb }}>
-                      <span onClick={() => !isShared && cycleStatus(task.id)} style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:4, cursor: isShared ? "default" : "pointer", background:STATUS_BG[task.status], color:STATUS_COLOR[task.status], userSelect:"none", whiteSpace:"nowrap" }}>{statusLabel(task.status)}</span>
                     </div>
                     <div style={{ width:COL.del, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
                       {!isShared && <button onClick={() => remove(task.id)} style={{ background:"none", border:"none", color:"#d1d5db", cursor:"pointer", fontSize:16, lineHeight:1 }}>x</button>}
