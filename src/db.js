@@ -172,3 +172,33 @@ export async function deleteListDB(id) {
 function dbToList(r) {
   return { id: r.id, label: r.label, color: r.color };
 }
+
+// ── AGENTS (per gebruiker) ─────────────────────────────────────────────────────
+
+export async function loadAgents(userId) {
+  const { data } = await supabase
+    .from("agents")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+  return data || [];
+}
+
+export async function addAgentDB(userId, a) {
+  const { data } = await supabase
+    .from("agents")
+    .insert({ user_id: userId, name: a.name, role: a.role || null, emoji: a.emoji || null, model: a.model || "sonnet", system_prompt: a.system_prompt || null })
+    .select()
+    .single();
+  return data;
+}
+
+export async function updateAgentDB(a) {
+  await supabase.from("agents")
+    .update({ name: a.name, role: a.role || null, emoji: a.emoji || null, model: a.model || "sonnet", system_prompt: a.system_prompt || null })
+    .eq("id", a.id);
+}
+
+export async function deleteAgentDB(id) {
+  await supabase.from("agents").delete().eq("id", id);
+}

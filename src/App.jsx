@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { flushSync } from "react-dom";
 import { supabase } from "./supabase.js";
-import { loadTasks, loadTrash, trashTaskDB, restoreTaskDB, loadEvents, loadLists, addTaskDB, updateTaskDB, deleteTaskDB, addEventDB, updateEventDB, deleteEventDB, addListDB, updateListDB, deleteListDB, seedDefaultListsDB } from "./db.js";
+import { loadTasks, loadTrash, trashTaskDB, restoreTaskDB, loadEvents, loadLists, addTaskDB, updateTaskDB, deleteTaskDB, addEventDB, updateEventDB, deleteEventDB, addListDB, updateListDB, deleteListDB, seedDefaultListsDB, loadAgents, addAgentDB, updateAgentDB, deleteAgentDB } from "./db.js";
 import { t, LANGUAGES, DAYS_BY_LANG, MONTHS_BY_LANG, MONTHS_SHORT_BY_LANG } from "./i18n.js";
 import { createContext, useContext } from "react";
 const LangContext = createContext('nl');
@@ -1247,31 +1247,21 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
 
 // ── SPLITTER ──────────────────────────────────────────────────────────────────
 // ── AGENTS PANEL ─────────────────────────────────────────────────────────────
+const AGENT_MODELS = [["opus","Opus"],["sonnet","Sonnet"],["haiku","Haiku"]];
+const AGENT_EMOJIS = ["🤖","📬","📈","💼","⚖️","🔭","📡","✍️","🌐","🎯","💡","🎓","📚","🔨","👶","🧠","🛠️","📊"];
+
 function AgentsPanel({ session }) {
-  const [agents]          = useState(HARDCODED_AGENTS);
-  const [agentRuns, setAgentRuns] = useState([]);
-  const [selected, setSelected]   = useState(null);
-  const [input, setInput]         = useState("");
-  const [running, setRunning]     = useState(false);
-  const [output, setOutput]       = useState(null);
+  const uid = session.user.id;
+  const [agents, setAgents]     = useState([]);
+  const [selected, setSelected] = useState(null);     // chat
+  const [editing, setEditing]   = useState(undefined); // undefined=dicht, null=nieuw, obj=bewerken
+  const [input, setInput]       = useState("");
+  const [running, setRunning]   = useState(false);
+  const [output, setOutput]     = useState(null);
+  const [form, setForm]         = useState({ name:"", role:"", emoji:"🤖", model:"sonnet", system_prompt:"" });
 
-  useEffect(() => {
-    supabase.from('agent_runs').select('*')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false })
-      .limit(100)
-      .then(({ data }) => { if (data) setAgentRuns(data); });
-  }, [session]);
-
-  const getLastRun = (id) => agentRuns.find(r => r.agent_id === id);
-  const statusDot  = (id) => {
-    const run = getLastRun(id);
-    if (!run) return "#6b7280";
-    const age = Date.now() - new Date(run.created_at).getTime();
-    if (age < 3_600_000)  return "#22c55e";
-    if (age < 86_400_000) return "#f59e0b";
-    return "#6b7280";
-  };
+  const reload = () => loadAgents(uid).then(setAgents);
+  useEffect(() => { reload(); }, [session]); // eslint-disable-line
 
   const trigger = async () => {
     if (!selected || !input.trim()) return;
@@ -1284,22 +1274,67 @@ function AgentsPanel({ session }) {
       });
       const data = await res.json();
       setOutput(data.reply || data.error || 'Geen response');
-      // Refresh runs if table exists
-      supabase.from('agent_runs').select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(100)
-        .then(({ data: d }) => { if (d) setAgentRuns(d); });
-    } catch (err) {
-      setOutput('Fout: ' + err.message);
-    }
+    } catch (err) { setOutput('Fout: ' + err.message); }
     setRunning(false);
   };
 
-  const headerStyle = { padding:"12px 14px", borderBottom:"2px solid #27272a", background:"#18181b", flexShrink:0, display:"flex", alignItems:"center", gap:10 };
+  const openNew  = () => { setForm({ name:"", role:"", emoji:"🤖", model:"sonnet", system_prompt:"" }); setEditing(null); };
+  const openEdit = (a) => { setForm({ name:a.name||"", role:a.role||"", emoji:a.emoji||"🤖", model:a.model||"sonnet", system_prompt:a.system_prompt||"" }); setEditing(a); };
+  const saveAgent = async () => {
+    if (!form.name.trim()) return;
+    if (editing?.id) await updateAgentDB({ ...form, id: editing.id });
+    else await addAgentDB(uid, form);
+    await reload(); setEditing(undefined);
+  };
+  const removeAgent = async () => { if (editing?.id) { await deleteAgentDB(editing.id); await reload(); } setEditing(undefined); };
 
+  const headerStyle = { padding:"12px 14px", borderBottom:"2px solid #27272a", background:"#18181b", flexShrink:0, display:"flex", alignItems:"center", gap:10 };
+  const label = { fontSize:10, color:"#9ca3af", fontWeight:700, letterSpacing:0.8, textTransform:"uppercase", margin:"12px 0 6px" };
+  const field = { width:"100%", border:"1px solid #e5e7eb", borderRadius:6, padding:"8px 10px", fontSize:13, outline:"none", color:"#111827", background:"#fff", fontFamily:"'DM Sans', sans-serif", boxSizing:"border-box" };
+
+  // ── BEWERKEN / AANMAKEN ──
+  if (editing !== undefined) {
+    return (
+      <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:"'DM Sans', sans-serif" }}>
+        <div style={headerStyle}>
+          <button onClick={() => setEditing(undefined)} style={{ background:"none", border:"none", color:"#9ca3af", cursor:"pointer", fontSize:16 }}>←</button>
+          <div style={{ flex:1, fontSize:13, fontWeight:700, color:"#f9fafb" }}>{editing ? "Agent bewerken" : "Nieuwe agent"}</div>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"4px 14px 14px" }}>
+          <div style={label}>Naam</div>
+          <input style={field} value={form.name} onChange={e => setForm(f => ({ ...f, name:e.target.value }))} placeholder="Bijv. Boodschapper" />
+          <div style={label}>Emoji</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+            {AGENT_EMOJIS.map(e => (
+              <div key={e} onClick={() => setForm(f => ({ ...f, emoji:e }))}
+                style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, borderRadius:6, cursor:"pointer", border: form.emoji===e ? "2px solid #2563EB" : "2px solid #f3f4f6", background:"#fafafa" }}>{e}</div>
+            ))}
+          </div>
+          <div style={label}>Model</div>
+          <div style={{ display:"flex", gap:6 }}>
+            {AGENT_MODELS.map(([val, lbl]) => (
+              <div key={val} onClick={() => setForm(f => ({ ...f, model:val }))}
+                style={{ flex:1, textAlign:"center", padding:"7px 0", borderRadius:6, cursor:"pointer", fontSize:12, fontWeight:700, color: form.model===val ? "#fff" : "#6b7280", background: form.model===val ? (MODEL_BADGE_COLOR[val]||"#374151") : "#f3f4f6" }}>{lbl}</div>
+            ))}
+          </div>
+          <div style={label}>Rol (kort)</div>
+          <input style={field} value={form.role} onChange={e => setForm(f => ({ ...f, role:e.target.value }))} placeholder="Bijv. houdt je boodschappen bij" />
+          <div style={label}>System prompt</div>
+          <textarea style={{ ...field, minHeight:90, resize:"vertical" }} value={form.system_prompt} onChange={e => setForm(f => ({ ...f, system_prompt:e.target.value }))} placeholder="Je bent ... Antwoord kort en in het Nederlands." />
+          <button onClick={saveAgent} disabled={!form.name.trim()}
+            style={{ marginTop:16, width:"100%", padding:"9px 0", background: form.name.trim() ? "#2563EB" : "#e5e7eb", color: form.name.trim() ? "#fff" : "#9ca3af", border:"none", borderRadius:6, fontSize:13, fontWeight:700, cursor: form.name.trim() ? "pointer" : "default" }}>
+            {editing ? "Opslaan" : "Aanmaken"}
+          </button>
+          {editing && (
+            <button onClick={removeAgent} style={{ marginTop:8, width:"100%", padding:"8px 0", background:"#FEE2E2", color:"#DC2626", border:"none", borderRadius:6, fontSize:12, fontWeight:600, cursor:"pointer" }}>Verwijderen</button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── CHAT ──
   if (selected) {
-    const recentRuns = agentRuns.filter(r => r.agent_id === selected.id).slice(0, 5);
     return (
       <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:"'DM Sans', sans-serif" }}>
         <div style={headerStyle}>
@@ -1315,19 +1350,6 @@ function AgentsPanel({ session }) {
           </span>
         </div>
         <div style={{ flex:1, overflowY:"auto", padding:"12px 14px" }}>
-          {recentRuns.length > 0 && (
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:10, color:"#9ca3af", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:8 }}>Recente runs</div>
-              {recentRuns.map(run => (
-                <div key={run.id} style={{ marginBottom:6, padding:"7px 9px", background:"#f9fafb", borderRadius:5, borderLeft:`3px solid ${run.status==='done' ? '#22c55e' : run.status==='error' ? '#ef4444' : '#9ca3af'}` }}>
-                  <div style={{ fontSize:10, color:"#9ca3af", marginBottom:2 }}>
-                    {new Date(run.created_at).toLocaleString('nl-NL', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
-                  </div>
-                  <div style={{ fontSize:12, color:"#374151", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{run.input}</div>
-                </div>
-              ))}
-            </div>
-          )}
           {output && (
             <div style={{ marginBottom:14 }}>
               <div style={{ fontSize:10, color:"#9ca3af", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:8 }}>Response</div>
@@ -1354,26 +1376,34 @@ function AgentsPanel({ session }) {
     );
   }
 
+  // ── LIJST ──
   return (
     <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:"'DM Sans', sans-serif" }}>
-      <div style={{ padding:"8px 14px", borderBottom:"2px solid #e5e7eb", background:"#f9fafb", flexShrink:0 }}>
+      <div style={{ padding:"8px 14px", borderBottom:"2px solid #e5e7eb", background:"#f9fafb", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, textTransform:"uppercase" }}>Agents</div>
+        <button onClick={openNew} style={{ background:"#2563EB", color:"#fff", border:"none", borderRadius:5, fontSize:11, fontWeight:700, padding:"4px 9px", cursor:"pointer" }}>+ Nieuw</button>
       </div>
       <div style={{ flex:1, overflowY:"auto" }}>
+        {agents.length === 0 && (
+          <div style={{ padding:"30px 20px", textAlign:"center", color:"#9ca3af", fontSize:13 }}>Nog geen agents. Maak je eerste agent aan met “+ Nieuw”.</div>
+        )}
         {agents.map(agent => (
-          <div key={agent.id} onClick={() => setSelected(agent)}
-            style={{ display:"flex", alignItems:"center", gap:9, padding:"9px 14px", borderBottom:"1px solid #f3f4f6", cursor:"pointer", background:"#fff" }}
+          <div key={agent.id}
+            style={{ display:"flex", alignItems:"center", gap:9, padding:"9px 14px", borderBottom:"1px solid #f3f4f6", background:"#fff" }}
             onMouseEnter={e => e.currentTarget.style.background="#f9fafb"}
             onMouseLeave={e => e.currentTarget.style.background="#fff"}>
-            <div style={{ width:7, height:7, borderRadius:"50%", background: statusDot(agent.id), flexShrink:0 }} />
-            <span style={{ fontSize:15, flexShrink:0, lineHeight:1 }}>{agent.emoji}</span>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:13, fontWeight:600, color:"#111827", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{agent.name}</div>
-              <div style={{ fontSize:11, color:"#6b7280", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{agent.role}</div>
+            <div onClick={() => setSelected(agent)} style={{ flex:1, minWidth:0, display:"flex", alignItems:"center", gap:9, cursor:"pointer" }}>
+              <span style={{ fontSize:15, flexShrink:0, lineHeight:1 }}>{agent.emoji}</span>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:13, fontWeight:600, color:"#111827", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{agent.name}</div>
+                <div style={{ fontSize:11, color:"#6b7280", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{agent.role}</div>
+              </div>
+              <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:3, background: MODEL_BADGE_COLOR[agent.model] || "#374151", color:"#fff", flexShrink:0 }}>
+                {(agent.model||"sonnet").toUpperCase()}
+              </span>
             </div>
-            <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:3, background: MODEL_BADGE_COLOR[agent.model] || "#374151", color:"#fff", flexShrink:0 }}>
-              {agent.model.toUpperCase()}
-            </span>
+            <button onClick={() => openEdit(agent)} title="Bewerken"
+              style={{ background:"none", border:"none", color:"#9ca3af", cursor:"pointer", fontSize:13, padding:"2px 4px", flexShrink:0 }}>✎</button>
           </div>
         ))}
       </div>
