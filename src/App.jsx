@@ -17,7 +17,7 @@ const dateKey = (d) => d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d
 const DAYS_NL = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
 const MONTHS_NL = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
 const MONTHS_SHORT_NL = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 8); // 08:00–21:00
 
 function getWeekDates(base) {
   const d = new Date(base);
@@ -702,6 +702,11 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
   );
 
   const HOUR_H = 52;
+  // Hele-dag-afspraak: omspant (vrijwel) het hele zichtbare raster → toon als
+  // smalle band over de volle hoogte i.p.v. een blok dat buiten beeld begint.
+  const evMin = (h, m) => h * 60 + m;
+  const isAllDay = (e) => evMin(e.startH, e.startM) <= HOURS[0] * 60 && evMin(e.endH, e.endM) >= (HOURS[HOURS.length - 1] + 1) * 60;
+  const openEvent = (ev) => { setSelectedEvent(ev); setEditNote(ev.note || ""); setEditMode(false); setEditTitle(ev.title); setEditStartH(ev.startH); setEditStartM(ev.startM); setEditEndH(ev.endH); setEditEndM(ev.endM); setEditColor(ev.color || 'blue'); };
 
   return (
     <div style={{ display:"flex", height:"100%", background:"#ffffff" }}>
@@ -879,11 +884,21 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
                         )}
                       </div>
                     ))}
-                    {dayEvents.map(ev => {
-                      const top = extraH + (ev.startH - HOURS[0] + ev.startM/60) * HOUR_H;
-                      const height = ((ev.endH - ev.startH) + (ev.endM - ev.startM)/60) * HOUR_H - 2;
+                    {/* Hele-dag-afspraken: smalle band over de volle hoogte */}
+                    {dayEvents.filter(isAllDay).map((ev, i) => (
+                      <div key={"ad-"+ev.id} onClick={e => { e.stopPropagation(); openEvent(ev); }}
+                        title={ev.title}
+                        style={{ position:"absolute", top: extraH, left: 2 + i*8, width:"42%", height: HOURS.length * HOUR_H - 2, background: EVENT_BG[ev.color]||"#DBEAFE", border:"1px solid "+(EVENT_BORDER[ev.color]||"#2563EB"), borderLeft:"3px solid "+(EVENT_BORDER[ev.color]||"#2563EB"), borderRadius:3, padding:"3px 5px", overflow:"hidden", zIndex:1, cursor:"pointer" }}>
+                        <div style={{ fontSize:11, fontWeight:700, color: EVENT_BORDER[ev.color]||"#2563EB", overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
+                      </div>
+                    ))}
+                    {dayEvents.filter(e => !isAllDay(e)).map(ev => {
+                      const rawTop = extraH + (ev.startH - HOURS[0] + ev.startM/60) * HOUR_H;
+                      const top    = Math.max(extraH, rawTop);
+                      const bottom = extraH + (ev.endH - HOURS[0] + ev.endM/60) * HOUR_H;
+                      const height = Math.max(bottom - top - 2, 16);
                       return (
-                        <div key={ev.id} onClick={e => { e.stopPropagation(); setSelectedEvent(ev); setEditNote(ev.note||""); setEditMode(false); setEditTitle(ev.title); setEditStartH(ev.startH); setEditStartM(ev.startM); setEditEndH(ev.endH); setEditEndM(ev.endM); setEditColor(ev.color||'blue'); }}
+                        <div key={ev.id} onClick={e => { e.stopPropagation(); openEvent(ev); }}
                           style={{ position:"absolute", top, left:2, right:2, height, background: EVENT_BG[ev.color]||"#DBEAFE", borderLeft:"3px solid "+(EVENT_BORDER[ev.color]||"#2563EB"), borderRadius:3, padding:"3px 5px", overflow:"hidden", zIndex:2, cursor:"pointer" }}>
                           <div style={{ fontSize:11, fontWeight:700, color: EVENT_BORDER[ev.color]||"#2563EB", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
                           <div style={{ fontSize:10, color:"#6b7280" }}>{pad(ev.startH)}:{pad(ev.startM)}</div>
