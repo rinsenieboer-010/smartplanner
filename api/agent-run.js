@@ -31,23 +31,28 @@ export default async function handler(req, res) {
   const { agent_id, message } = req.body;
   if (!agent_id || !message) return res.status(400).json({ error: 'agent_id en message zijn verplicht' });
 
-  const agentDefault = AGENT_DEFAULTS[agent_id];
-  if (!agentDefault) return res.status(404).json({ error: 'Agent niet gevonden' });
-
-  // Try to load system_prompt from Supabase agents table; fall back to default
-  let systemPrompt = `Je bent ${agentDefault.name}, ${agentDefault.role} voor Rinse Nieboer. Beantwoord zijn vraag direct en bondig. Spreek Nederlands.`;
-  let model = agentDefault.model;
-
+  // Eerst de per-gebruiker agents-tabel; valt terug op de oude vaste defaults
+  // (zodat de web-versie met hardcoded ids blijft werken).
+  let name = 'assistent', role = '', model = 'sonnet', systemPrompt = null;
   try {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
       process.env.VITE_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
     );
-    const { data } = await supabase.from('agents').select('system_prompt,model').eq('id', agent_id).single();
-    if (data?.system_prompt) systemPrompt = data.system_prompt;
-    if (data?.model) model = data.model;
+    const { data } = await supabase.from('agents').select('name,role,model,system_prompt').eq('id', agent_id).single();
+    if (data) { name = data.name || name; role = data.role || ''; model = data.model || 'sonnet'; systemPrompt = data.system_prompt || null; }
   } catch {}
+
+  if (!systemPrompt && name === 'assistent') {
+    const def = AGENT_DEFAULTS[agent_id];
+    if (!def) return res.status(404).json({ error: 'Agent niet gevonden' });
+    name = def.name; role = def.role; model = def.model;
+  }
+
+  if (!systemPrompt) {
+    systemPrompt = `Je bent ${name}${role ? ', ' + role : ''} voor de gebruiker. Beantwoord de vraag direct en bondig. Spreek Nederlands.`;
+  }
 
   const claudeModel = MODEL_MAP[model] || MODEL_MAP.sonnet;
 
