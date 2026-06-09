@@ -107,29 +107,33 @@ export async function deleteEventDB(id) {
 
 function eventToDB(e) {
   return {
-    id:      typeof e.id === "number" ? undefined : e.id,
-    title:   e.title,
-    date:    e.date,
-    start_h: e.startH,
-    start_m: e.startM,
-    end_h:   e.endH,
-    end_m:   e.endM,
-    color:   e.color,
-    note:    e.note || null,
+    id:          typeof e.id === "number" ? undefined : e.id,
+    title:       e.title,
+    date:        e.date,
+    start_h:     e.startH,
+    start_m:     e.startM,
+    end_h:       e.endH,
+    end_m:       e.endM,
+    color:       e.color,
+    note:        e.note || null,
+    shared:      e.shared || false,
+    shared_with: e.sharedWith || [],
   };
 }
 
 function dbToEvent(r) {
   return {
-    id:     r.id,
-    title:  r.title,
-    date:   r.date,
-    startH: r.start_h,
-    startM: r.start_m,
-    endH:   r.end_h,
-    endM:   r.end_m,
-    color:  r.color,
-    note:   r.note || "",
+    id:         r.id,
+    title:      r.title,
+    date:       r.date,
+    startH:     r.start_h,
+    startM:     r.start_m,
+    endH:       r.end_h,
+    endM:       r.end_m,
+    color:      r.color,
+    note:       r.note || "",
+    shared:     r.shared || false,
+    sharedWith: r.shared_with || [],
   };
 }
 
@@ -171,6 +175,34 @@ export async function deleteListDB(id) {
 
 function dbToList(r) {
   return { id: r.id, label: r.label, color: r.color };
+}
+
+// ── SHARE LISTS + PERSON COLORS (granulair delen) ──────────────────────────────
+
+export async function loadShareLists(shareId) {
+  const { data } = await supabase.from("share_lists").select("*").eq("share_id", shareId);
+  return (data || []).map(r => ({ listId: r.list_id, label: r.label, color: r.color }));
+}
+
+export async function setShareLists(shareId, lists) {
+  await supabase.from("share_lists").delete().eq("share_id", shareId);
+  if (lists.length === 0) return;
+  await supabase.from("share_lists").insert(
+    lists.map(l => ({ share_id: shareId, list_id: l.id, label: l.label, color: l.color }))
+  );
+}
+
+export async function loadPersonColors(userId) {
+  const { data } = await supabase.from("person_colors").select("*").eq("user_id", userId);
+  return (data || []).map(r => ({ email: r.person_email, color: r.color }));
+}
+
+export async function setPersonColorDB(userId, email, color) {
+  await supabase.from("person_colors").upsert({ user_id: userId, person_email: email, color }, { onConflict: "user_id,person_email" });
+}
+
+export async function removePersonColorDB(userId, email) {
+  await supabase.from("person_colors").delete().eq("user_id", userId).eq("person_email", email);
 }
 
 // ── AGENTS (per gebruiker) ─────────────────────────────────────────────────────

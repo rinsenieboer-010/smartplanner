@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { flushSync } from "react-dom";
 import { supabase } from "./supabase.js";
-import { loadTasks, loadTrash, trashTaskDB, restoreTaskDB, loadEvents, loadLists, addTaskDB, updateTaskDB, deleteTaskDB, addEventDB, updateEventDB, deleteEventDB, addListDB, updateListDB, deleteListDB, seedDefaultListsDB, loadAgents, addAgentDB, updateAgentDB, deleteAgentDB } from "./db.js";
+import { loadTasks, loadTrash, trashTaskDB, restoreTaskDB, loadEvents, loadLists, addTaskDB, updateTaskDB, deleteTaskDB, addEventDB, updateEventDB, deleteEventDB, addListDB, updateListDB, deleteListDB, seedDefaultListsDB, loadAgents, addAgentDB, updateAgentDB, deleteAgentDB, loadShareLists, setShareLists, loadPersonColors, setPersonColorDB, removePersonColorDB } from "./db.js";
 import { t, LANGUAGES, DAYS_BY_LANG, MONTHS_BY_LANG, MONTHS_SHORT_BY_LANG } from "./i18n.js";
 import { createContext, useContext } from "react";
 const LangContext = createContext('nl');
@@ -48,6 +48,15 @@ const STATUS_BG    = { "": "#f3f4f6", open: "#DBEAFE", bezig: "#FFF176", klaar: 
 const EVENT_BG     = { blue: "#DBEAFE", red: "#FEE2E2", yellow: "#FFF176" };
 const EVENT_BORDER = { blue: "#2563EB", red: "#DC2626", yellow: "#E6B400" };
 
+// Secundaire kleuren — uitsluitend voor uitgenodigde personen (toegewezen in instellingen)
+const PERSON_COLOR_KEYS = ["zwart", "oranje", "paars", "groen"];
+const PERSON_COLORS = {
+  zwart:  { dot: "#111827", bg: "#E5E7EB", border: "#111827", text: "#111827" },
+  oranje: { dot: "#EA580C", bg: "#FFEDD5", border: "#EA580C", text: "#9A3412" },
+  paars:  { dot: "#9333EA", bg: "#F3E8FF", border: "#9333EA", text: "#6B21A8" },
+  groen:  { dot: "#16A34A", bg: "#DCFCE7", border: "#15803D", text: "#15803D" },
+};
+
 const pastDate    = dateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate()-2));
 const futureDate  = dateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate()+5));
 
@@ -75,6 +84,15 @@ const HARDCODED_AGENTS = [
   { id: "stage",       name: "Stage",       role: "Stageplek zoeker",        model: "opus",   emoji: "🎓" },
 ];
 const MODEL_BADGE_COLOR = { opus: "#7c3aed", sonnet: "#2563EB", haiku: "#059669" };
+
+// Namespace voor gedeelde lijst-/taak-IDs zodat ze niet botsen met eigen IDs
+const prefixSharedId = (ownerId, id) => `s:${ownerId}:${id}`;
+const parseSharedId = (id) => {
+  if (typeof id !== "string" || !id.startsWith("s:")) return null;
+  const rest = id.slice(2); const c = rest.indexOf(":");
+  if (c === -1) return null;
+  return { ownerId: rest.slice(0, c), originalId: rest.slice(c + 1) };
+};
 
 
 // ── DATE PICKER ──────────────────────────────────────────────────────────────
@@ -174,7 +192,7 @@ function DatePicker({ value, onChange, onClose }) {
 }
 
 // ── TASK PANEL ────────────────────────────────────────────────────────────────
-function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, panelWidth }) {
+function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLists = [], sharedTasks = [], personColors = {}, userId, panelWidth }) {
   const lang = useLang();
   const showSidebar = panelWidth > 400;
   const [adding, setAdding] = useState(false);
@@ -187,23 +205,9 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
   const [datePickerOpen, setDatePickerOpen] = useState(null); // task id
   const [openNoteId, setOpenNoteId] = useState(null);
   const [noteValue, setNoteValue] = useState("");
-  const [sharedLists, setSharedLists] = useState([]);
-  const [addingShared, setAddingShared] = useState(false);
-  const [newSharedName, setNewSharedName] = useState("");
 
-  const addShared = () => {
-    if (!newSharedName.trim()) return;
-    const colors = ["#E6B400","#DC2626","#2563EB"];
-    const color = colors[sharedLists.length % 3];
-    const id = "shared_" + Date.now();
-    setSharedLists(l => [...l, { id, label: newSharedName.trim(), color }]);
-    setNewSharedName(""); setAddingShared(false); setActiveList(id);
-  };
-  const removeShared = (id) => {
-    setSharedLists(l => l.filter(x => x.id !== id));
-    if (activeList === id) setActiveList("mine");
-  };
-  const sharedDemoTasks = [];
+  // Gedeelde lijst tonen in de kleur van de persoon (zo zie je meteen van wie)
+  const listColor = (l) => (l.isShared ? (PERSON_COLORS[personColors[l.ownerEmail]]?.dot || l.color) : l.color);
   const [addingList, setAddingList] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [editingListName, setEditingListName] = useState(false);
@@ -217,7 +221,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
   const isShared = sharedLists.some(l => l.id === activeList);
   const isTrash  = activeList === "trash";
 
-  const allTasks = [...tasks.map(t => ({ ...t, list: t.list || "mine" })), ...sharedDemoTasks];
+  const allTasks = [...tasks.map(t => ({ ...t, list: t.list || "mine" })), ...sharedTasks];
   const visibleTasks = allTasks.filter(t => t.list === activeList);
   // Eerst op datum (vroegste boven, geen datum onderaan), dan binnen elke
   // datumgroep op prioriteit: hoog → midden → laag → geen prioriteit
@@ -385,22 +389,27 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
           </div>
         )}
 
-        <div style={{ padding:"14px 12px 8px", fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2, marginTop:8, borderTop:"1px solid #27272a" }}>
-          <span>{t(lang, 'shared')}</span>
-        </div>
-        {sharedLists.map(l => (
-          <div key={l.id} onClick={() => setActiveList(l.id)} style={{
-            display:"flex", alignItems:"center", gap:8, padding:"7px 12px", cursor:"pointer", overflow:"hidden",
-            background: activeList===l.id ? "#27272a" : "transparent",
-            borderLeft: activeList===l.id ? "3px solid "+l.color : "3px solid transparent"
-          }}>
-            <div style={{ width:8, height:8, borderRadius:"50%", background:l.color, flexShrink:0 }} />
-            <div style={{ minWidth:0, flex:1 }}>
-              <div style={{ fontSize:12, color: activeList===l.id ? "#f4f4f5" : "#a1a1aa", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{l.label}</div>
-              <div style={{ fontSize:10, color:"#52525b" }}>{t(lang, 'shared').toLowerCase()}</div>
-            </div>
+        {sharedLists.length > 0 && (
+          <div style={{ padding:"14px 12px 8px", fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2, marginTop:8, borderTop:"1px solid #27272a" }}>
+            <span>{t(lang, 'shared')}</span>
           </div>
-        ))}
+        )}
+        {sharedLists.map(l => {
+          const c = listColor(l);
+          return (
+            <div key={l.id} onClick={() => setActiveList(l.id)} style={{
+              display:"flex", alignItems:"center", gap:8, padding:"7px 12px", cursor:"pointer", overflow:"hidden",
+              background: activeList===l.id ? "#27272a" : "transparent",
+              borderLeft: activeList===l.id ? "3px solid "+c : "3px solid transparent"
+            }}>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:c, flexShrink:0 }} />
+              <div style={{ minWidth:0, flex:1 }}>
+                <div style={{ fontSize:12, color: activeList===l.id ? "#f4f4f5" : "#a1a1aa", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{l.label}</div>
+                <div style={{ fontSize:10, color:"#52525b", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{(l.ownerEmail||"").split("@")[0]}</div>
+              </div>
+            </div>
+          );
+        })}
 
         {/* Trash — pinned to bottom */}
         <div style={{ flex:1 }} />
@@ -597,9 +606,14 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, userId, 
 }
 
 // ── CALENDAR PANEL ────────────────────────────────────────────────────────────
-function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
+function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColors = {}, invitees = [], userId, panelWidth }) {
   const lang = useLang();
   const showSidebar = panelWidth > 400;
+  const NEUTRAL_PERSON = { dot: "#9ca3af", bg: "#F3F4F6", border: "#9ca3af", text: "#6b7280" };
+  const personStyle = (email) => PERSON_COLORS[personColors[email]] || NEUTRAL_PERSON;
+  const [modalSharedWith, setModalSharedWith] = useState([]);
+  const [editSharedWith, setEditSharedWith]   = useState([]);
+  const toggleIn = (arr, v) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
   const [weekBase, setWeekBase] = useState(new Date(today));
   const [adding, setAdding] = useState(null);
   const [newTitle, setNewTitle] = useState("");
@@ -674,11 +688,12 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
     setNewTitle("");
     setModalNote("");
     setModalColor("blue");
+    setModalSharedWith([]);
   };
 
   const addEvent = () => {
     if (!newTitle.trim() || !adding) return;
-    const eventData = { title: newTitle.trim(), note: modalNote.trim(), date: adding.date, startH: modalStartH, startM: modalStartM, endH: modalEndH, endM: modalEndM, color: modalColor };
+    const eventData = { title: newTitle.trim(), note: modalNote.trim(), date: adding.date, startH: modalStartH, startM: modalStartM, endH: modalEndH, endM: modalEndM, color: modalColor, shared: modalSharedWith.length > 0, sharedWith: modalSharedWith };
     addEventDB(userId, eventData).then(saved => setEvents(ev => [...ev, saved]));
     setNewTitle(""); setAdding(null);
   };
@@ -706,7 +721,7 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
   // smalle band over de volle hoogte i.p.v. een blok dat buiten beeld begint.
   const evMin = (h, m) => h * 60 + m;
   const isAllDay = (e) => evMin(e.startH, e.startM) <= HOURS[0] * 60 && evMin(e.endH, e.endM) >= (HOURS[HOURS.length - 1] + 1) * 60;
-  const openEvent = (ev) => { setSelectedEvent(ev); setEditNote(ev.note || ""); setEditMode(false); setEditTitle(ev.title); setEditStartH(ev.startH); setEditStartM(ev.startM); setEditEndH(ev.endH); setEditEndM(ev.endM); setEditColor(ev.color || 'blue'); };
+  const openEvent = (ev) => { setSelectedEvent(ev); setEditNote(ev.note || ""); setEditMode(false); setEditTitle(ev.title); setEditStartH(ev.startH); setEditStartM(ev.startM); setEditEndH(ev.endH); setEditEndM(ev.endM); setEditColor(ev.color || 'blue'); setEditSharedWith(ev.sharedWith || []); };
 
   return (
     <div style={{ display:"flex", height:"100%", background:"#ffffff" }}>
@@ -905,6 +920,34 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
                         </div>
                       );
                     })}
+                    {/* Gedeelde afspraken van anderen — hele-dag-band (rechts, in hun kleur) */}
+                    {sharedEvents.filter(e => e.date===dk && isAllDay(e)).map(ev => {
+                      const ps = personStyle(ev.ownerEmail);
+                      return (
+                        <div key={"shad-"+ev.id} title={ev.title}
+                          onClick={e => { e.stopPropagation(); window.alert(`${ev.title}\n${(ev.ownerEmail||"").split("@")[0]} · hele dag`); }}
+                          style={{ position:"absolute", top: extraH, right: 2, width:"40%", height: HOURS.length * HOUR_H - 2, background: ps.bg, border:"1px dashed "+ps.border, borderLeft:"3px solid "+ps.border, borderRadius:3, padding:"3px 5px", overflow:"hidden", zIndex:1, cursor:"pointer" }}>
+                          <div style={{ fontSize:9, fontWeight:800, color: ps.text, textTransform:"uppercase" }}>{(ev.ownerEmail||"").split("@")[0]}</div>
+                          <div style={{ fontSize:11, fontWeight:700, color: ps.text, overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
+                        </div>
+                      );
+                    })}
+                    {/* Gedeelde afspraken van anderen — getimed, eronder, steekt onderaan uit */}
+                    {sharedEvents.filter(e => e.date===dk && !isAllDay(e)).map(ev => {
+                      const ps = personStyle(ev.ownerEmail);
+                      const rawTop = extraH + (ev.startH - HOURS[0] + ev.startM/60) * HOUR_H;
+                      const top    = Math.max(extraH, rawTop);
+                      const bottom = extraH + (ev.endH - HOURS[0] + ev.endM/60) * HOUR_H;
+                      const height = Math.max(bottom - top - 2, 16) + 8;
+                      return (
+                        <div key={"sh-"+ev.id} title={ev.title}
+                          onClick={e => { e.stopPropagation(); window.alert(`${ev.title}\n${(ev.ownerEmail||"").split("@")[0]} · ${pad(ev.startH)}:${pad(ev.startM)}–${pad(ev.endH)}:${pad(ev.endM)}`); }}
+                          style={{ position:"absolute", top, left:5, right:5, height, background: ps.bg, border:"1px dashed "+ps.border, borderRadius:3, padding:"2px 5px", overflow:"hidden", zIndex:1, cursor:"pointer" }}>
+                          <div style={{ fontSize:8, fontWeight:800, color: ps.text, textTransform:"uppercase", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{(ev.ownerEmail||"").split("@")[0]}</div>
+                          <div style={{ fontSize:10, fontWeight:700, color: ps.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
@@ -948,8 +991,24 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
                     <div key={key} onClick={() => setEditColor(key)} style={{ width:20, height:20, borderRadius:"50%", background:hex, cursor:"pointer", border: editColor===key ? "3px solid #111827" : "3px solid transparent", boxSizing:"border-box" }} />
                   ))}
                 </div>
+                {invitees.length > 0 && (
+                  <div style={{ marginTop:4 }}>
+                    <div style={{ fontSize:11, color:"#6b7280", marginBottom:4 }}>Zichtbaar voor</div>
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                      <div onClick={() => setEditSharedWith([])}
+                        style={{ fontSize:11, fontWeight:600, padding:"4px 10px", borderRadius:12, cursor:"pointer", border:"1px solid "+(editSharedWith.length===0?"#374151":"#e5e7eb"), background: editSharedWith.length===0?"#374151":"#fff", color: editSharedWith.length===0?"#fff":"#374151" }}>Alleen ik</div>
+                      {invitees.map(em => {
+                        const on = editSharedWith.includes(em);
+                        return (
+                          <div key={em} onClick={() => setEditSharedWith(sw => toggleIn(sw, em))}
+                            style={{ fontSize:11, fontWeight:600, padding:"4px 10px", borderRadius:12, cursor:"pointer", border:"1px solid "+(on?"#2563EB":"#e5e7eb"), background: on?"#2563EB":"#fff", color: on?"#fff":"#374151" }}>{on?"✓ ":""}{em.split("@")[0]}</div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 <button onClick={() => {
-                  const updated = { ...selectedEvent, title: editTitle, startH: editStartH, startM: editStartM, endH: editEndH, endM: editEndM, color: editColor };
+                  const updated = { ...selectedEvent, title: editTitle, startH: editStartH, startM: editStartM, endH: editEndH, endM: editEndM, color: editColor, shared: editSharedWith.length > 0, sharedWith: editSharedWith };
                   updateEventDB(updated);
                   setEvents(evs => evs.map(x => x.id===selectedEvent.id ? updated : x));
                   setSelectedEvent(updated);
@@ -1010,6 +1069,23 @@ function CalendarPanel({ events, setEvents, tasks, userId, panelWidth }) {
                 <div key={key} onClick={() => setModalColor(key)} style={{ width:22, height:22, borderRadius:"50%", background:hex, cursor:"pointer", border: modalColor===key ? "3px solid #111827" : "3px solid transparent", boxSizing:"border-box" }} />
               ))}
             </div>
+            {/* Zichtbaar voor */}
+            {invitees.length > 0 && (
+              <div style={{ marginBottom:12 }}>
+                <div style={{ fontSize:11, color:"#6b7280", marginBottom:4 }}>Zichtbaar voor</div>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                  <div onClick={() => setModalSharedWith([])}
+                    style={{ fontSize:11, fontWeight:600, padding:"4px 10px", borderRadius:12, cursor:"pointer", border:"1px solid "+(modalSharedWith.length===0?"#374151":"#e5e7eb"), background: modalSharedWith.length===0?"#374151":"#fff", color: modalSharedWith.length===0?"#fff":"#374151" }}>Alleen ik</div>
+                  {invitees.map(em => {
+                    const on = modalSharedWith.includes(em);
+                    return (
+                      <div key={em} onClick={() => setModalSharedWith(sw => toggleIn(sw, em))}
+                        style={{ fontSize:11, fontWeight:600, padding:"4px 10px", borderRadius:12, cursor:"pointer", border:"1px solid "+(on?"#2563EB":"#e5e7eb"), background: on?"#2563EB":"#fff", color: on?"#fff":"#374151" }}>{on?"✓ ":""}{em.split("@")[0]}</div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {/* Note */}
             <div style={{ marginBottom:14 }}>
               <textarea value={modalNote} onChange={e => setModalNote(e.target.value)}
@@ -1622,6 +1698,13 @@ export default function App() {
   const [incomingShares, setIncomingShares] = useState([]);
   const [inviteEmail, setInviteEmail]     = useState("");
   const [invitePermission, setInvitePermission] = useState("view");
+  const [sharedLists, setSharedLists]     = useState([]);   // lijsten die anderen met mij delen
+  const [sharedTasks, setSharedTasks]     = useState([]);   // taken in die gedeelde lijsten
+  const [sharedEvents, setSharedEvents]   = useState([]);   // afspraken die anderen met mij delen
+  const [personColors, setPersonColors]   = useState({});   // email -> kleur-key
+  const [shareListsMap, setShareListsMap] = useState({});   // mijn shareId -> [listId,...]
+  const [sharedWithMe, setSharedWithMe]   = useState([]);   // geaccepteerde shares waarin ik uitgenodigd ben
+  const [personModalEmail, setPersonModalEmail] = useState(null);
   const containerRef = useRef(null);
   const totalRef     = useRef(0);
 
@@ -1674,37 +1757,57 @@ export default function App() {
   const invitePerson = async () => {
     if (!inviteEmail.trim()) return;
     const email = inviteEmail.trim().toLowerCase();
-    const { data, error } = await supabase.from("shares").insert({
-      owner_id: session.user.id,
-      owner_email: session.user.email,
-      invited_email: email,
-      permission: invitePermission,
-    }).select().single();
-    if (!error && data) {
-      setOutgoingShares(s => [...s, data]);
-      setInviteEmail("");
-    }
+    await supabase.from("shares").insert({
+      owner_id: session.user.id, owner_email: session.user.email,
+      invited_email: email, permission: invitePermission,
+    });
+    setInviteEmail("");
+    await reloadAll();
   };
 
   const removeShare = async (id) => {
     await supabase.from("shares").delete().eq("id", id);
-    setOutgoingShares(s => s.filter(x => x.id !== id));
+    await reloadAll();
   };
 
   const updateSharePermission = async (id, permission) => {
     await supabase.from("shares").update({ permission }).eq("id", id);
-    setOutgoingShares(s => s.map(x => x.id === id ? { ...x, permission } : x));
+    await reloadAll();
   };
 
   const acceptInvitation = async (id) => {
     await supabase.from("shares").update({ status: "accepted" }).eq("id", id);
     setIncomingShares(s => s.filter(x => x.id !== id));
+    await reloadAll();
   };
 
   const declineInvitation = async (id) => {
     await supabase.from("shares").update({ status: "declined" }).eq("id", id);
     setIncomingShares(s => s.filter(x => x.id !== id));
+    await reloadAll();
   };
+
+  // Per persoon: kleur toewijzen en welke lijsten ze mogen zien
+  const ownListsForShare = lists.filter(l => !l.isShared);
+  const setPersonColor = async (email, color) => {
+    if (color) await setPersonColorDB(session.user.id, email, color);
+    else await removePersonColorDB(session.user.id, email);
+    await reloadAll();
+  };
+  const toggleShareList = async (share, listId) => {
+    const current = shareListsMap[share.id] || [];
+    const nextIds = current.includes(listId) ? current.filter(x => x !== listId) : [...current, listId];
+    const objs = ownListsForShare.filter(l => nextIds.includes(l.id)).map(l => ({ id: l.id, label: l.label, color: l.color }));
+    await setShareLists(share.id, objs);
+    await reloadAll();
+  };
+  const peopleEmails = Array.from(new Set([
+    ...outgoingShares.map(s => s.invited_email),
+    ...sharedWithMe.map(s => s.owner_email),
+  ]));
+  const pmOut       = personModalEmail ? outgoingShares.find(s => s.invited_email === personModalEmail) : null;
+  const pmSharedIds = pmOut ? (shareListsMap[pmOut.id] || []) : [];
+  const pmColor     = personModalEmail ? personColors[personModalEmail] : null;
 
   const generateApiKey = async () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -1713,37 +1816,81 @@ export default function App() {
     setApiKey(key);
   };
 
+  const reloadAll = useCallback(async () => {
+    if (!session) return;
+    const uid = session.user.id;
+    const email = session.user.email;
+    {
+      const [t, ev, ls, tr, pcs, incRes, outRes] = await Promise.all([
+        loadTasks(uid), loadEvents(uid), loadLists(uid), loadTrash(uid),
+        loadPersonColors(uid),
+        supabase.from("shares").select("*").eq("invited_email", email).eq("status", "accepted"),
+        supabase.from("shares").select("*").eq("owner_id", uid),
+      ]);
+      setTasks(t);
+      setEvents(ev);
+      setTrash(tr);
+      if (ls) {
+        setLists(ls);
+      } else if (!seededLists.current) {
+        seededLists.current = true;
+        seedDefaultListsDB(uid, DEFAULT_LISTS).then(seeded => setLists(seeded));
+      }
+
+      const colorMap = {};
+      pcs.forEach(({ email: e, color }) => { colorMap[e] = color; });
+      setPersonColors(colorMap);
+
+      // Gedeeld MET mij: per eigenaar de gedeelde lijsten + taken + afspraken
+      const accepted = incRes.data || [];
+      setSharedWithMe(accepted);
+      const shared = await Promise.all(accepted.map(async (share) => {
+        const [sl, sTasks, sEvents] = await Promise.all([
+          loadShareLists(share.id), loadTasks(share.owner_id), loadEvents(share.owner_id),
+        ]);
+        return { share, sl, sTasks, sEvents };
+      }));
+      setSharedLists(shared.flatMap(({ share, sl }) => sl.map(l => ({
+        id: prefixSharedId(share.owner_id, l.listId), label: l.label || "Gedeeld", color: l.color || "#9ca3af",
+        isShared: true, ownerId: share.owner_id, ownerEmail: share.owner_email, permission: share.permission,
+      }))));
+      setSharedTasks(shared.flatMap(({ share, sTasks }) => sTasks.map(task => ({
+        ...task, list: prefixSharedId(share.owner_id, task.list || "mine"),
+        isShared: true, ownerId: share.owner_id, ownerEmail: share.owner_email, permission: share.permission,
+      }))));
+      setSharedEvents(shared.flatMap(({ share, sEvents }) => sEvents.map(e => ({
+        ...e, isShared: true, ownerId: share.owner_id, ownerEmail: share.owner_email,
+      }))));
+
+      // Gedeeld DOOR mij: huidige lijst-selectie per uitgaande share
+      const outgoing = outRes.data || [];
+      setOutgoingShares(outgoing);
+      const slMap = {};
+      await Promise.all(outgoing.map(async (share) => {
+        const sl = await loadShareLists(share.id);
+        slMap[share.id] = sl.map(x => x.listId);
+      }));
+      setShareListsMap(slMap);
+    }
+  }, [session]);
+
   useEffect(() => {
     if (!session) return;
     const uid = session.user.id;
-
-    const reloadAll = () =>
-      Promise.all([loadTasks(uid), loadEvents(uid), loadLists(uid), loadTrash(uid)]).then(([t, ev, ls, tr]) => {
-        setTasks(t);
-        setEvents(ev);
-        setTrash(tr);
-        if (ls) {
-          setLists(ls);
-        } else if (!seededLists.current) {
-          // Nieuwe gebruiker zonder lijsten in de database: zaai de standaardlijsten
-          // één keer, zodat hernoemen/kleur/verwijderen daarna bewaard blijft.
-          seededLists.current = true;
-          seedDefaultListsDB(uid, DEFAULT_LISTS).then(seeded => setLists(seeded));
-        }
-      });
-
     reloadAll();
 
-    // Realtime sync: wijzigingen vanaf telefoon verschijnen direct in de web app
+    // Realtime sync: eigen + gedeelde wijzigingen verschijnen direct
     const channel = supabase
       .channel(`user-data-${uid}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks',  filter: `user_id=eq.${uid}` }, reloadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: `user_id=eq.${uid}` }, reloadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lists',  filter: `user_id=eq.${uid}` }, reloadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks'  }, reloadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, reloadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lists'  }, reloadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'share_lists' }, reloadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shares' }, reloadAll)
       .subscribe();
 
     return () => supabase.removeChannel(channel);
-  }, [session]);
+  }, [session, reloadAll]);
 
   useEffect(() => {
     const update = () => {
@@ -1926,11 +2073,11 @@ export default function App() {
       </div>
       <div ref={containerRef} style={{ display:"flex", height:"calc(100vh - 44px)", overflow:"hidden" }}>
         {visiblePanels.tasks && <div style={{ width: widths[0] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
-          {isCollapsedLeft ? <CollapsedLabel label={t(lang, 'tasks')} /> : <TaskPanel tasks={tasks} setTasks={setTasks} trash={trash} setTrash={setTrash} lists={lists} setLists={setLists} userId={session.user.id} panelWidth={widths[0]??320} />}
+          {isCollapsedLeft ? <CollapsedLabel label={t(lang, 'tasks')} /> : <TaskPanel tasks={tasks} setTasks={setTasks} trash={trash} setTrash={setTrash} lists={lists} setLists={setLists} sharedLists={sharedLists} sharedTasks={sharedTasks} personColors={personColors} userId={session.user.id} panelWidth={widths[0]??320} />}
         </div>}
         {visiblePanels.tasks && (visiblePanels.calendar || visiblePanels.assistant || visiblePanels.agents) && <Splitter onMouseDown={startLeft} />}
         {visiblePanels.calendar && <div style={{ width: widths[1] ?? 200, flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.12s ease" }}>
-          {isCollapsedMid ? <CollapsedLabel label={t(lang, 'calendar')} /> : <CalendarPanel events={events} setEvents={setEvents} tasks={tasks} userId={session.user.id} panelWidth={widths[1]??200} />}
+          {isCollapsedMid ? <CollapsedLabel label={t(lang, 'calendar')} /> : <CalendarPanel events={events} setEvents={setEvents} tasks={tasks} sharedEvents={sharedEvents} personColors={personColors} invitees={outgoingShares.filter(s => s.status==="accepted").map(s => s.invited_email)} userId={session.user.id} panelWidth={widths[1]??200} />}
         </div>}
         {visiblePanels.calendar && (visiblePanels.assistant || visiblePanels.agents) && <Splitter onMouseDown={startMid} />}
         {visiblePanels.assistant && <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
@@ -2061,19 +2208,26 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Gedeeld door mij */}
-              {outgoingShares.length > 0 && (
+              {/* Personen: klik om kleur + welke lijsten ze zien in te stellen */}
+              {peopleEmails.length > 0 && (
                 <div style={{ marginBottom:12 }}>
-                  <div style={{ fontSize:11, color:"#52525b", marginBottom:6 }}>Gedeeld met</div>
-                  {outgoingShares.map(s => (
-                    <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, background:"#111827", borderRadius:6, padding:"7px 10px", marginBottom:4 }}>
-                      <span style={{ flex:1, fontSize:11, color:"#9ca3af", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.invited_email}</span>
-                      <span style={{ fontSize:10, color: s.status === "accepted" ? "#4ade80" : "#6b7280" }}>
-                        {s.status === "accepted" ? "actief" : "wacht..."}
-                      </span>
-                      <button onClick={() => removeShare(s.id)} style={{ background:"none", border:"none", color:"#6b7280", cursor:"pointer", fontSize:13, padding:"0 2px" }}>✕</button>
-                    </div>
-                  ))}
+                  <div style={{ fontSize:11, color:"#52525b", marginBottom:6 }}>Personen</div>
+                  {peopleEmails.map(email => {
+                    const out = outgoingShares.find(s => s.invited_email === email);
+                    const myColor = personColors[email];
+                    const dot = myColor ? PERSON_COLORS[myColor].dot : "#3f3f46";
+                    return (
+                      <div key={email} onClick={() => setPersonModalEmail(email)}
+                        style={{ display:"flex", alignItems:"center", gap:8, background:"#111827", borderRadius:6, padding:"8px 10px", marginBottom:4, cursor:"pointer" }}>
+                        <div style={{ width:11, height:11, borderRadius:"50%", background:dot, border: myColor ? "none" : "1px solid #3f3f46", flexShrink:0 }} />
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:11, color:"#f9fafb", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{email}</div>
+                          <div style={{ fontSize:9, color:"#52525b" }}>{out ? (out.status === "accepted" ? "tik om in te stellen" : "wacht op acceptatie") : "deelt met jou"}</div>
+                        </div>
+                        <span style={{ color:"#52525b", fontSize:14 }}>›</span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -2117,6 +2271,59 @@ export default function App() {
             </div>
 
           </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Persoon-instellingen (popup over de instellingen) ── */}
+      {personModalEmail && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:80, display:"flex", alignItems:"center", justifyContent:"center" }}
+          onClick={() => setPersonModalEmail(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#18181b", borderRadius:14, width:340, maxHeight:"85vh", overflowY:"auto", padding:22 }}>
+            <div style={{ display:"flex", alignItems:"center", marginBottom:16 }}>
+              <div style={{ flex:1, color:"#f9fafb", fontSize:14, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{personModalEmail}</div>
+              <button onClick={() => setPersonModalEmail(null)} style={{ background:"none", border:"none", color:"#9ca3af", fontSize:18, cursor:"pointer" }}>✕</button>
+            </div>
+
+            <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, marginBottom:8 }}>KLEUR</div>
+            <div style={{ display:"flex", gap:10, marginBottom:18 }}>
+              {PERSON_COLOR_KEYS.map(key => (
+                <div key={key} onClick={() => setPersonColor(personModalEmail, pmColor===key ? null : key)}
+                  style={{ width:28, height:28, borderRadius:"50%", background: PERSON_COLORS[key].dot, cursor:"pointer", border: pmColor===key ? "3px solid #f9fafb" : "3px solid transparent", boxSizing:"border-box" }} />
+              ))}
+            </div>
+
+            {pmOut ? (
+              <>
+                <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, marginBottom:8 }}>
+                  WAT KAN {(personModalEmail||"").split("@")[0].toUpperCase()} ZIEN
+                </div>
+                {ownListsForShare.map(l => {
+                  const on = pmSharedIds.includes(l.id);
+                  return (
+                    <div key={l.id} onClick={() => toggleShareList(pmOut, l.id)}
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderBottom:"1px solid #27272a", cursor:"pointer" }}>
+                      <div style={{ width:9, height:9, borderRadius:"50%", background:l.color }} />
+                      <div style={{ flex:1, color:"#f9fafb", fontSize:13 }}>{l.label}</div>
+                      <div style={{ width:22, height:22, borderRadius:5, border:"2px solid "+(on?"#2563EB":"#3f3f46"), background:on?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13 }}>{on?"✓":""}</div>
+                    </div>
+                  );
+                })}
+                <div style={{ fontSize:11, color:"#6b7280", marginTop:10, lineHeight:1.5 }}>Afspraken deel je per stuk in de agenda.</div>
+
+                <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, margin:"18px 0 8px" }}>RECHTEN</div>
+                <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+                  {[["view","👁 Bekijken"],["edit","✏️ Bewerken"]].map(([p,labelTxt]) => (
+                    <button key={p} onClick={() => updateSharePermission(pmOut.id, p)}
+                      style={{ flex:1, border:"1px solid "+(pmOut.permission===p?"#2563EB":"#3f3f46"), background: pmOut.permission===p?"#1e3a8a":"transparent", color: pmOut.permission===p?"#fff":"#9ca3af", borderRadius:7, padding:"8px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>{labelTxt}</button>
+                  ))}
+                </div>
+                <button onClick={() => { removeShare(pmOut.id); setPersonModalEmail(null); }}
+                  style={{ width:"100%", border:"1px solid #7f1d1d", background:"transparent", color:"#f87171", borderRadius:7, padding:"9px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>Stop met delen</button>
+              </>
+            ) : (
+              <div style={{ fontSize:12, color:"#9ca3af", lineHeight:1.6 }}>Deze persoon deelt met jou. Geef een kleur zodat je z'n gedeelde lijsten en afspraken herkent. Wil je zelf iets delen? Nodig 'm uit via z'n e-mailadres.</div>
+            )}
           </div>
         </div>
       )}
