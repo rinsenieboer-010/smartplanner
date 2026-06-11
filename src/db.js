@@ -61,6 +61,8 @@ function taskToDB(t) {
     status:    t.status || null,
     list_id:   t.list || "mine",
     note:      t.note || null,
+    recurrence:        t.recurrence || null,
+    last_completed_at: t.lastCompletedAt || null,
   };
 }
 
@@ -73,7 +75,9 @@ function dbToTask(r) {
     status:   r.status || "",
     list:     r.list_id || "mine",
     note:     r.note || "",
-    completedAt: r.deleted_at || null,
+    completedAt:     r.deleted_at || null,
+    recurrence:      r.recurrence || null,
+    lastCompletedAt: r.last_completed_at || null,
   };
 }
 

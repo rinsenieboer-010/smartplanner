@@ -238,15 +238,45 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
     return (PRIO_RANK[pa] ?? 3) - (PRIO_RANK[pb] ?? 3);
   });
 
+  // Bereken de volgende herhaal-deadline: altijd strikt ná vandaag
+  const nextRecurDeadline = (currentDeadline, recurrence) => {
+    const today = new Date(); today.setHours(0,0,0,0);
+    let base = currentDeadline ? new Date(currentDeadline + 'T00:00:00') : new Date(today);
+    base.setHours(0,0,0,0);
+    const step = () => {
+      if (recurrence === 'daily')    base.setDate(base.getDate() + 1);
+      else if (recurrence === 'weekly')   base.setDate(base.getDate() + 7);
+      else if (recurrence === 'biweekly') base.setDate(base.getDate() + 14);
+      else if (recurrence === 'monthly')  base.setMonth(base.getMonth() + 1);
+    };
+    step();
+    // Als de berekende datum nog steeds vandaag of in het verleden valt, spring naar morgen of later
+    while (base <= today) step();
+    return dateKey(base); // lokale datum, niet UTC — anders schuift de deadline een dag terug
+  };
+
   const completeDone = (id) => {
     setFadingOut(f => ({ ...f, [id]: true }));
     setTimeout(() => {
       const task = tasks.find(t => t.id === id);
       if (task) {
-        const completedAt = new Date().toISOString();
-        trashTaskDB(id); // zacht verwijderen: blijft in Supabase met deleted_at
-        setTrash(tr => [...tr, { ...task, completedAt }]);
-        setTasks(t => t.filter(x => x.id !== id));
+        if (task.recurrence) {
+          // Herhalende taak: niet naar de prullenbak, maar deadline opschuiven
+          const newDeadline = nextRecurDeadline(task.deadline, task.recurrence);
+          const updated = {
+            ...task,
+            status: '',
+            deadline: newDeadline,
+            lastCompletedAt: new Date().toISOString(),
+          };
+          updateTaskDB(updated);
+          setTasks(t => t.map(x => x.id === id ? updated : x));
+        } else {
+          const completedAt = new Date().toISOString();
+          trashTaskDB(id); // zacht verwijderen: blijft in Supabase met deleted_at
+          setTrash(tr => [...tr, { ...task, completedAt }]);
+          setTasks(t => t.filter(x => x.id !== id));
+        }
       }
       setFadingOut(f => { const n = { ...f }; delete n[id]; return n; });
     }, 2000);
@@ -350,11 +380,18 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
   const activeColor = [...lists, ...sharedLists].find(l => l.id===activeList)?.color || "#2563EB";
   const activeLabel = isTrash ? t(lang, 'trash') : ([...lists, ...sharedLists].find(l => l.id===activeList)?.label || t(lang, 'tasks'));
 
-  const COL = { name: 200, date: 100, prio: 88, status: 80, del: 28 };
-  const TABLE_MIN = COL.name + COL.date + COL.prio + COL.del + 41;
+  const COL = { name: 200, date: 100, prio: 88, status: 80, recur: 34, del: 28 };
+  const TABLE_MIN = COL.name + COL.date + COL.prio + COL.recur + COL.del + 41;
   const cb = { borderRight: "1px solid #e5e7eb" };
   const prioLabel   = (p) => p==="hoog" ? t(lang,'prioHigh') : p==="midden" ? t(lang,'prioMid') : p==="laag" ? t(lang,'prioLow') : "—";
   const statusLabel = (s) => s==="open" ? t(lang,'statusOpen') : s==="bezig" ? t(lang,'statusBusy') : s==="klaar" ? t(lang,'statusDone') : "—";
+  // Aantal kalenderdagen achterstand t.o.v. vandaag
+  const overdueDaysCount = (deadline) => {
+    if (!deadline) return 0;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dl = new Date(deadline + 'T00:00:00');
+    return Math.max(0, Math.round((today - dl) / 86400000));
+  };
 
   return (
     <div style={{ display:"flex", height:"100%", background:"#ffffff" }}>
@@ -513,6 +550,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                 <div style={{ width:COL.name+41, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colName')}</div>
                 <div style={{ width:COL.date, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colDeadline')}</div>
                 <div style={{ width:COL.prio, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", ...cb, background:"#f9fafb" }}>{t(lang, 'colPriority')}</div>
+                <div style={{ width:COL.recur, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 4px", textAlign:"center", ...cb, background:"#f9fafb" }}>{t(lang, 'recurCol')}</div>
                 <div style={{ width:COL.del, flexShrink:0, background:"#f9fafb" }} />
               </div>
               {sorted.map(task => {
@@ -538,6 +576,11 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                     <div style={{ width:COL.date, flexShrink:0, fontSize:12, padding:"8px 10px", color:dlColor, fontWeight:dlWeight, ...cb, cursor:"pointer", position:"relative" }}
                       onClick={e => { e.stopPropagation(); if(!isShared && !isFading) setDatePickerOpen(datePickerOpen===task.id ? null : task.id); }}>
                       {formatDeadline(task.deadline, lang)}
+                      {task.recurrence && task.deadline && task.deadline < getTodayKey() && (
+                        <span title={overdueDaysCount(task.deadline) + ' ' + t(lang, 'overdueDays')} style={{ marginLeft:4, fontSize:9, color:"#DC2626", fontWeight:700 }}>
+                          {'· ' + overdueDaysCount(task.deadline) + 'd'}
+                        </span>
+                      )}
                       {datePickerOpen === task.id && (
                         <DatePicker
                           value={task.deadline}
@@ -548,6 +591,23 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                     </div>
                     <div style={{ width:COL.prio, flexShrink:0, display:"flex", justifyContent:"center", padding:"8px 6px", ...cb }}>
                       <span onClick={() => !isShared && cyclePrio(task.id)} style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:4, cursor: isShared ? "default" : "pointer", background:PRIO_BG[task.priority], color:PRIO_COLOR[task.priority], userSelect:"none" }}>{prioLabel(task.priority)}</span>
+                    </div>
+                    <div
+                      title={t(lang, task.recurrence ? 'recur' + task.recurrence.charAt(0).toUpperCase() + task.recurrence.slice(1) : 'recurNone')}
+                      onClick={() => { if (!isShared && !isFading) {
+                        const cycle = { null: 'daily', daily: 'weekly', weekly: 'biweekly', biweekly: 'monthly', monthly: null };
+                        const next = cycle[task.recurrence || 'null'] !== undefined ? cycle[task.recurrence || 'null'] : null;
+                        const updated = { ...task, recurrence: next || null };
+                        updateTaskDB(updated);
+                        setTasks(t => t.map(x => x.id === task.id ? updated : x));
+                      }}}
+                      style={{ width:COL.recur, flexShrink:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", ...cb, cursor: isShared ? "default" : "pointer", userSelect:"none", padding:"4px 2px" }}>
+                      <span style={{ fontSize:13, color: task.recurrence ? "#2563EB" : "#d4d4d8", lineHeight:1 }}>↻</span>
+                      {task.recurrence && (
+                        <span style={{ fontSize:8, color:"#2563EB", lineHeight:1, marginTop:1 }}>
+                          {t(lang, 'recur' + task.recurrence.charAt(0).toUpperCase() + task.recurrence.slice(1) + 'Short')}
+                        </span>
+                      )}
                     </div>
                     <div style={{ width:COL.del, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
                       {!isShared && <button onClick={() => remove(task.id)} style={{ background:"none", border:"none", color:"#d1d5db", cursor:"pointer", fontSize:16, lineHeight:1 }}>x</button>}
