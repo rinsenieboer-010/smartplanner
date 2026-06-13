@@ -205,6 +205,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
   const [datePickerOpen, setDatePickerOpen] = useState(null); // task id
   const [openNoteId, setOpenNoteId] = useState(null);
   const [noteValue, setNoteValue] = useState("");
+  const [titleValue, setTitleValue] = useState("");
 
   // Gedeelde lijst tonen in de kleur van de persoon (zo zie je meteen van wie)
   const listColor = (l) => (l.isShared ? (PERSON_COLORS[personColors[l.ownerEmail]]?.dot || l.color) : l.color);
@@ -568,7 +569,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                     <div style={{ width:41, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", ...cb, alignSelf:"stretch" }}>
                       <button onClick={() => !isShared && completeDone(task.id)} style={{ width:15, height:15, borderRadius:"50%", cursor: isShared ? "default" : "pointer", border:"2px solid #d1d5db", background:"transparent", flexShrink:0 }} />
                     </div>
-                    <div onClick={() => { if(!isShared) { const next = openNoteId===task.id ? null : task.id; setOpenNoteId(next); if(next) setNoteValue(task.note||""); } }}
+                    <div onClick={() => { if(!isShared) { const next = openNoteId===task.id ? null : task.id; setOpenNoteId(next); if(next) { setNoteValue(task.note||""); setTitleValue(task.title||""); } } }}
                       style={{ width:COL.name, flexShrink:0, fontSize:13, color:"#111827", padding:"8px 10px", textDecoration: isFading ? "line-through" : "none", opacity: isFading ? 0.4 : 1, overflow: openNoteId===task.id ? "visible" : "hidden", textOverflow: openNoteId===task.id ? "clip" : "ellipsis", whiteSpace: openNoteId===task.id ? "normal" : "nowrap", cursor: isShared ? "default" : "pointer", ...cb, display:"flex", alignItems: openNoteId===task.id ? "flex-start" : "center", gap:5 }}>
                       <span style={{ overflow: openNoteId===task.id ? "visible" : "hidden", textOverflow: openNoteId===task.id ? "clip" : "ellipsis", whiteSpace: openNoteId===task.id ? "normal" : "nowrap" }}>{task.title}</span>
                       {task.note && <span title="Notitie aanwezig" style={{ flexShrink:0, fontSize:10, color:"#9ca3af" }}>📝</span>}
@@ -615,9 +616,16 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                     </div>
                     {openNoteId === task.id && !isShared && (
                       <div style={{ padding:"6px 12px 10px 52px", borderTop:"1px solid #f3f4f6", background:"#fafafa" }}>
-                        <div style={{ fontSize:13, fontWeight:600, color:"#111827", marginBottom:6, wordBreak:"break-word", lineHeight:1.4 }}>{task.title}</div>
-                        <textarea
+                        <input
                           autoFocus
+                          value={titleValue}
+                          onChange={e => setTitleValue(e.target.value)}
+                          onBlur={() => { const nt = titleValue.trim(); if (nt && nt !== task.title) { setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,title:nt}; updateTaskDB(u); return u; })); } else if (!nt) { setTitleValue(task.title||""); } }}
+                          onKeyDown={e => { if(e.key==="Enter") e.currentTarget.blur(); if(e.key==="Escape"){ setTitleValue(task.title||""); e.currentTarget.blur(); } }}
+                          placeholder={t(lang, 'taskNamePlaceholder')}
+                          style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"6px 8px", fontSize:13, fontWeight:600, outline:"none", color:"#111827", background:"#fff", fontFamily:"'DM Sans', sans-serif", boxSizing:"border-box", display:"block", marginBottom:6 }}
+                        />
+                        <textarea
                           value={noteValue}
                           onChange={e => setNoteValue(e.target.value)}
                           onBlur={() => { setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,note:noteValue}; updateTaskDB(u); return u; })); }}
@@ -625,7 +633,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                           rows={2}
                           style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"6px 8px", fontSize:12, outline:"none", resize:"none", color:"#374151", background:"#fff", fontFamily:"'DM Sans', sans-serif", boxSizing:"border-box", display:"block" }}
                         />
-                        <button onClick={() => { setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,note:noteValue}; updateTaskDB(u); return u; })); setOpenNoteId(null); }}
+                        <button onClick={() => { const nt = titleValue.trim(); setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x, note:noteValue, title: nt || x.title}; updateTaskDB(u); return u; })); setOpenNoteId(null); }}
                           style={{ marginTop:5, background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"3px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
                           {t(lang, 'save')}
                         </button>
