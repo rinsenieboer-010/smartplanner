@@ -96,11 +96,13 @@ const parseSharedId = (id) => {
 
 
 // ── DATE PICKER ──────────────────────────────────────────────────────────────
-function DatePicker({ value, recurrence, onChange, onRecurrenceChange, onClose }) {
+function DatePicker({ value, recurrence, onSave, onClose }) {
   const lang = useLang();
   const initial = value ? new Date(value + "T12:00:00") : new Date();
   const [viewYear, setViewYear] = useState(initial.getFullYear());
   const [viewMonth, setViewMonth] = useState(initial.getMonth());
+  const [selectedDate, setSelectedDate] = useState(value);
+  const [selectedRecurrence, setSelectedRecurrence] = useState(recurrence);
   const yearListRef = useRef(null);
   const customMatch = recurrence?.match(/^custom:(\d+):(days|weeks|months)$/);
   const [customInterval, setCustomInterval] = useState(customMatch ? Number(customMatch[1]) : 2);
@@ -126,23 +128,21 @@ function DatePicker({ value, recurrence, onChange, onRecurrenceChange, onClose }
 
   const selectDay = (day) => {
     const key = viewYear + "-" + String(viewMonth+1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
-    onChange(key);
-    onClose();
+    setSelectedDate(key);
   };
 
-  const clearDate = () => { onChange(null); onClose(); };
+  const clearDate = () => setSelectedDate(null);
   const setRecurrence = (next) => {
     setCustomOpen(false);
-    onRecurrenceChange(next === recurrence ? null : next);
+    setSelectedRecurrence(next === selectedRecurrence ? null : next);
   };
-  const saveCustomRecurrence = () => onRecurrenceChange(`custom:${customInterval}:${customUnit}`);
 
   const days = daysInMonth(viewYear, viewMonth);
   const offset = firstDay(viewYear, viewMonth);
   const cells = Array(offset).fill(null).concat(Array.from({ length: days }, (_, i) => i + 1));
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const selectedKey = value;
+  const selectedKey = selectedDate;
   const todayKey2 = getTodayKey();
 
   return (
@@ -204,8 +204,8 @@ function DatePicker({ value, recurrence, onChange, onRecurrenceChange, onClose }
           ].map(([key, label]) => (
             <button key={key} onClick={() => setRecurrence(key)} style={{
               border:"none", borderRadius:4, padding:"5px 6px", cursor:"pointer", fontSize:11, fontWeight:700,
-              background: !customOpen && recurrence === key ? "#DBEAFE" : "#f3f4f6",
-              color: !customOpen && recurrence === key ? "#2563EB" : "#6b7280"
+              background: !customOpen && selectedRecurrence === key ? "#DBEAFE" : "#f3f4f6",
+              color: !customOpen && selectedRecurrence === key ? "#2563EB" : "#6b7280"
             }}>{t(lang, label)}</button>
           ))}
           <button onClick={() => setCustomOpen(true)} style={{
@@ -229,22 +229,24 @@ function DatePicker({ value, recurrence, onChange, onRecurrenceChange, onClose }
                 <option value="months">{t(lang, 'repeatMonths')}</option>
               </select>
             </div>
-            <button onClick={saveCustomRecurrence}
-              style={{ marginTop:6, background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"3px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
-              {t(lang, 'save')}
-            </button>
           </div>
         )}
-        {recurrence && (
-          <button onClick={() => onRecurrenceChange(null)} style={{ marginTop:6, padding:0, fontSize:10, color:"#9ca3af", background:"none", border:"none", cursor:"pointer" }}>
+        {(selectedRecurrence || customOpen) && (
+          <button onClick={() => { setSelectedRecurrence(null); setCustomOpen(false); }} style={{ marginTop:6, padding:0, fontSize:10, color:"#9ca3af", background:"none", border:"none", cursor:"pointer" }}>
             {t(lang, 'recurNone')}
           </button>
         )}
       </div>
 
-      {/* Clear */}
-      <div style={{ borderTop:"1px solid #f3f4f6", padding:"6px 12px" }}>
+      <div style={{ borderTop:"1px solid #f3f4f6", padding:"6px 12px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <button onClick={clearDate} style={{ fontSize:11, color:"#9ca3af", background:"none", border:"none", cursor:"pointer" }}>{t(lang, 'clearDate')}</button>
+        <button onClick={() => {
+          const nextRecurrence = customOpen ? `custom:${customInterval}:${customUnit}` : selectedRecurrence;
+          onSave(selectedDate, nextRecurrence);
+          onClose();
+        }} style={{ background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"4px 12px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+          {t(lang, 'save')}
+        </button>
       </div>
     </div>
   );
@@ -646,8 +648,12 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                         <DatePicker
                           value={task.deadline}
                           recurrence={task.recurrence}
-                          onChange={(dk) => setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,deadline:dk}; updateTaskDB(u); return u; }))}
-                          onRecurrenceChange={(recurrence) => setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,recurrence}; updateTaskDB(u); return u; }))}
+                          onSave={(deadline, recurrence) => setTasks(t => t.map(x => {
+                            if (x.id!==task.id) return x;
+                            const u={...x,deadline,recurrence};
+                            updateTaskDB(u);
+                            return u;
+                          }))}
                           onClose={() => setDatePickerOpen(null)}
                         />
                       )}
