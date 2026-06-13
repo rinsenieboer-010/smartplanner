@@ -105,7 +105,8 @@ function DatePicker({ value, recurrence, onChange, onRecurrenceChange, onClose }
   const customMatch = recurrence?.match(/^custom:(\d+):(days|weeks|months)$/);
   const [customInterval, setCustomInterval] = useState(customMatch ? Number(customMatch[1]) : 2);
   const [customUnit, setCustomUnit] = useState(customMatch?.[2] || "weeks");
-  const isCustom = recurrence === "biweekly" || Boolean(customMatch);
+  const savedCustom = recurrence === "biweekly" || Boolean(customMatch);
+  const [customOpen, setCustomOpen] = useState(savedCustom);
 
   const years = Array.from({ length: 20 }, (_, i) => initial.getFullYear() - 5 + i);
 
@@ -130,12 +131,11 @@ function DatePicker({ value, recurrence, onChange, onRecurrenceChange, onClose }
   };
 
   const clearDate = () => { onChange(null); onClose(); };
-  const setRecurrence = (next) => onRecurrenceChange(next === recurrence ? null : next);
-  const setCustomRecurrence = (interval, unit) => {
-    setCustomInterval(interval);
-    setCustomUnit(unit);
-    onRecurrenceChange(`custom:${interval}:${unit}`);
+  const setRecurrence = (next) => {
+    setCustomOpen(false);
+    onRecurrenceChange(next === recurrence ? null : next);
   };
+  const saveCustomRecurrence = () => onRecurrenceChange(`custom:${customInterval}:${customUnit}`);
 
   const days = daysInMonth(viewYear, viewMonth);
   const offset = firstDay(viewYear, viewMonth);
@@ -204,29 +204,35 @@ function DatePicker({ value, recurrence, onChange, onRecurrenceChange, onClose }
           ].map(([key, label]) => (
             <button key={key} onClick={() => setRecurrence(key)} style={{
               border:"none", borderRadius:4, padding:"5px 6px", cursor:"pointer", fontSize:11, fontWeight:700,
-              background: recurrence === key ? "#DBEAFE" : "#f3f4f6",
-              color: recurrence === key ? "#2563EB" : "#6b7280"
+              background: !customOpen && recurrence === key ? "#DBEAFE" : "#f3f4f6",
+              color: !customOpen && recurrence === key ? "#2563EB" : "#6b7280"
             }}>{t(lang, label)}</button>
           ))}
-          <button onClick={() => isCustom ? onRecurrenceChange(null) : setCustomRecurrence(customInterval, customUnit)} style={{
+          <button onClick={() => setCustomOpen(true)} style={{
             border:"none", borderRadius:4, padding:"5px 6px", cursor:"pointer", fontSize:11, fontWeight:700,
-            background: isCustom ? "#DBEAFE" : "#f3f4f6",
-            color: isCustom ? "#2563EB" : "#6b7280"
+            background: customOpen ? "#DBEAFE" : "#f3f4f6",
+            color: customOpen ? "#2563EB" : "#6b7280"
           }}>{t(lang, 'recurCustom')}</button>
         </div>
-        {isCustom && (
-          <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:6 }}>
-            <span style={{ fontSize:11, color:"#6b7280" }}>{t(lang, 'repeatEvery')}</span>
-            <select value={customInterval} onChange={e => setCustomRecurrence(Number(e.target.value), customUnit)}
-              style={{ border:"1px solid #e5e7eb", borderRadius:4, padding:"3px 4px", fontSize:11, color:"#374151", background:"#fff" }}>
-              {Array.from({ length: 12 }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
-            <select value={customUnit} onChange={e => setCustomRecurrence(customInterval, e.target.value)}
-              style={{ flex:1, border:"1px solid #e5e7eb", borderRadius:4, padding:"3px 4px", fontSize:11, color:"#374151", background:"#fff" }}>
-              <option value="days">{t(lang, 'repeatDays')}</option>
-              <option value="weeks">{t(lang, 'repeatWeeks')}</option>
-              <option value="months">{t(lang, 'repeatMonths')}</option>
-            </select>
+        {customOpen && (
+          <div style={{ marginTop:6 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+              <span style={{ fontSize:11, color:"#6b7280" }}>{t(lang, 'repeatEvery')}</span>
+              <select value={customInterval} onChange={e => setCustomInterval(Number(e.target.value))}
+                style={{ border:"1px solid #e5e7eb", borderRadius:4, padding:"3px 4px", fontSize:11, color:"#374151", background:"#fff" }}>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+              <select value={customUnit} onChange={e => setCustomUnit(e.target.value)}
+                style={{ flex:1, border:"1px solid #e5e7eb", borderRadius:4, padding:"3px 4px", fontSize:11, color:"#374151", background:"#fff" }}>
+                <option value="days">{t(lang, 'repeatDays')}</option>
+                <option value="weeks">{t(lang, 'repeatWeeks')}</option>
+                <option value="months">{t(lang, 'repeatMonths')}</option>
+              </select>
+            </div>
+            <button onClick={saveCustomRecurrence}
+              style={{ marginTop:6, background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"3px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+              {t(lang, 'save')}
+            </button>
           </div>
         )}
         {recurrence && (
