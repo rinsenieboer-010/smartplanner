@@ -96,12 +96,16 @@ const parseSharedId = (id) => {
 
 
 // ── DATE PICKER ──────────────────────────────────────────────────────────────
-function DatePicker({ value, onChange, onClose }) {
+function DatePicker({ value, recurrence, onChange, onRecurrenceChange, onClose }) {
   const lang = useLang();
   const initial = value ? new Date(value + "T12:00:00") : new Date();
   const [viewYear, setViewYear] = useState(initial.getFullYear());
   const [viewMonth, setViewMonth] = useState(initial.getMonth());
   const yearListRef = useRef(null);
+  const customMatch = recurrence?.match(/^custom:(\d+):(days|weeks|months)$/);
+  const [customInterval, setCustomInterval] = useState(customMatch ? Number(customMatch[1]) : 2);
+  const [customUnit, setCustomUnit] = useState(customMatch?.[2] || "weeks");
+  const isCustom = recurrence === "biweekly" || Boolean(customMatch);
 
   const years = Array.from({ length: 20 }, (_, i) => initial.getFullYear() - 5 + i);
 
@@ -126,6 +130,12 @@ function DatePicker({ value, onChange, onClose }) {
   };
 
   const clearDate = () => { onChange(null); onClose(); };
+  const setRecurrence = (next) => onRecurrenceChange(next === recurrence ? null : next);
+  const setCustomRecurrence = (interval, unit) => {
+    setCustomInterval(interval);
+    setCustomUnit(unit);
+    onRecurrenceChange(`custom:${interval}:${unit}`);
+  };
 
   const days = daysInMonth(viewYear, viewMonth);
   const offset = firstDay(viewYear, viewMonth);
@@ -181,6 +191,49 @@ function DatePicker({ value, onChange, onClose }) {
             }}>{day}</button>
           );
         })}
+      </div>
+
+      {/* Repeat */}
+      <div style={{ borderTop:"1px solid #f3f4f6", padding:"8px 12px" }}>
+        <div style={{ fontSize:10, fontWeight:700, color:"#9ca3af", letterSpacing:0.8, marginBottom:6 }}>{t(lang, 'repeat')}</div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:4 }}>
+          {[
+            ["daily", "recurDaily"],
+            ["weekly", "recurWeekly"],
+            ["monthly", "recurMonthly"],
+          ].map(([key, label]) => (
+            <button key={key} onClick={() => setRecurrence(key)} style={{
+              border:"none", borderRadius:4, padding:"5px 6px", cursor:"pointer", fontSize:11, fontWeight:700,
+              background: recurrence === key ? "#DBEAFE" : "#f3f4f6",
+              color: recurrence === key ? "#2563EB" : "#6b7280"
+            }}>{t(lang, label)}</button>
+          ))}
+          <button onClick={() => isCustom ? onRecurrenceChange(null) : setCustomRecurrence(customInterval, customUnit)} style={{
+            border:"none", borderRadius:4, padding:"5px 6px", cursor:"pointer", fontSize:11, fontWeight:700,
+            background: isCustom ? "#DBEAFE" : "#f3f4f6",
+            color: isCustom ? "#2563EB" : "#6b7280"
+          }}>{t(lang, 'recurCustom')}</button>
+        </div>
+        {isCustom && (
+          <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:6 }}>
+            <span style={{ fontSize:11, color:"#6b7280" }}>{t(lang, 'repeatEvery')}</span>
+            <select value={customInterval} onChange={e => setCustomRecurrence(Number(e.target.value), customUnit)}
+              style={{ border:"1px solid #e5e7eb", borderRadius:4, padding:"3px 4px", fontSize:11, color:"#374151", background:"#fff" }}>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <select value={customUnit} onChange={e => setCustomRecurrence(customInterval, e.target.value)}
+              style={{ flex:1, border:"1px solid #e5e7eb", borderRadius:4, padding:"3px 4px", fontSize:11, color:"#374151", background:"#fff" }}>
+              <option value="days">{t(lang, 'repeatDays')}</option>
+              <option value="weeks">{t(lang, 'repeatWeeks')}</option>
+              <option value="months">{t(lang, 'repeatMonths')}</option>
+            </select>
+          </div>
+        )}
+        {recurrence && (
+          <button onClick={() => onRecurrenceChange(null)} style={{ marginTop:6, padding:0, fontSize:10, color:"#9ca3af", background:"none", border:"none", cursor:"pointer" }}>
+            {t(lang, 'recurNone')}
+          </button>
+        )}
       </div>
 
       {/* Clear */}
@@ -249,6 +302,13 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
       else if (recurrence === 'weekly')   base.setDate(base.getDate() + 7);
       else if (recurrence === 'biweekly') base.setDate(base.getDate() + 14);
       else if (recurrence === 'monthly')  base.setMonth(base.getMonth() + 1);
+      else if (recurrence?.startsWith('custom:')) {
+        const [, intervalRaw, unit] = recurrence.split(':');
+        const interval = Math.max(1, Number(intervalRaw) || 1);
+        if (unit === 'days') base.setDate(base.getDate() + interval);
+        else if (unit === 'weeks') base.setDate(base.getDate() + (interval * 7));
+        else if (unit === 'months') base.setMonth(base.getMonth() + interval);
+      }
     };
     step();
     // Als de berekende datum nog steeds vandaag of in het verleden valt, spring naar morgen of later
@@ -303,10 +363,6 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
     const taskData = { title: newTitle.trim(), priority: "", status: "", deadline: null, list: activeList };
     addTaskDB(userId, taskData).then(saved => setTasks(t => [...t, saved]));
     setNewTitle(""); setAdding(false);
-  };
-  const remove = (id) => {
-    deleteTaskDB(id);
-    setTasks(t => t.filter(x => x.id !== id));
   };
   const cyclePrio = (id) => {
     const next = { "":"hoog", hoog:"midden", midden:"laag", laag:"" };
@@ -381,8 +437,8 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
   const activeColor = [...lists, ...sharedLists].find(l => l.id===activeList)?.color || "#2563EB";
   const activeLabel = isTrash ? t(lang, 'trash') : ([...lists, ...sharedLists].find(l => l.id===activeList)?.label || t(lang, 'tasks'));
 
-  const COL = { name: 200, date: 100, prio: 88, status: 80, recur: 34, del: 28 };
-  const TABLE_MIN = COL.name + COL.date + COL.prio + COL.recur + COL.del + 41;
+  const COL = { name: 200, date: 100, prio: 88, status: 80 };
+  const TABLE_MIN = COL.name + COL.date + COL.prio + 41;
   const cb = { borderRight: "1px solid #e5e7eb" };
   const prioLabel   = (p) => p==="hoog" ? t(lang,'prioHigh') : p==="midden" ? t(lang,'prioMid') : p==="laag" ? t(lang,'prioLow') : "—";
   const statusLabel = (s) => s==="open" ? t(lang,'statusOpen') : s==="bezig" ? t(lang,'statusBusy') : s==="klaar" ? t(lang,'statusDone') : "—";
@@ -550,9 +606,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
               <div style={{ display:"flex", alignItems:"stretch", borderBottom:"2px solid #e5e7eb", background:"#f9fafb", position:"sticky", top:0, zIndex:5 }}>
                 <div style={{ width:COL.name+41, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colName')}</div>
                 <div style={{ width:COL.date, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colDeadline')}</div>
-                <div style={{ width:COL.prio, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", ...cb, background:"#f9fafb" }}>{t(lang, 'colPriority')}</div>
-                <div style={{ width:COL.recur, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 4px", textAlign:"center", ...cb, background:"#f9fafb" }}>{t(lang, 'recurCol')}</div>
-                <div style={{ width:COL.del, flexShrink:0, background:"#f9fafb" }} />
+                <div style={{ flex:1, minWidth:COL.prio, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", background:"#f9fafb" }}>{t(lang, 'colPriority')}</div>
               </div>
               {sorted.map(task => {
                 const tk = getTodayKey();
@@ -585,33 +639,15 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                       {datePickerOpen === task.id && (
                         <DatePicker
                           value={task.deadline}
+                          recurrence={task.recurrence}
                           onChange={(dk) => setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,deadline:dk}; updateTaskDB(u); return u; }))}
+                          onRecurrenceChange={(recurrence) => setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,recurrence}; updateTaskDB(u); return u; }))}
                           onClose={() => setDatePickerOpen(null)}
                         />
                       )}
                     </div>
-                    <div style={{ width:COL.prio, flexShrink:0, display:"flex", justifyContent:"center", padding:"8px 6px", ...cb }}>
+                    <div style={{ flex:1, minWidth:COL.prio, display:"flex", justifyContent:"center", padding:"8px 6px" }}>
                       <span onClick={() => !isShared && cyclePrio(task.id)} style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:4, cursor: isShared ? "default" : "pointer", background:PRIO_BG[task.priority], color:PRIO_COLOR[task.priority], userSelect:"none" }}>{prioLabel(task.priority)}</span>
-                    </div>
-                    <div
-                      title={t(lang, task.recurrence ? 'recur' + task.recurrence.charAt(0).toUpperCase() + task.recurrence.slice(1) : 'recurNone')}
-                      onClick={() => { if (!isShared && !isFading) {
-                        const cycle = { null: 'daily', daily: 'weekly', weekly: 'biweekly', biweekly: 'monthly', monthly: null };
-                        const next = cycle[task.recurrence || 'null'] !== undefined ? cycle[task.recurrence || 'null'] : null;
-                        const updated = { ...task, recurrence: next || null };
-                        updateTaskDB(updated);
-                        setTasks(t => t.map(x => x.id === task.id ? updated : x));
-                      }}}
-                      style={{ width:COL.recur, flexShrink:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", ...cb, cursor: isShared ? "default" : "pointer", userSelect:"none", padding:"4px 2px" }}>
-                      <span style={{ fontSize:13, color: task.recurrence ? "#2563EB" : "#d4d4d8", lineHeight:1 }}>↻</span>
-                      {task.recurrence && (
-                        <span style={{ fontSize:8, color:"#2563EB", lineHeight:1, marginTop:1 }}>
-                          {t(lang, 'recur' + task.recurrence.charAt(0).toUpperCase() + task.recurrence.slice(1) + 'Short')}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ width:COL.del, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      {!isShared && <button onClick={() => remove(task.id)} style={{ background:"none", border:"none", color:"#d1d5db", cursor:"pointer", fontSize:16, lineHeight:1 }}>x</button>}
                     </div>
                     </div>
                     {openNoteId === task.id && !isShared && (
