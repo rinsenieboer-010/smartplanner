@@ -636,14 +636,20 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                       <span style={{ overflow: openNoteId===task.id ? "visible" : "hidden", textOverflow: openNoteId===task.id ? "clip" : "ellipsis", whiteSpace: openNoteId===task.id ? "normal" : "nowrap" }}>{task.title}</span>
                       {task.note && <span title="Notitie aanwezig" style={{ flexShrink:0, fontSize:10, color:"#9ca3af" }}>📝</span>}
                     </div>
-                    <div style={{ width:COL.date, flexShrink:0, fontSize:12, padding:"8px 10px", color:dlColor, fontWeight:dlWeight, ...cb, cursor:"pointer", position:"relative" }}
+                    <div style={{ width:COL.date, flexShrink:0, fontSize:12, padding:"8px 8px 8px 10px", color:dlColor, fontWeight:dlWeight, ...cb, cursor:"pointer", position:"relative", display:"flex", alignItems:"center" }}
                       onClick={e => { e.stopPropagation(); if(!isShared && !isFading) setDatePickerOpen(datePickerOpen===task.id ? null : task.id); }}>
-                      {formatDeadline(task.deadline, lang)}
-                      {task.recurrence && task.deadline && task.deadline < getTodayKey() && (
-                        <span title={overdueDaysCount(task.deadline) + ' ' + t(lang, 'overdueDays')} style={{ marginLeft:4, fontSize:9, color:"#DC2626", fontWeight:700 }}>
-                          {'· ' + overdueDaysCount(task.deadline) + 'd'}
-                        </span>
-                      )}
+                      <span style={{ flex:1, minWidth:0, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                        {formatDeadline(task.deadline, lang)}
+                        {task.recurrence && task.deadline && task.deadline < getTodayKey() && (
+                          <span title={overdueDaysCount(task.deadline) + ' ' + t(lang, 'overdueDays')} style={{ marginLeft:4, fontSize:9, color:"#DC2626", fontWeight:700 }}>
+                            {'· ' + overdueDaysCount(task.deadline) + 'd'}
+                          </span>
+                        )}
+                      </span>
+                      <span title={task.recurrence ? t(lang, 'repeat') : undefined}
+                        style={{ width:14, flexShrink:0, textAlign:"right", fontSize:13, lineHeight:1, color:"#2563EB", visibility:task.recurrence ? "visible" : "hidden" }}>
+                        ↻
+                      </span>
                       {datePickerOpen === task.id && (
                         <DatePicker
                           value={task.deadline}
