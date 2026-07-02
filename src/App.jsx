@@ -1815,6 +1815,7 @@ export default function App() {
     catch { return { tasks:true, calendar:true, assistant:true, agents:true }; }
   });
   const [apiKey, setApiKey]               = useState(null);
+  const [keyCopied, setKeyCopied]         = useState(false);
   const [showSettings, setShowSettings]   = useState(false);
   const [outgoingShares, setOutgoingShares] = useState([]);
   const [incomingShares, setIncomingShares] = useState([]);
@@ -2265,9 +2266,18 @@ export default function App() {
                     {apiKey}
                   </div>
                   <div style={{ display:"flex", gap:8 }}>
-                    <button onClick={() => navigator.clipboard.writeText(apiKey)}
-                      style={{ flex:1, padding:"8px 0", borderRadius:6, border:"1px solid #3f3f46", background:"none", color:"#f9fafb", fontSize:12, cursor:"pointer" }}>
-                      {t(lang, 'copy')}
+                    <button onClick={async () => {
+                        try { await navigator.clipboard.writeText(apiKey); }
+                        catch { /* clipboard kan geblokkeerd zijn; toon toch bevestiging */ }
+                        setKeyCopied(true);
+                        setTimeout(() => setKeyCopied(false), 1600);
+                      }}
+                      style={{ flex:1, padding:"8px 0", borderRadius:6,
+                        border: keyCopied ? "1px solid #16a34a" : "1px solid #3f3f46",
+                        background: keyCopied ? "#16a34a" : "none",
+                        color:"#f9fafb", fontSize:12, cursor:"pointer",
+                        transition:"background 150ms ease, border-color 150ms ease" }}>
+                      {keyCopied ? '✓ ' + t(lang, 'copied') : t(lang, 'copy')}
                     </button>
                     <button onClick={generateApiKey}
                       style={{ flex:1, padding:"8px 0", borderRadius:6, border:"none", background:"#27272a", color:"#9ca3af", fontSize:12, cursor:"pointer" }}>
@@ -2284,7 +2294,7 @@ export default function App() {
 
               {apiKey && (
                 <div style={{ fontSize:11, color:"#6b7280", marginTop:12, lineHeight:1.5 }}>
-                  {t(lang, 'apiUsage')} <code style={{ color:"#9ca3af" }}>Authorization: Bearer {apiKey.slice(0,12)}...</code>
+                  {t(lang, 'apiUsage')} <code style={{ color:"#9ca3af" }}>Authorization: Bearer &lt;jouw-key&gt;</code>
                 </div>
               )}
             </div>
