@@ -185,6 +185,15 @@ Regels:
         return res.status(200).json({ reply, actions, ...(newMemory !== undefined && { newMemory }) });
       }
     }
+
+    // Loop-limiet bereikt: stuur wat we hebben, anders hangt het verzoek tot de timeout.
+    return res.status(200).json({
+      reply: actions.length > 0
+        ? `Gedaan. ${actions.length} item${actions.length > 1 ? 's' : ''} bijgewerkt.`
+        : 'Sorry, dit werd te complex. Probeer het in kleinere stappen.',
+      actions,
+      ...(newMemory !== undefined && { newMemory }),
+    });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

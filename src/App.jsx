@@ -1476,7 +1476,6 @@ function AgentsPanel({ session }) {
     setRunning(false);
   };
 
-  const openNew  = () => { setForm({ name:"", role:"", emoji:"🤖", model:"sonnet", system_prompt:"" }); setEditing(null); };
   const openEdit = (a) => { setForm({ name:a.name||"", role:a.role||"", emoji:a.emoji||"🤖", model:a.model||"sonnet", system_prompt:a.system_prompt||"" }); setEditing(a); };
   const saveAgent = async () => {
     if (!form.name.trim()) return;
@@ -1579,11 +1578,10 @@ function AgentsPanel({ session }) {
     <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:"'DM Sans', sans-serif" }}>
       <div style={{ padding:"8px 14px", borderBottom:"2px solid #e5e7eb", background:"#f9fafb", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, textTransform:"uppercase" }}>Agents</div>
-        <button onClick={openNew} style={{ background:"#2563EB", color:"#fff", border:"none", borderRadius:5, fontSize:11, fontWeight:700, padding:"4px 9px", cursor:"pointer" }}>+ Nieuw</button>
       </div>
       <div style={{ flex:1, overflowY:"auto" }}>
         {agents.length === 0 && (
-          <div style={{ padding:"30px 20px", textAlign:"center", color:"#9ca3af", fontSize:13 }}>Nog geen agents. Maak je eerste agent aan met “+ Nieuw”.</div>
+          <div style={{ padding:"30px 20px", textAlign:"center", color:"#9ca3af", fontSize:13 }}>Nog geen agents. Voeg ze toe via je API-key: geef je JMP-key aan een AI (ChatGPT, Gemini) en laat die je agents aanmaken.</div>
         )}
         {agents.map(agent => (
           <div key={agent.id}

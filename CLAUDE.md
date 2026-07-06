@@ -6,11 +6,28 @@ justmyplan is een React productiviteitsapp met drie panelen: Taken (links), Agen
 ## Tech stack
 - React (Vite) — alles in één bestand: `src/App.jsx`
 - Inline styles door de hele app (geen CSS bestanden)
-- Claude API voor de AI-assistent (claude-sonnet-4-20250514)
+- Claude API voor de AI-assistent (claude-sonnet-4-6, via `api/chat.js`)
 - Supabase voor authenticatie en database
 - Hosting: Vercel
 - Repository: https://github.com/rinsenieboer-010/smartplanner
-- Live URL: https://smartplanner-eta.vercel.app/
+- Live URL: https://justmyplan.com
+
+## API endpoints (Vercel functions in `api/`)
+- `chat.js` — AI-assistent web: volledige tool-loop server-side
+- `claude.js` — dunne Anthropic-proxy voor de mobiele app (app houdt eigen tool-loop)
+- `agent-run.js` — agent-bericht uitvoeren (per-user agents uit de `agents`-tabel)
+- `data.js` — externe API met `jmp_` API-key (Authorization: Bearer): taken/events lezen + schrijven
+- `notify.js` — notificaties van agents naar Rinse
+
+## Mobiele app (aparte repo)
+- Repo: `C:\Users\RJNie\Documents\justmyplan-tel` (Expo / React Native)
+- Staat live in de Apple App Store (bundle `com.justmyplan.app`)
+- Updates: JS-wijzigingen via EAS Update (OTA, geen review); native wijzigingen via `eas build` + `eas submit` + Apple review
+- Terminal-bridge: `C:\Users\RJNie\justmyplan-bridge` — vanaf de app met echte terminal-agents praten (tabel `agent_requests`)
+
+## Agents (Model A)
+- Agents worden NIET handmatig in de UI aangemaakt (knoppen verwijderd in web + app)
+- Aanmaken gaat via de API-key door een externe AI; bewerken/verwijderen kan nog wel in de UI
 
 ## Supabase configuratie
 - Project URL: https://fsublwuxvujxibyacvvp.supabase.co
@@ -77,8 +94,7 @@ git push
 Vercel deployt automatisch.
 
 ## Volgende stappen (nog te doen)
-- Wachtwoord vergeten / reset flow
-- Gebruikersnaam of profielafbeelding in header
-- Gedeelde lijsten tussen gebruikers
+- `POST /api/agents`: agents aanmaken via de API-key (Model A afmaken)
+- Server-side auth op `api/claude.js` en `api/agent-run.js` (nu open endpoints)
 - Notificaties / herinneringen
-- iOS/Android app (React Native of Capacitor)
+- Gebruikersnaam of profielafbeelding in header
