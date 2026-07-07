@@ -2055,19 +2055,46 @@ export default function App() {
 
       setWidths(prev => {
         if (side === "left") {
-          // Tasks ↔ Calendar; AI and Agents fixed — available = total minus fixed panels+splitters
-          const avail = total - prev[2] - prev[3] - 18;
-          const raw = Math.max(min, Math.min(cursor, avail - min));
-          let w = snap ? snapOnRelease(raw, total) : raw;
-          w = Math.max(min, Math.min(w, avail - min));
-          return [w, avail - w, prev[2], prev[3]];
+          // Tasks growing pushes Calendar → Assistant → Agents (cascade)
+          const raw = Math.max(min, Math.min(cursor, total - 18 - 3 * min));
+          let t = snap ? snapOnRelease(raw, total) : raw;
+          t = Math.max(min, Math.min(t, total - 18 - 3 * min));
+
+          const rightBudget = total - t - 18; // calendar + assistant + agents
+          let c, a, g;
+          if (rightBudget - prev[2] - prev[3] >= min) {
+            // calendar absorbs it all
+            c = rightBudget - prev[2] - prev[3];
+            a = prev[2]; g = prev[3];
+          } else if (rightBudget - prev[3] >= 2 * min) {
+            // cascade into assistant
+            c = min;
+            a = rightBudget - min - prev[3];
+            g = prev[3];
+          } else if (rightBudget >= 3 * min) {
+            // cascade into agents
+            c = min; a = min; g = rightBudget - 2 * min;
+          } else {
+            c = min; a = min; g = min;
+          }
+          return [t, c, a, g];
         } else if (side === "mid") {
-          // Calendar ↔ AI; Tasks and Agents fixed
-          const avail = total - prev[0] - prev[3] - 18;
-          const raw = Math.max(min, Math.min(cursor - prev[0] - 6, avail - min));
+          // Calendar growing pushes Assistant → Agents (cascade); Tasks fixed
+          const avail = total - prev[0] - 18; // calendar + assistant + agents
+          const raw = Math.max(min, Math.min(cursor - prev[0] - 6, avail - 2 * min));
           let cal = snap ? snapOnRelease(raw, total) : raw;
-          cal = Math.max(min, Math.min(cal, avail - min));
-          return [prev[0], cal, avail - cal, prev[3]];
+          cal = Math.max(min, Math.min(cal, avail - 2 * min));
+
+          const rightBudget = avail - cal; // assistant + agents
+          let a, g;
+          if (rightBudget - prev[3] >= min) {
+            a = rightBudget - prev[3];
+            g = prev[3];
+          } else {
+            a = min;
+            g = Math.max(min, rightBudget - min);
+          }
+          return [prev[0], cal, a, g];
         } else {
           // AI ↔ Agents with cascade push: agents growing pushes assistant → calendar → tasks
           const agentRaw = total - cursor - 3;
