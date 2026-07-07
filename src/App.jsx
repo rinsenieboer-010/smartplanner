@@ -2055,46 +2055,29 @@ export default function App() {
 
       setWidths(prev => {
         if (side === "left") {
-          // Tasks growing pushes Calendar → Assistant → Agents (cascade)
-          const raw = Math.max(min, Math.min(cursor, total - 18 - 3 * min));
+          // Tasks growing pushes Calendar → Assistant (cascade); Agents strip left untouched
+          const budget = total - prev[3] - 18; // tasks + calendar + assistant
+          const raw = Math.max(min, Math.min(cursor, budget - 2 * min));
           let t = snap ? snapOnRelease(raw, total) : raw;
-          t = Math.max(min, Math.min(t, total - 18 - 3 * min));
+          t = Math.max(min, Math.min(t, budget - 2 * min));
 
-          const rightBudget = total - t - 18; // calendar + assistant + agents
-          let c, a, g;
-          if (rightBudget - prev[2] - prev[3] >= min) {
-            // calendar absorbs it all
-            c = rightBudget - prev[2] - prev[3];
-            a = prev[2]; g = prev[3];
-          } else if (rightBudget - prev[3] >= 2 * min) {
-            // cascade into assistant
+          const rightBudget = budget - t; // calendar + assistant
+          let c, a;
+          if (rightBudget - prev[2] >= min) {
+            c = rightBudget - prev[2];
+            a = prev[2];
+          } else {
             c = min;
-            a = rightBudget - min - prev[3];
-            g = prev[3];
-          } else if (rightBudget >= 3 * min) {
-            // cascade into agents
-            c = min; a = min; g = rightBudget - 2 * min;
-          } else {
-            c = min; a = min; g = min;
+            a = Math.max(min, rightBudget - min);
           }
-          return [t, c, a, g];
+          return [t, c, a, prev[3]];
         } else if (side === "mid") {
-          // Calendar growing pushes Assistant → Agents (cascade); Tasks fixed
-          const avail = total - prev[0] - 18; // calendar + assistant + agents
-          const raw = Math.max(min, Math.min(cursor - prev[0] - 6, avail - 2 * min));
+          // Calendar ↔ Assistant; Tasks and Agents fixed
+          const avail = total - prev[0] - prev[3] - 18;
+          const raw = Math.max(min, Math.min(cursor - prev[0] - 6, avail - min));
           let cal = snap ? snapOnRelease(raw, total) : raw;
-          cal = Math.max(min, Math.min(cal, avail - 2 * min));
-
-          const rightBudget = avail - cal; // assistant + agents
-          let a, g;
-          if (rightBudget - prev[3] >= min) {
-            a = rightBudget - prev[3];
-            g = prev[3];
-          } else {
-            a = min;
-            g = Math.max(min, rightBudget - min);
-          }
-          return [prev[0], cal, a, g];
+          cal = Math.max(min, Math.min(cal, avail - min));
+          return [prev[0], cal, avail - cal, prev[3]];
         } else {
           // AI ↔ Agents with cascade push: agents growing pushes assistant → calendar → tasks
           const agentRaw = total - cursor - 3;
@@ -2220,19 +2203,19 @@ export default function App() {
         </div>
       </div>
       <div ref={containerRef} style={{ display:"flex", height:"calc(100vh - 44px)", overflow:"hidden" }}>
-        {visiblePanels.tasks && <div style={{ width: widths[0] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
+        {visiblePanels.tasks && <div style={{ width: widths[0] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.22s ease-out" }}>
           {isCollapsedLeft ? <CollapsedLabel label={t(lang, 'tasks')} /> : <TaskPanel tasks={tasks} setTasks={setTasks} trash={trash} setTrash={setTrash} lists={lists} setLists={setLists} sharedLists={sharedLists} sharedTasks={sharedTasks} personColors={personColors} userId={session.user.id} panelWidth={widths[0]??320} />}
         </div>}
         {visiblePanels.tasks && (visiblePanels.calendar || visiblePanels.assistant || visiblePanels.agents) && <Splitter onMouseDown={startLeft} />}
-        {visiblePanels.calendar && <div style={{ width: widths[1] ?? 200, flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.12s ease" }}>
+        {visiblePanels.calendar && <div style={{ width: widths[1] ?? 200, flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.22s ease-out" }}>
           {isCollapsedMid ? <CollapsedLabel label={t(lang, 'calendar')} /> : <CalendarPanel events={events} setEvents={setEvents} tasks={tasks} sharedEvents={sharedEvents} personColors={personColors} invitees={outgoingShares.filter(s => s.status==="accepted").map(s => s.invited_email)} userId={session.user.id} panelWidth={widths[1]??200} />}
         </div>}
         {visiblePanels.calendar && (visiblePanels.assistant || visiblePanels.agents) && <Splitter onMouseDown={startMid} />}
-        {visiblePanels.assistant && <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
+        {visiblePanels.assistant && <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.22s ease-out" }}>
           {isCollapsedRight ? <CollapsedLabel label={t(lang, 'assistant')} /> : <AIPanel tasks={tasks} events={events} setTasks={setTasks} setEvents={setEvents} userId={session.user.id} />}
         </div>}
         {visiblePanels.assistant && visiblePanels.agents && <Splitter onMouseDown={startAgent} />}
-        {visiblePanels.agents && <div style={{ width: widths[3] ?? 44, flexShrink:0, overflow:"hidden", transition:"width 0.12s ease" }}>
+        {visiblePanels.agents && <div style={{ width: widths[3] ?? 44, flexShrink:0, overflow:"hidden", transition:"width 0.22s ease-out" }}>
           {isCollapsedAgent ? <CollapsedLabel label="Agents" /> : <AgentsPanel session={session} />}
         </div>}
       </div>
