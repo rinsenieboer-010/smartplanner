@@ -1815,6 +1815,7 @@ export default function App() {
   const [inviteEmail, setInviteEmail]     = useState("");
   const [invitePermission, setInvitePermission] = useState("view");
   const [inviteLists, setInviteLists]     = useState([]);   // vooraf gekozen lijsten om te delen
+  const [inviteModalOpen, setInviteModalOpen] = useState(false); // uitnodig-popup open?
   // Zichtbaarheid van gedeelde items die de ontvanger zelf regelt (lokaal in browser).
   // Sleutels: gedeelde lijst-id (verbergt lijst) of `cal:<ownerId>` (verbergt agenda).
   const [hiddenShared, setHiddenShared]   = useState(() => {
@@ -2351,46 +2352,20 @@ export default function App() {
             <div style={{ borderTop:"1px solid #27272a", paddingTop:20, marginTop:20 }}>
               <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Delen</div>
 
-              {/* Uitnodigen: e-mail, dan vooraf rechten + welke lijsten je deelt */}
-              <input
-                value={inviteEmail}
-                onChange={e => setInviteEmail(e.target.value)}
-                placeholder="e-mailadres..."
-                style={{ width:"100%", boxSizing:"border-box", background:"#111827", border:"1px solid #3f3f46", borderRadius:6, color:"#f9fafb", fontSize:12, padding:"8px 10px", outline:"none", marginBottom:10 }}
-              />
-
-              <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:0.5, marginBottom:6 }}>RECHTEN</div>
-              <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-                {[["view","👁 Bekijken"],["edit","✏️ Bewerken"]].map(([p,labelTxt]) => (
-                  <button key={p} onClick={() => setInvitePermission(p)}
-                    style={{ flex:1, border:"1px solid "+(invitePermission===p?"#2563EB":"#3f3f46"), background: invitePermission===p?"#1e3a8a":"transparent", color: invitePermission===p?"#fff":"#9ca3af", borderRadius:7, padding:"8px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>{labelTxt}</button>
-                ))}
+              {/* Uitnodigen: e-mail + knop opent een pop-up met rechten + lijsten */}
+              <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+                <input
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && inviteEmail.trim()) setInviteModalOpen(true); }}
+                  placeholder="e-mailadres..."
+                  style={{ flex:1, background:"#111827", border:"1px solid #3f3f46", borderRadius:6, color:"#f9fafb", fontSize:12, padding:"7px 10px", outline:"none" }}
+                />
+                <button onClick={() => inviteEmail.trim() && setInviteModalOpen(true)} disabled={!inviteEmail.trim()}
+                  style={{ background:"#2563EB", border:"none", borderRadius:6, color:"#fff", fontSize:12, fontWeight:600, padding:"0 14px", cursor: inviteEmail.trim() ? "pointer" : "default", opacity: inviteEmail.trim() ? 1 : 0.5 }}>
+                  Uitnodigen
+                </button>
               </div>
-
-              <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:0.5, marginBottom:6 }}>WELKE LIJSTEN DEEL JE</div>
-              {ownListsForShare.length === 0 ? (
-                <div style={{ fontSize:12, color:"#3f3f46", marginBottom:12 }}>Je hebt nog geen eigen lijsten.</div>
-              ) : (
-                <div style={{ marginBottom:12 }}>
-                  {ownListsForShare.map(l => {
-                    const on = inviteLists.includes(l.id);
-                    return (
-                      <div key={l.id} onClick={() => setInviteLists(prev => prev.includes(l.id) ? prev.filter(x => x !== l.id) : [...prev, l.id])}
-                        style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 2px", cursor:"pointer" }}>
-                        <div style={{ width:9, height:9, borderRadius:"50%", background:l.color }} />
-                        <div style={{ flex:1, color:"#f9fafb", fontSize:13 }}>{l.label}</div>
-                        <div style={{ width:20, height:20, borderRadius:5, border:"2px solid "+(on?"#2563EB":"#3f3f46"), background:on?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:12 }}>{on?"✓":""}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              <div style={{ fontSize:11, color:"#6b7280", marginBottom:10, lineHeight:1.5 }}>Afspraken deel je per stuk in de agenda. Lijsten en rechten pas je later nog aan bij de persoon.</div>
-
-              <button onClick={invitePerson} disabled={!inviteEmail.trim()}
-                style={{ width:"100%", background:"#2563EB", border:"none", borderRadius:7, color:"#fff", fontSize:13, fontWeight:700, padding:"10px 0", cursor: inviteEmail.trim() ? "pointer" : "default", opacity: inviteEmail.trim() ? 1 : 0.5, marginBottom:16 }}>
-                Uitnodigen &amp; delen
-              </button>
 
               {/* Personen: klik om kleur + welke lijsten ze zien in te stellen */}
               {peopleEmails.length > 0 && (
@@ -2537,6 +2512,52 @@ export default function App() {
             ) : (
               <div style={{ fontSize:12, color:"#9ca3af", lineHeight:1.6 }}>Deze persoon deelt nog niets met jou. Geef een kleur zodat je z'n gedeelde lijsten en afspraken straks herkent. Wil je zelf iets delen? Nodig 'm uit via z'n e-mailadres.</div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Uitnodig-popup: kies rechten + lijsten, dan verzenden ── */}
+      {inviteModalOpen && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:85, display:"flex", alignItems:"center", justifyContent:"center" }}
+          onClick={() => setInviteModalOpen(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#18181b", borderRadius:14, width:340, maxHeight:"85vh", overflowY:"auto", padding:22 }}>
+            <div style={{ display:"flex", alignItems:"center", marginBottom:16 }}>
+              <div style={{ flex:1, color:"#f9fafb", fontSize:14, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>Uitnodigen: {inviteEmail.trim()}</div>
+              <button onClick={() => setInviteModalOpen(false)} style={{ background:"none", border:"none", color:"#9ca3af", fontSize:18, cursor:"pointer" }}>✕</button>
+            </div>
+
+            <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, marginBottom:8 }}>RECHTEN</div>
+            <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+              {[["view","👁 Bekijken"],["edit","✏️ Bewerken"]].map(([p,labelTxt]) => (
+                <button key={p} onClick={() => setInvitePermission(p)}
+                  style={{ flex:1, border:"1px solid "+(invitePermission===p?"#2563EB":"#3f3f46"), background: invitePermission===p?"#1e3a8a":"transparent", color: invitePermission===p?"#fff":"#9ca3af", borderRadius:7, padding:"8px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>{labelTxt}</button>
+              ))}
+            </div>
+
+            <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, marginBottom:8 }}>WELKE LIJSTEN DEEL JE</div>
+            {ownListsForShare.length === 0 ? (
+              <div style={{ fontSize:12, color:"#3f3f46", marginBottom:12 }}>Je hebt nog geen eigen lijsten.</div>
+            ) : (
+              <div style={{ marginBottom:12 }}>
+                {ownListsForShare.map(l => {
+                  const on = inviteLists.includes(l.id);
+                  return (
+                    <div key={l.id} onClick={() => setInviteLists(prev => prev.includes(l.id) ? prev.filter(x => x !== l.id) : [...prev, l.id])}
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderBottom:"1px solid #27272a", cursor:"pointer" }}>
+                      <div style={{ width:9, height:9, borderRadius:"50%", background:l.color }} />
+                      <div style={{ flex:1, color:"#f9fafb", fontSize:13 }}>{l.label}</div>
+                      <div style={{ width:22, height:22, borderRadius:5, border:"2px solid "+(on?"#2563EB":"#3f3f46"), background:on?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13 }}>{on?"✓":""}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ fontSize:11, color:"#6b7280", marginTop:8, marginBottom:14, lineHeight:1.5 }}>Afspraken deel je per stuk in de agenda. Later nog aan te passen bij de persoon.</div>
+
+            <button onClick={async () => { await invitePerson(); setInviteModalOpen(false); }}
+              style={{ width:"100%", background:"#2563EB", border:"none", borderRadius:7, color:"#fff", fontSize:13, fontWeight:700, padding:"10px 0", cursor:"pointer" }}>
+              Verzenden
+            </button>
           </div>
         </div>
       )}
