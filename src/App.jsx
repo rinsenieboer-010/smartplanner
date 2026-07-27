@@ -612,9 +612,9 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
           <div style={{ flex:1, overflowY:"auto", overflowX:"auto" }}>
             <div style={{ minWidth:TABLE_MIN }}>
               <div style={{ display:"flex", alignItems:"stretch", borderBottom:"2px solid #e5e7eb", background:"#f9fafb", position:"sticky", top:0, zIndex:5 }}>
-                <div style={{ width:COL.name+41, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colName')}</div>
+                <div style={{ flex:1, minWidth:COL.name+41, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colName')}</div>
                 <div style={{ width:COL.date, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colDeadline')}</div>
-                <div style={{ flex:1, minWidth:COL.prio, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", background:"#f9fafb" }}>{t(lang, 'colPriority')}</div>
+                <div style={{ width:COL.prio, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", background:"#f9fafb" }}>{t(lang, 'colPriority')}</div>
               </div>
               {sorted.map(task => {
                 const tk = getTodayKey();
@@ -632,7 +632,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                       <button onClick={() => !isShared && completeDone(task.id)} style={{ width:15, height:15, borderRadius:"50%", cursor: isShared ? "default" : "pointer", border:"2px solid #d1d5db", background:"transparent", flexShrink:0 }} />
                     </div>
                     <div onClick={() => { if(!isShared) { const next = openNoteId===task.id ? null : task.id; setOpenNoteId(next); if(next) { setNoteValue(task.note||""); setTitleValue(task.title||""); } } }}
-                      style={{ width:COL.name, flexShrink:0, fontSize:13, color:"#111827", padding:"8px 10px", textDecoration: isFading ? "line-through" : "none", opacity: isFading ? 0.4 : 1, overflow: openNoteId===task.id ? "visible" : "hidden", textOverflow: openNoteId===task.id ? "clip" : "ellipsis", whiteSpace: openNoteId===task.id ? "normal" : "nowrap", cursor: isShared ? "default" : "pointer", ...cb, display:"flex", alignItems: openNoteId===task.id ? "flex-start" : "center", gap:5 }}>
+                      style={{ flex:1, minWidth:COL.name, fontSize:13, color:"#111827", padding:"8px 10px", textDecoration: isFading ? "line-through" : "none", opacity: isFading ? 0.4 : 1, overflow: openNoteId===task.id ? "visible" : "hidden", textOverflow: openNoteId===task.id ? "clip" : "ellipsis", whiteSpace: openNoteId===task.id ? "normal" : "nowrap", cursor: isShared ? "default" : "pointer", ...cb, display:"flex", alignItems: openNoteId===task.id ? "flex-start" : "center", gap:5 }}>
                       <span style={{ overflow: openNoteId===task.id ? "visible" : "hidden", textOverflow: openNoteId===task.id ? "clip" : "ellipsis", whiteSpace: openNoteId===task.id ? "normal" : "nowrap" }}>{task.title}</span>
                       {task.note && <span title="Notitie aanwezig" style={{ flexShrink:0, fontSize:10, color:"#9ca3af" }}>📝</span>}
                     </div>
@@ -664,7 +664,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                         />
                       )}
                     </div>
-                    <div style={{ flex:1, minWidth:COL.prio, display:"flex", justifyContent:"center", padding:"8px 6px" }}>
+                    <div style={{ width:COL.prio, flexShrink:0, display:"flex", justifyContent:"center", padding:"8px 6px" }}>
                       <span onClick={() => !isShared && cyclePrio(task.id)} style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:4, cursor: isShared ? "default" : "pointer", background:PRIO_BG[task.priority], color:PRIO_COLOR[task.priority], userSelect:"none" }}>{prioLabel(task.priority)}</span>
                     </div>
                     </div>
@@ -701,13 +701,13 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                   <div style={{ width:41, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", ...cb, padding:"8px 0" }}>
                     <div style={{ width:15, height:15, borderRadius:"50%", border:"2px solid #d1d5db" }} />
                   </div>
-                  <div style={{ width:COL.name, flexShrink:0, padding:"6px 10px", ...cb }}>
+                  <div style={{ flex:1, minWidth:COL.name, padding:"6px 10px", ...cb }}>
                     <input value={newTitle} onChange={e => setNewTitle(e.target.value)}
                       onKeyDown={e => { if(e.key==="Enter") addTask(); if(e.key==="Escape"){ setAdding(false); setNewTitle(""); } }}
                       placeholder={t(lang, 'taskNamePlaceholder')} autoFocus
                       style={{ width:"100%", border:"none", borderBottom:"2px solid "+activeColor, fontSize:13, outline:"none", padding:"2px 0", color:"#111827" }} />
                   </div>
-                  <div style={{ flex:1, padding:"6px 10px", display:"flex", gap:8, alignItems:"center" }}>
+                  <div style={{ flexShrink:0, padding:"6px 10px", display:"flex", gap:8, alignItems:"center" }}>
                     <button onClick={addTask} style={{ fontSize:11, background:activeColor, color:"#fff", border:"none", borderRadius:3, padding:"3px 8px", cursor:"pointer" }}>{t(lang, 'addBtn')}</button>
                     <button onClick={() => { setAdding(false); setNewTitle(""); }} style={{ fontSize:11, background:"none", color:"#9ca3af", border:"none", cursor:"pointer" }}>{t(lang, 'cancel')}</button>
                   </div>
