@@ -1410,11 +1410,6 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
         )}
         <div ref={bottomRef} />
       </div>
-      <div style={{ padding:"6px 14px", display:"flex", gap:6, flexWrap:"wrap", borderTop:"1px solid #e5e7eb" }}>
-        {[t(lang,'quickQ1'), t(lang,'quickQ2'), t(lang,'quickQ3')].map(q => (
-          <button key={q} onClick={() => setInput(q)} style={{ background:"#fff", border:"1px solid #e5e7eb", borderRadius:20, padding:"4px 10px", fontSize:11, cursor:"pointer", color:"#374151", whiteSpace:"nowrap" }}>{q}</button>
-        ))}
-      </div>
       {attachments.length > 0 && (
         <div style={{ padding:"6px 14px", display:"flex", gap:6, flexWrap:"wrap", borderTop:"1px solid #e5e7eb" }}>
           {attachments.map((att, i) => (
