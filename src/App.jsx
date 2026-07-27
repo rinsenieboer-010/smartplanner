@@ -1814,6 +1814,20 @@ export default function App() {
   const [incomingShares, setIncomingShares] = useState([]);
   const [inviteEmail, setInviteEmail]     = useState("");
   const [invitePermission, setInvitePermission] = useState("view");
+  const [inviteLists, setInviteLists]     = useState([]);   // vooraf gekozen lijsten om te delen
+  // Zichtbaarheid van gedeelde items die de ontvanger zelf regelt (lokaal in browser).
+  // Sleutels: gedeelde lijst-id (verbergt lijst) of `cal:<ownerId>` (verbergt agenda).
+  const [hiddenShared, setHiddenShared]   = useState(() => {
+    try { return JSON.parse(localStorage.getItem("jmp_hidden_shared") || "[]"); } catch { return []; }
+  });
+  const toggleSharedVisible = (key) => {
+    setHiddenShared(prev => {
+      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
+      try { localStorage.setItem("jmp_hidden_shared", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  const isSharedVisible = (key) => !hiddenShared.includes(key);
   const [sharedLists, setSharedLists]     = useState([]);   // lijsten die anderen met mij delen
   const [sharedTasks, setSharedTasks]     = useState([]);   // taken in die gedeelde lijsten
   const [sharedEvents, setSharedEvents]   = useState([]);   // afspraken die anderen met mij delen
@@ -1873,11 +1887,16 @@ export default function App() {
   const invitePerson = async () => {
     if (!inviteEmail.trim()) return;
     const email = inviteEmail.trim().toLowerCase();
-    await supabase.from("shares").insert({
+    // Meteen 'accepted' (geen aparte accepteerstap) + gekozen lijsten direct meesturen
+    const { data: inserted } = await supabase.from("shares").insert({
       owner_id: session.user.id, owner_email: session.user.email,
-      invited_email: email, permission: invitePermission,
-    });
+      invited_email: email, permission: invitePermission, status: "accepted",
+    }).select().single();
+    const objs = ownListsForShare.filter(l => inviteLists.includes(l.id)).map(l => ({ id: l.id, label: l.label, color: l.color }));
+    if (inserted && objs.length) await setShareLists(inserted.id, objs);
     setInviteEmail("");
+    setInviteLists([]);
+    setInvitePermission("view");
     await reloadAll();
   };
 
@@ -1924,6 +1943,10 @@ export default function App() {
   const pmOut       = personModalEmail ? outgoingShares.find(s => s.invited_email === personModalEmail) : null;
   const pmSharedIds = pmOut ? (shareListsMap[pmOut.id] || []) : [];
   const pmColor     = personModalEmail ? personColors[personModalEmail] : null;
+  // Wat deze persoon met MIJ deelt (ontvangerskant): gedeelde lijsten + evt. agenda
+  const pmIncomingLists   = personModalEmail ? sharedLists.filter(l => l.ownerEmail === personModalEmail) : [];
+  const pmIncomingOwnerId = pmIncomingLists[0]?.ownerId || (personModalEmail ? sharedEvents.find(e => e.ownerEmail === personModalEmail)?.ownerId : null);
+  const pmHasIncomingCal  = personModalEmail ? sharedEvents.some(e => e.ownerEmail === personModalEmail) : false;
 
   const generateApiKey = async () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -2199,11 +2222,11 @@ export default function App() {
       </div>
       <div ref={containerRef} style={{ display:"flex", height:"calc(100vh - 44px)", overflow:"hidden" }}>
         {visiblePanels.tasks && <div style={{ width: widths[0] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.22s ease-out" }}>
-          {isCollapsedLeft ? <CollapsedLabel label={t(lang, 'tasks')} /> : <TaskPanel tasks={tasks} setTasks={setTasks} trash={trash} setTrash={setTrash} lists={lists} setLists={setLists} sharedLists={sharedLists} sharedTasks={sharedTasks} personColors={personColors} userId={session.user.id} panelWidth={widths[0]??320} />}
+          {isCollapsedLeft ? <CollapsedLabel label={t(lang, 'tasks')} /> : <TaskPanel tasks={tasks} setTasks={setTasks} trash={trash} setTrash={setTrash} lists={lists} setLists={setLists} sharedLists={sharedLists.filter(l => isSharedVisible(l.id))} sharedTasks={sharedTasks.filter(tk => isSharedVisible(tk.list))} personColors={personColors} userId={session.user.id} panelWidth={widths[0]??320} />}
         </div>}
         {visiblePanels.tasks && (visiblePanels.calendar || visiblePanels.assistant || visiblePanels.agents) && <Splitter onMouseDown={startLeft} />}
         {visiblePanels.calendar && <div style={{ width: widths[1] ?? 200, flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.22s ease-out" }}>
-          {isCollapsedMid ? <CollapsedLabel label={t(lang, 'calendar')} /> : <CalendarPanel events={events} setEvents={setEvents} tasks={tasks} sharedEvents={sharedEvents} personColors={personColors} invitees={outgoingShares.filter(s => s.status==="accepted").map(s => s.invited_email)} userId={session.user.id} panelWidth={widths[1]??200} />}
+          {isCollapsedMid ? <CollapsedLabel label={t(lang, 'calendar')} /> : <CalendarPanel events={events} setEvents={setEvents} tasks={tasks} sharedEvents={sharedEvents.filter(e => isSharedVisible("cal:" + e.ownerId))} personColors={personColors} invitees={outgoingShares.filter(s => s.status==="accepted").map(s => s.invited_email)} userId={session.user.id} panelWidth={widths[1]??200} />}
         </div>}
         {visiblePanels.calendar && (visiblePanels.assistant || visiblePanels.agents) && <Splitter onMouseDown={startMid} />}
         {visiblePanels.assistant && <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.22s ease-out" }}>
@@ -2328,20 +2351,46 @@ export default function App() {
             <div style={{ borderTop:"1px solid #27272a", paddingTop:20, marginTop:20 }}>
               <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Delen</div>
 
-              {/* Uitnodigen */}
-              <div style={{ display:"flex", gap:8, marginBottom:16 }}>
-                <input
-                  value={inviteEmail}
-                  onChange={e => setInviteEmail(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && invitePerson()}
-                  placeholder="e-mailadres..."
-                  style={{ flex:1, background:"#111827", border:"1px solid #3f3f46", borderRadius:6, color:"#f9fafb", fontSize:12, padding:"7px 10px", outline:"none" }}
-                />
-                <button onClick={invitePerson}
-                  style={{ background:"#2563EB", border:"none", borderRadius:6, color:"#fff", fontSize:12, fontWeight:600, padding:"0 14px", cursor:"pointer" }}>
-                  Uitnodigen
-                </button>
+              {/* Uitnodigen: e-mail, dan vooraf rechten + welke lijsten je deelt */}
+              <input
+                value={inviteEmail}
+                onChange={e => setInviteEmail(e.target.value)}
+                placeholder="e-mailadres..."
+                style={{ width:"100%", boxSizing:"border-box", background:"#111827", border:"1px solid #3f3f46", borderRadius:6, color:"#f9fafb", fontSize:12, padding:"8px 10px", outline:"none", marginBottom:10 }}
+              />
+
+              <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:0.5, marginBottom:6 }}>RECHTEN</div>
+              <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+                {[["view","👁 Bekijken"],["edit","✏️ Bewerken"]].map(([p,labelTxt]) => (
+                  <button key={p} onClick={() => setInvitePermission(p)}
+                    style={{ flex:1, border:"1px solid "+(invitePermission===p?"#2563EB":"#3f3f46"), background: invitePermission===p?"#1e3a8a":"transparent", color: invitePermission===p?"#fff":"#9ca3af", borderRadius:7, padding:"8px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>{labelTxt}</button>
+                ))}
               </div>
+
+              <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:0.5, marginBottom:6 }}>WELKE LIJSTEN DEEL JE</div>
+              {ownListsForShare.length === 0 ? (
+                <div style={{ fontSize:12, color:"#3f3f46", marginBottom:12 }}>Je hebt nog geen eigen lijsten.</div>
+              ) : (
+                <div style={{ marginBottom:12 }}>
+                  {ownListsForShare.map(l => {
+                    const on = inviteLists.includes(l.id);
+                    return (
+                      <div key={l.id} onClick={() => setInviteLists(prev => prev.includes(l.id) ? prev.filter(x => x !== l.id) : [...prev, l.id])}
+                        style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 2px", cursor:"pointer" }}>
+                        <div style={{ width:9, height:9, borderRadius:"50%", background:l.color }} />
+                        <div style={{ flex:1, color:"#f9fafb", fontSize:13 }}>{l.label}</div>
+                        <div style={{ width:20, height:20, borderRadius:5, border:"2px solid "+(on?"#2563EB":"#3f3f46"), background:on?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:12 }}>{on?"✓":""}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div style={{ fontSize:11, color:"#6b7280", marginBottom:10, lineHeight:1.5 }}>Afspraken deel je per stuk in de agenda. Lijsten en rechten pas je later nog aan bij de persoon.</div>
+
+              <button onClick={invitePerson} disabled={!inviteEmail.trim()}
+                style={{ width:"100%", background:"#2563EB", border:"none", borderRadius:7, color:"#fff", fontSize:13, fontWeight:700, padding:"10px 0", cursor: inviteEmail.trim() ? "pointer" : "default", opacity: inviteEmail.trim() ? 1 : 0.5, marginBottom:16 }}>
+                Uitnodigen &amp; delen
+              </button>
 
               {/* Personen: klik om kleur + welke lijsten ze zien in te stellen */}
               {peopleEmails.length > 0 && (
@@ -2456,8 +2505,37 @@ export default function App() {
                 <button onClick={() => { removeShare(pmOut.id); setPersonModalEmail(null); }}
                   style={{ width:"100%", border:"1px solid #7f1d1d", background:"transparent", color:"#f87171", borderRadius:7, padding:"9px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>Stop met delen</button>
               </>
+            ) : (pmIncomingLists.length > 0 || pmHasIncomingCal) ? (
+              <>
+                <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, marginBottom:8 }}>
+                  WAT JE VAN {(personModalEmail||"").split("@")[0].toUpperCase()} ZIET
+                </div>
+                {pmIncomingLists.map(l => {
+                  const on = isSharedVisible(l.id);
+                  return (
+                    <div key={l.id} onClick={() => toggleSharedVisible(l.id)}
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderBottom:"1px solid #27272a", cursor:"pointer" }}>
+                      <div style={{ width:9, height:9, borderRadius:"50%", background:l.color }} />
+                      <div style={{ flex:1, color:"#f9fafb", fontSize:13, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{l.label}</div>
+                      <span style={{ fontSize:16, color: on ? "#2563EB" : "#3f3f46" }}>{on ? "👁" : "🚫"}</span>
+                    </div>
+                  );
+                })}
+                {pmHasIncomingCal && pmIncomingOwnerId && (() => {
+                  const on = isSharedVisible("cal:" + pmIncomingOwnerId);
+                  return (
+                    <div onClick={() => toggleSharedVisible("cal:" + pmIncomingOwnerId)}
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderBottom:"1px solid #27272a", cursor:"pointer" }}>
+                      <span style={{ fontSize:12 }}>📅</span>
+                      <div style={{ flex:1, color:"#f9fafb", fontSize:13 }}>Agenda (afspraken)</div>
+                      <span style={{ fontSize:16, color: on ? "#2563EB" : "#3f3f46" }}>{on ? "👁" : "🚫"}</span>
+                    </div>
+                  );
+                })()}
+                <div style={{ fontSize:11, color:"#6b7280", marginTop:10, lineHeight:1.5 }}>Klik op het oog om een lijst of agenda voor jezelf te tonen of verbergen. Dit verandert niets voor de ander.</div>
+              </>
             ) : (
-              <div style={{ fontSize:12, color:"#9ca3af", lineHeight:1.6 }}>Deze persoon deelt met jou. Geef een kleur zodat je z'n gedeelde lijsten en afspraken herkent. Wil je zelf iets delen? Nodig 'm uit via z'n e-mailadres.</div>
+              <div style={{ fontSize:12, color:"#9ca3af", lineHeight:1.6 }}>Deze persoon deelt nog niets met jou. Geef een kleur zodat je z'n gedeelde lijsten en afspraken straks herkent. Wil je zelf iets delen? Nodig 'm uit via z'n e-mailadres.</div>
             )}
           </div>
         </div>
