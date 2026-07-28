@@ -71,6 +71,9 @@ const DEFAULT_LISTS = [
 const LEGACY_LIST_LABELS = { school: "School", huishouden: "Huishouden", werk: "Werk" };
 const LEGACY_LIST_COLORS = { school: "#E6B400", huishouden: "#DC2626", werk: "#DC2626" };
 
+// Gedeelde agenda's: één vaste, halfdoorzichtige kleur, achter je eigen afspraken
+const SHARED_CAL = { bg: "rgba(148,163,184,0.22)", border: "rgba(100,116,139,0.55)", text: "#475569" };
+
 const HARDCODED_AGENTS = [
   { id: "bart",        name: "Bart",        role: "Centrale dispatcher",     model: "sonnet", emoji: "📬" },
   { id: "teacher",     name: "Teacher",     role: "Verbetert alle agents",   model: "opus",   emoji: "📚" },
@@ -1048,7 +1051,7 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
                     })}
                     {/* Gedeelde afspraken van anderen — hele-dag-band (rechts, in hun kleur) */}
                     {sharedEvents.filter(e => e.date===dk && isAllDay(e)).map(ev => {
-                      const ps = personStyle(ev.ownerEmail);
+                      const ps = SHARED_CAL;
                       return (
                         <div key={"shad-"+ev.id} title={ev.title}
                           onClick={e => { e.stopPropagation(); window.alert(`${ev.title}\n${(ev.ownerEmail||"").split("@")[0]} · hele dag`); }}
@@ -1060,7 +1063,7 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
                     })}
                     {/* Gedeelde afspraken van anderen — getimed, eronder, steekt onderaan uit */}
                     {sharedEvents.filter(e => e.date===dk && !isAllDay(e)).map(ev => {
-                      const ps = personStyle(ev.ownerEmail);
+                      const ps = SHARED_CAL;
                       const rawTop = extraH + (ev.startH - HOURS[0] + ev.startM/60) * HOUR_H;
                       const top    = Math.max(extraH, rawTop);
                       const bottom = extraH + (ev.endH - HOURS[0] + ev.endM/60) * HOUR_H;
@@ -1957,7 +1960,15 @@ export default function App() {
     const current = shareListsMap[share.id] || [];
     const nextIds = current.includes(listId) ? current.filter(x => x !== listId) : [...current, listId];
     const objs = ownListsForShare.filter(l => nextIds.includes(l.id)).map(l => ({ id: l.id, label: l.label, color: l.color }));
+    // Meteen lokaal bijwerken zodat het vinkje direct verschijnt
+    setShareListsMap(m => ({ ...m, [share.id]: nextIds }));
     await setShareLists(share.id, objs);
+    await reloadAll();
+  };
+  // Deel (of stop met delen) van je hele agenda met deze connectie
+  const setShareCalendar = async (shareId, on) => {
+    setOutgoingShares(list => list.map(s => s.id === shareId ? { ...s, share_calendar: on } : s));
+    await supabase.from("shares").update({ share_calendar: on }).eq("id", shareId);
     await reloadAll();
   };
   const peopleEmails = Array.from(new Set([
@@ -2509,6 +2520,14 @@ export default function App() {
                     <button key={p} onClick={() => updateSharePermission(pmOut.id, p)}
                       style={{ flex:1, border:"1px solid "+(pmOut.permission===p?"#2563EB":"#3f3f46"), background: pmOut.permission===p?"#1e3a8a":"transparent", color: pmOut.permission===p?"#fff":"#9ca3af", borderRadius:7, padding:"8px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>{labelTxt}</button>
                   ))}
+                </div>
+
+                <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, margin:"18px 0 8px" }}>AGENDA</div>
+                <div onClick={() => setShareCalendar(pmOut.id, !pmOut.share_calendar)}
+                  style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderTop:"1px solid #27272a", cursor:"pointer" }}>
+                  <span style={{ fontSize:12 }}>📅</span>
+                  <div style={{ flex:1, color:"#f9fafb", fontSize:13 }}>Mijn agenda delen</div>
+                  <div style={{ width:22, height:22, borderRadius:5, border:"2px solid "+(pmOut.share_calendar?"#2563EB":"#3f3f46"), background:pmOut.share_calendar?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13 }}>{pmOut.share_calendar?"✓":""}</div>
                 </div>
               </>
             )}
