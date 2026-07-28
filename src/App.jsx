@@ -60,12 +60,16 @@ const PERSON_COLORS = {
 const pastDate    = dateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate()-2));
 const futureDate  = dateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate()+5));
 
+// Alleen 'Mijn taken' is een vaste standaardlijst (niet te verwijderen). De rest
+// maakt de gebruiker zelf; verwijderde lijsten blijven weg.
 const DEFAULT_LISTS = [
-  { id: "mine",       label: "Mijn taken",  color: "#2563EB" },
-  { id: "school",     label: "School",      color: "#E6B400" },
-  { id: "huishouden", label: "Huishouden",  color: "#DC2626" },
-  { id: "werk",       label: "Werk",        color: "#DC2626" },
+  { id: "mine", label: "Mijn taken", color: "#2563EB" },
 ];
+
+// Labels/kleuren voor oude standaardlijsten, zodat lijsten die nog taken bevatten
+// netjes getoond blijven (geen taken kwijtraken) ook al zijn ze geen default meer.
+const LEGACY_LIST_LABELS = { school: "School", huishouden: "Huishouden", werk: "Werk" };
+const LEGACY_LIST_COLORS = { school: "#E6B400", huishouden: "#DC2626", werk: "#DC2626" };
 
 const HARDCODED_AGENTS = [
   { id: "bart",        name: "Bart",        role: "Centrale dispatcher",     model: "sonnet", emoji: "📬" },
@@ -418,7 +422,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
     setNewListName(""); setAddingList(false); setActiveList(id);
   };
   const deleteList = () => {
-    if (lists.length <= 1) return;
+    if (activeList === "mine" || lists.length <= 1) return;
     const tasksToDelete = tasks.filter(x => (x.list||"mine") === activeList);
     tasksToDelete.forEach(t => deleteTaskDB(t.id));
     deleteListDB(activeList);
@@ -559,7 +563,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
           )}
           {isShared && <span style={{ fontSize:10, background:"#f3f4f6", color:"#6b7280", borderRadius:4, padding:"2px 6px", fontWeight:700 }}>{t(lang, 'sharedBadge')}</span>}
           {isTrash && <span style={{ fontSize:11, color:"#9ca3af", marginLeft:4 }}>{t(lang, 'trashAutoDelete')}</span>}
-          {!isTrash && !isShared && lists.length > 1 && (
+          {!isTrash && !isShared && activeList !== "mine" && lists.length > 1 && (
             <button onClick={deleteList} title={t(lang, 'deleteList')}
               style={{ marginLeft:"auto", background:"none", border:"none", color:"#d1d5db", cursor:"pointer", fontSize:16, lineHeight:1, padding:"2px 4px", borderRadius:3 }}
               onMouseEnter={e => e.currentTarget.style.color="#DC2626"}
@@ -1311,6 +1315,14 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
         };
         setTasks(t => t.map(x => x.id === d.task_id ? updated : x));
         await updateTaskDB(updated);
+      } else if (action.type === "delete_task") {
+        const d = action.data;
+        await trashTaskDB(d.task_id);
+        setTasks(t => t.filter(x => x.id !== d.task_id));
+      } else if (action.type === "delete_event") {
+        const d = action.data;
+        await deleteEventDB(d.event_id);
+        setEvents(ev => ev.filter(x => x.id !== d.event_id));
       }
     }
   };
@@ -1888,10 +1900,11 @@ export default function App() {
   const invitePerson = async () => {
     if (!inviteEmail.trim()) return;
     const email = inviteEmail.trim().toLowerCase();
-    // Meteen 'accepted' (geen aparte accepteerstap) + gekozen lijsten direct meesturen
+    // Verzoek versturen (pending). Gekozen lijsten gaan mee en worden actief
+    // zodra de ander accepteert.
     const { data: inserted } = await supabase.from("shares").insert({
       owner_id: session.user.id, owner_email: session.user.email,
-      invited_email: email, permission: invitePermission, status: "accepted",
+      invited_email: email, permission: invitePermission, status: "pending",
     }).select().single();
     const objs = ownListsForShare.filter(l => inviteLists.includes(l.id)).map(l => ({ id: l.id, label: l.label, color: l.color }));
     if (inserted && objs.length) await setShareLists(inserted.id, objs);
@@ -1911,9 +1924,19 @@ export default function App() {
     await reloadAll();
   };
 
-  const acceptInvitation = async (id) => {
-    await supabase.from("shares").update({ status: "accepted" }).eq("id", id);
-    setIncomingShares(s => s.filter(x => x.id !== id));
+  // Accepteren = tweezijdige connectie: verzoek accepteren én meteen een
+  // omgekeerde connectie terug aanmaken zodat beide kanten kunnen delen.
+  const acceptInvitation = async (share) => {
+    await supabase.from("shares").update({ status: "accepted" }).eq("id", share.id);
+    const { data: existing } = await supabase.from("shares")
+      .select("id").eq("owner_id", session.user.id).eq("invited_email", share.owner_email);
+    if (!existing || existing.length === 0) {
+      await supabase.from("shares").insert({
+        owner_id: session.user.id, owner_email: session.user.email,
+        invited_email: share.owner_email, permission: "view", status: "accepted",
+      });
+    }
+    setIncomingShares(s => s.filter(x => x.id !== share.id));
     await reloadAll();
   };
 
@@ -1970,11 +1993,23 @@ export default function App() {
       setTasks(t);
       setEvents(ev);
       setTrash(tr);
+      // Lijsten met eigen taken erin altijd tonen, ook al staan ze niet (meer)
+      // in de lijstenset — zo raken taken nooit hun tab kwijt, maar blijven lege
+      // verwijderde lijsten weg.
+      const withRecovered = (base) => {
+        const out = [...base];
+        const known = new Set(out.map(l => l.id));
+        t.forEach(task => {
+          const id = task.list || "mine";
+          if (!known.has(id)) { known.add(id); out.push({ id, label: LEGACY_LIST_LABELS[id] || id, color: LEGACY_LIST_COLORS[id] || "#9ca3af" }); }
+        });
+        return out;
+      };
       if (ls) {
-        setLists(ls);
+        setLists(withRecovered(ls));
       } else if (!seededLists.current) {
         seededLists.current = true;
-        seedDefaultListsDB(uid, DEFAULT_LISTS).then(seeded => setLists(seeded));
+        seedDefaultListsDB(uid, DEFAULT_LISTS).then(seeded => setLists(withRecovered(seeded)));
       }
 
       const colorMap = {};
@@ -2348,9 +2383,9 @@ export default function App() {
               ))}
             </div>
 
-            {/* Delen */}
+            {/* Connecties */}
             <div style={{ borderTop:"1px solid #27272a", paddingTop:20, marginTop:20 }}>
-              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Delen</div>
+              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Connecties</div>
 
               {/* Uitnodigen: e-mail + knop opent een pop-up met rechten + lijsten */}
               <div style={{ display:"flex", gap:8, marginBottom:16 }}>
@@ -2367,42 +2402,41 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Personen: klik om kleur + welke lijsten ze zien in te stellen */}
-              {peopleEmails.length > 0 && (
-                <div style={{ marginBottom:12 }}>
-                  <div style={{ fontSize:11, color:"#52525b", marginBottom:6 }}>Personen</div>
-                  {peopleEmails.map(email => {
-                    const out = outgoingShares.find(s => s.invited_email === email);
-                    const myColor = personColors[email];
-                    const dot = myColor ? PERSON_COLORS[myColor].dot : "#3f3f46";
-                    return (
-                      <div key={email} onClick={() => setPersonModalEmail(email)}
-                        style={{ display:"flex", alignItems:"center", gap:8, background:"#111827", borderRadius:6, padding:"8px 10px", marginBottom:4, cursor:"pointer" }}>
-                        <div style={{ width:11, height:11, borderRadius:"50%", background:dot, border: myColor ? "none" : "1px solid #3f3f46", flexShrink:0 }} />
-                        <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontSize:11, color:"#f9fafb", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{email}</div>
-                          <div style={{ fontSize:9, color:"#52525b" }}>{out ? (out.status === "accepted" ? "tik om in te stellen" : "wacht op acceptatie") : "deelt met jou"}</div>
-                        </div>
-                        <span style={{ color:"#52525b", fontSize:14 }}>›</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Inkomende uitnodigingen */}
+              {/* Verzoeken aan jou (accepteren = tweezijdige connectie) */}
               {incomingShares.length > 0 && (
-                <div>
-                  <div style={{ fontSize:11, color:"#52525b", marginBottom:6 }}>Uitnodigingen</div>
+                <div style={{ marginBottom:14 }}>
+                  <div style={{ fontSize:11, color:"#9ca3af", fontWeight:700, marginBottom:6 }}>Verzoeken aan jou</div>
                   {incomingShares.map(s => (
                     <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, background:"#111827", borderRadius:6, padding:"7px 10px", marginBottom:4 }}>
-                      <span style={{ flex:1, fontSize:11, color:"#9ca3af", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.owner_email}</span>
-                      <button onClick={() => acceptInvitation(s.id)} style={{ background:"#166534", border:"none", borderRadius:4, color:"#4ade80", fontSize:11, padding:"3px 8px", cursor:"pointer" }}>✓</button>
+                      <span style={{ flex:1, fontSize:11, color:"#f9fafb", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.owner_email}</span>
+                      <button onClick={() => acceptInvitation(s)} style={{ background:"#166534", border:"none", borderRadius:4, color:"#4ade80", fontSize:11, fontWeight:700, padding:"3px 10px", cursor:"pointer" }}>Accepteren</button>
                       <button onClick={() => declineInvitation(s.id)} style={{ background:"none", border:"none", color:"#6b7280", cursor:"pointer", fontSize:13, padding:"0 2px" }}>✕</button>
                     </div>
                   ))}
                 </div>
               )}
+
+              {/* Je connecties */}
+              <div style={{ fontSize:11, color:"#9ca3af", fontWeight:700, marginBottom:6 }}>Je connecties</div>
+              {peopleEmails.length === 0 ? (
+                <div style={{ fontSize:12, color:"#3f3f46" }}>Nog geen connecties. Nodig iemand uit via e-mail.</div>
+              ) : peopleEmails.map(email => {
+                const out = outgoingShares.find(s => s.invited_email === email);
+                const myColor = personColors[email];
+                const dot = myColor ? PERSON_COLORS[myColor].dot : "#3f3f46";
+                const subtitle = out ? (out.status === "accepted" ? "tik om in te stellen" : "verzoek verstuurd") : "gedeeld met jou";
+                return (
+                  <div key={email} onClick={() => setPersonModalEmail(email)}
+                    style={{ display:"flex", alignItems:"center", gap:8, background:"#111827", borderRadius:6, padding:"8px 10px", marginBottom:4, cursor:"pointer" }}>
+                    <div style={{ width:11, height:11, borderRadius:"50%", background:dot, border: myColor ? "none" : "1px solid #3f3f46", flexShrink:0 }} />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:11, color:"#f9fafb", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{email}</div>
+                      <div style={{ fontSize:9, color:"#52525b" }}>{subtitle}</div>
+                    </div>
+                    <span style={{ color:"#52525b", fontSize:14 }}>›</span>
+                  </div>
+                );
+              })}
             </div>
 
             {/* App Store */}
@@ -2452,10 +2486,11 @@ export default function App() {
               ))}
             </div>
 
-            {pmOut ? (
+            {/* Wat JIJ deelt met deze connectie */}
+            {pmOut && (
               <>
                 <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, marginBottom:8 }}>
-                  WAT KAN {(personModalEmail||"").split("@")[0].toUpperCase()} ZIEN
+                  WAT JIJ DEELT MET {(personModalEmail||"").split("@")[0].toUpperCase()}
                 </div>
                 {ownListsForShare.map(l => {
                   const on = pmSharedIds.includes(l.id);
@@ -2468,22 +2503,21 @@ export default function App() {
                     </div>
                   );
                 })}
-                <div style={{ fontSize:11, color:"#6b7280", marginTop:10, lineHeight:1.5 }}>Afspraken deel je per stuk in de agenda.</div>
-
                 <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, margin:"18px 0 8px" }}>RECHTEN</div>
-                <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+                <div style={{ display:"flex", gap:8 }}>
                   {[["view","👁 Bekijken"],["edit","✏️ Bewerken"]].map(([p,labelTxt]) => (
                     <button key={p} onClick={() => updateSharePermission(pmOut.id, p)}
                       style={{ flex:1, border:"1px solid "+(pmOut.permission===p?"#2563EB":"#3f3f46"), background: pmOut.permission===p?"#1e3a8a":"transparent", color: pmOut.permission===p?"#fff":"#9ca3af", borderRadius:7, padding:"8px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>{labelTxt}</button>
                   ))}
                 </div>
-                <button onClick={() => { removeShare(pmOut.id); setPersonModalEmail(null); }}
-                  style={{ width:"100%", border:"1px solid #7f1d1d", background:"transparent", color:"#f87171", borderRadius:7, padding:"9px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>Stop met delen</button>
               </>
-            ) : (pmIncomingLists.length > 0 || pmHasIncomingCal) ? (
+            )}
+
+            {/* Wat DEZE PERSOON met jou deelt (zichtbaarheid) */}
+            {(pmIncomingLists.length > 0 || pmHasIncomingCal) && (
               <>
-                <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, marginBottom:8 }}>
-                  WAT JE VAN {(personModalEmail||"").split("@")[0].toUpperCase()} ZIET
+                <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, margin: pmOut ? "20px 0 8px" : "0 0 8px" }}>
+                  WAT {(personModalEmail||"").split("@")[0].toUpperCase()} MET JOU DEELT
                 </div>
                 {pmIncomingLists.map(l => {
                   const on = isSharedVisible(l.id);
@@ -2507,10 +2541,17 @@ export default function App() {
                     </div>
                   );
                 })()}
-                <div style={{ fontSize:11, color:"#6b7280", marginTop:10, lineHeight:1.5 }}>Klik op het oog om een lijst of agenda voor jezelf te tonen of verbergen. Dit verandert niets voor de ander.</div>
+                <div style={{ fontSize:11, color:"#6b7280", marginTop:10, lineHeight:1.5 }}>Klik op het oog om iets voor jezelf te tonen of verbergen. Dit verandert niets voor de ander.</div>
               </>
-            ) : (
-              <div style={{ fontSize:12, color:"#9ca3af", lineHeight:1.6 }}>Deze persoon deelt nog niets met jou. Geef een kleur zodat je z'n gedeelde lijsten en afspraken straks herkent. Wil je zelf iets delen? Nodig 'm uit via z'n e-mailadres.</div>
+            )}
+
+            {!pmOut && pmIncomingLists.length === 0 && !pmHasIncomingCal && (
+              <div style={{ fontSize:12, color:"#9ca3af", lineHeight:1.6 }}>Nog niks gedeeld tussen jullie. Geef een kleur, of nodig 'm uit om een connectie te maken.</div>
+            )}
+
+            {pmOut && (
+              <button onClick={() => { removeShare(pmOut.id); setPersonModalEmail(null); }}
+                style={{ width:"100%", border:"1px solid #7f1d1d", background:"transparent", color:"#f87171", borderRadius:7, padding:"9px 0", fontSize:12, fontWeight:600, cursor:"pointer", marginTop:22 }}>Stop met delen</button>
             )}
           </div>
         </div>

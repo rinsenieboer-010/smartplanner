@@ -58,6 +58,46 @@ const TOOLS = [
     }
   },
   {
+    name: "delete_task",
+    description: "Verwijder één taak (gaat naar de prullenbak, is terug te halen). Gebruik het task_id.",
+    input_schema: {
+      type: "object",
+      properties: { task_id: { type: "string" } },
+      required: ["task_id"]
+    }
+  },
+  {
+    name: "filter_and_delete_tasks",
+    description: "Verwijder alle taken waarvan de titel een zoekwoord bevat. Handig om in één keer veel taken op te ruimen.",
+    input_schema: {
+      type: "object",
+      properties: { keyword: { type: "string", description: "Zoekwoord in de taaknaam (hoofdletterongevoelig)" } },
+      required: ["keyword"]
+    }
+  },
+  {
+    name: "delete_event",
+    description: "Verwijder één afspraak uit de agenda. Gebruik het event_id.",
+    input_schema: {
+      type: "object",
+      properties: { event_id: { type: "string" } },
+      required: ["event_id"]
+    }
+  },
+  {
+    name: "filter_and_delete_events",
+    description: "Verwijder alle afspraken waarvan de titel een zoekwoord bevat, optioneel binnen een datumbereik. Handig om een over een heel jaar herhaalde afspraak in één keer op te ruimen.",
+    input_schema: {
+      type: "object",
+      properties: {
+        keyword: { type: "string", description: "Zoekwoord in de titel (hoofdletterongevoelig)" },
+        from: { type: "string", description: "Optioneel: vanaf datum YYYY-MM-DD" },
+        to:   { type: "string", description: "Optioneel: t/m datum YYYY-MM-DD" }
+      },
+      required: ["keyword"]
+    }
+  },
+  {
     name: "update_memory",
     description: "Sla een werkwijze of voorkeur op voor toekomstige gesprekken.",
     input_schema: {
@@ -84,7 +124,7 @@ export default async function handler(req, res) {
     `- task_id="${t.id}" | ${t.title} | ${t.priority || 'geen prioriteit'} | ${t.status || 'geen status'}${t.deadline ? ' | deadline: ' + t.deadline : ''}`
   ).join('\n');
   const eventList = (events || []).map(e =>
-    `- ${e.title} op ${e.date} ${pad(e.startH)}:${pad(e.startM)}-${pad(e.endH)}:${pad(e.endM)}`
+    `- event_id="${e.id}" | ${e.title} op ${e.date} ${pad(e.startH)}:${pad(e.startM)}-${pad(e.endH)}:${pad(e.endM)}`
   ).join('\n');
 
   const systemPrompt = `Je bent een slimme planningsassistent voor justmyplan.
@@ -96,6 +136,8 @@ GEDRAGSREGEL — je gebruikt ALTIJD een tool, zonder uitzondering:
 - Gebruiker stelt een vraag of voert gesprek? → gebruik no_action met je antwoord
 - Meerdere taken wijzigen op basis van een woord in de naam? → gebruik filter_and_update_tasks met het zoekwoord
 - Eén specifieke taak wijzigen? → gebruik update_task met de task_id
+- Eén taak of afspraak verwijderen? → gebruik delete_task (task_id) of delete_event (event_id)
+- Veel taken/afspraken tegelijk verwijderen (bijv. een over een heel jaar herhaalde afspraak of een import)? → gebruik filter_and_delete_tasks of filter_and_delete_events met het zoekwoord
 
 VERBOD: Zeg NOOIT dat je iets hebt gedaan zonder de bijbehorende tool aan te roepen.
 
@@ -168,6 +210,22 @@ Regels:
               }});
             }
             toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: `${matched.length} taken met "${d.keyword}" gevonden en bijgewerkt.` });
+          } else if (toolUse.name === 'filter_and_delete_tasks') {
+            const keyword = (toolUse.input.keyword || '').toLowerCase();
+            const matched = (tasks || []).filter(t => t.title?.toLowerCase().includes(keyword));
+            for (const task of matched) actions.push({ type: 'delete_task', data: { task_id: task.id } });
+            toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: `${matched.length} taken met "${toolUse.input.keyword}" verwijderd.` });
+          } else if (toolUse.name === 'filter_and_delete_events') {
+            const d = toolUse.input;
+            const keyword = (d.keyword || '').toLowerCase();
+            const matched = (events || []).filter(e => {
+              if (!e.title?.toLowerCase().includes(keyword)) return false;
+              if (d.from && e.date < d.from) return false;
+              if (d.to && e.date > d.to) return false;
+              return true;
+            });
+            for (const ev of matched) actions.push({ type: 'delete_event', data: { event_id: ev.id } });
+            toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: `${matched.length} afspraken met "${d.keyword}" verwijderd.` });
           } else {
             actions.push({ type: toolUse.name, data: toolUse.input });
             toolResults.push({ type: 'tool_result', tool_use_id: toolUse.id, content: 'Uitgevoerd.' });
