@@ -308,14 +308,27 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
 
   const allTasks = [...tasks.map(t => ({ ...t, list: t.list || "mine" })), ...sharedTasks];
   const visibleTasks = allTasks.filter(t => t.list === activeList);
-  // Eerst op datum (vroegste boven, geen datum onderaan), dan binnen elke
-  // datumgroep op prioriteit: hoog → midden → laag → geen prioriteit
+  // Drie groepen, in deze volgorde:
+  //   0 — taken met een datum die nu spelen (vroegste boven)
+  //   1 — taken zonder datum
+  //   2 — herhalende taken die pas later weer aan de beurt zijn
+  // Een herhalende taak zakt dus onder de datumloze taken zolang hij nog niet
+  // speelt, en springt omhoog vanaf de dag ervoor.
+  const now = new Date();
+  const tomorrowKey = dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+  const sortGroup = (task) => {
+    if (!task.deadline) return 1;
+    if (task.recurrence && task.deadline > tomorrowKey) return 2;
+    return 0;
+  };
+  // Binnen elke groep op prioriteit: hoog → midden → laag → geen prioriteit
   const PRIO_RANK = { hoog: 0, midden: 1, laag: 2, "": 3 };
   const sorted = [...visibleTasks].sort((a, b) => {
-    if (a.deadline && b.deadline) {
-      if (a.deadline !== b.deadline) return a.deadline < b.deadline ? -1 : 1;
-    } else if (a.deadline && !b.deadline) return -1;
-    else if (!a.deadline && b.deadline) return 1;
+    const ga = sortGroup(a), gb = sortGroup(b);
+    if (ga !== gb) return ga - gb;
+    if (a.deadline && b.deadline && a.deadline !== b.deadline) {
+      return a.deadline < b.deadline ? -1 : 1;
+    }
     // zelfde datum (of beide zonder datum) → op prioriteit.
     // frozenPrio houdt de oude positie vast terwijl je nog doorklikt.
     const pa = frozenPrio[a.id] !== undefined ? frozenPrio[a.id] : a.priority;
