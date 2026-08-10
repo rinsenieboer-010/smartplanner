@@ -110,20 +110,25 @@ function DatePicker({ value, recurrence, onSave, onClose }) {
   const [viewMonth, setViewMonth] = useState(initial.getMonth());
   const [selectedDate, setSelectedDate] = useState(value);
   const [selectedRecurrence, setSelectedRecurrence] = useState(recurrence);
-  const yearListRef = useRef(null);
+  const monthListRef = useRef(null);
   const customMatch = recurrence?.match(/^custom:(\d+):(days|weeks|months)$/);
   const [customInterval, setCustomInterval] = useState(customMatch ? Number(customMatch[1]) : 2);
   const [customUnit, setCustomUnit] = useState(customMatch?.[2] || "weeks");
   const savedCustom = recurrence === "biweekly" || Boolean(customMatch);
   const [customOpen, setCustomOpen] = useState(savedCustom);
 
-  const years = Array.from({ length: 20 }, (_, i) => initial.getFullYear() - 5 + i);
+  // Alleen dit jaar en de twee jaren erna. Niet terug in de tijd, behalve als de
+  // taak zelf nog op een ouder jaar staat: dan blijft dat jaar zichtbaar.
+  const thisYear = new Date().getFullYear();
+  const years = Array.from(new Set([initial.getFullYear(), thisYear, thisYear + 1, thisYear + 2]))
+    .filter(y => y <= thisYear + 2)
+    .sort((a, b) => a - b);
 
   useEffect(() => {
-    // Scroll year into view
-    if (yearListRef.current) {
-      const active = yearListRef.current.querySelector("[data-active='true']");
-      if (active) active.scrollIntoView({ block: "center" });
+    // Gekozen maand in beeld scrollen (alleen de strip zelf, niet de pagina)
+    if (monthListRef.current) {
+      const active = monthListRef.current.querySelector("[data-active='true']");
+      if (active) active.scrollIntoView({ block: "nearest", inline: "center" });
     }
   }, []);
 
@@ -164,13 +169,24 @@ function DatePicker({ value, recurrence, onSave, onClose }) {
         <button onClick={nextMonth} style={{ background:"none", border:"none", cursor:"pointer", color:"#374151", fontSize:16, padding:"2px 6px" }}>›</button>
       </div>
 
-      {/* Year scroll */}
-      <div ref={yearListRef} style={{ display:"flex", gap:4, overflowX:"auto", padding:"6px 12px", borderBottom:"1px solid #f3f4f6", scrollbarWidth:"none" }}>
+      {/* Month scroll */}
+      <div ref={monthListRef} style={{ display:"flex", gap:4, overflowX:"auto", padding:"6px 12px 4px", scrollbarWidth:"none" }}>
+        {MONTHS_SHORT_BY_LANG[lang].map((m, i) => (
+          <button key={i} data-active={i === viewMonth ? "true" : "false"} onClick={() => setViewMonth(i)} style={{
+            flexShrink:0, padding:"4px 9px", borderRadius:4, border:"none", cursor:"pointer", fontSize:11, fontWeight:700,
+            background: i === viewMonth ? "#2563EB" : "#f3f4f6",
+            color: i === viewMonth ? "#fff" : "#6b7280"
+          }}>{m}</button>
+        ))}
+      </div>
+
+      {/* Year */}
+      <div style={{ display:"flex", gap:4, padding:"0 12px 6px", borderBottom:"1px solid #f3f4f6" }}>
         {years.map(y => (
-          <button key={y} data-active={y === viewYear ? "true" : "false"} onClick={() => setViewYear(y)} style={{
-            flexShrink:0, padding:"2px 8px", borderRadius:4, border:"none", cursor:"pointer", fontSize:11, fontWeight:700,
-            background: y === viewYear ? "#2563EB" : "#f3f4f6",
-            color: y === viewYear ? "#fff" : "#6b7280"
+          <button key={y} onClick={() => setViewYear(y)} style={{
+            flexShrink:0, padding:"3px 9px", borderRadius:4, border:"none", cursor:"pointer", fontSize:10, fontWeight:700,
+            background: y === viewYear ? "#DBEAFE" : "transparent",
+            color: y === viewYear ? "#2563EB" : "#9ca3af"
           }}>{y}</button>
         ))}
       </div>
