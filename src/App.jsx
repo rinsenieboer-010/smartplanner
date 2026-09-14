@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { flushSync } from "react-dom";
 import { supabase } from "./supabase.js";
-import { loadTasks, loadTrash, trashTaskDB, restoreTaskDB, loadEvents, loadLists, addTaskDB, updateTaskDB, deleteTaskDB, addEventDB, updateEventDB, deleteEventDB, addListDB, updateListDB, deleteListDB, seedDefaultListsDB, loadAgents, addAgentDB, updateAgentDB, deleteAgentDB, loadShareLists, setShareLists, loadPersonColors, setPersonColorDB, removePersonColorDB } from "./db.js";
+import { loadTasks, loadTrash, trashTaskDB, restoreTaskDB, loadEvents, loadLists, addTaskDB, updateTaskDB, deleteTaskDB, addEventDB, updateEventDB, deleteEventDB, addListDB, updateListDB, deleteListDB, updateTaskOrderDB, reorderListsDB, updateListSectionsDB, seedDefaultListsDB, loadAgents, addAgentDB, updateAgentDB, deleteAgentDB, loadShareLists, setShareLists, loadPersonColors, setPersonColorDB, removePersonColorDB } from "./db.js";
 import { t, LANGUAGES, DAYS_BY_LANG, MONTHS_BY_LANG, MONTHS_SHORT_BY_LANG } from "./i18n.js";
 import { createContext, useContext } from "react";
 const LangContext = createContext('nl');
@@ -290,6 +290,13 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
   const [openNoteId, setOpenNoteId] = useState(null);
   const [noteValue, setNoteValue] = useState("");
   const [titleValue, setTitleValue] = useState("");
+  // Slepen: taken + secties binnen een lijst, en lijsten in de zijbalk
+  const [draggingId, setDraggingId] = useState(null);
+  const [dropAt, setDropAt] = useState(null); // { id, after }
+  const [listDragId, setListDragId] = useState(null);
+  const [listDropAt, setListDropAt] = useState(null); // { id, after }
+  const [editingSectionId, setEditingSectionId] = useState(null);
+  const [sectionValue, setSectionValue] = useState("");
 
   // Gedeelde lijst tonen in de kleur van de persoon (zo zie je meteen van wie)
   const listColor = (l) => (l.isShared ? (PERSON_COLORS[personColors[l.ownerEmail]]?.dot || l.color) : l.color);
@@ -335,6 +342,109 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
     const pb = frozenPrio[b.id] !== undefined ? frozenPrio[b.id] : b.priority;
     return (PRIO_RANK[pa] ?? 3) - (PRIO_RANK[pb] ?? 3);
   });
+
+  // Handmatige volgorde: zodra je in een lijst sleept of een sectie toevoegt,
+  // wint jouw volgorde van datum en prioriteit. Taken die nog geen plek hebben
+  // (bijv. net aangemaakt via de assistent) staan automatisch gesorteerd bovenaan.
+  const SECTION_COLORS = ["#2563EB", "#DC2626", "#E6B400"];
+  const activeListObj = lists.find(l => l.id === activeList);
+  const sections = (!isShared && activeListObj?.sections) || [];
+  const isManual = !isShared && (sections.length > 0 || visibleTasks.some(x => x.sortOrder != null));
+  const rows = !isManual
+    ? sorted.map(task => ({ kind: "task", id: task.id, task }))
+    : [
+        ...sorted.filter(x => x.sortOrder == null).map(task => ({ kind: "task", id: task.id, task })),
+        ...[
+          ...visibleTasks.filter(x => x.sortOrder != null).map(task => ({ kind: "task", id: task.id, task, key: task.sortOrder })),
+          ...sections.map(section => ({ kind: "section", id: section.id, section, key: section.sortOrder ?? 0 })),
+        ].sort((a, b) => a.key - b.key),
+      ];
+
+  const saveSections = (secs) => {
+    setLists(l => l.map(x => x.id === activeList ? { ...x, sections: secs } : x));
+    updateListSectionsDB(activeList, secs);
+  };
+
+  // Legt de getoonde volgorde vast: elke rij krijgt zijn index als sort_order
+  const applyOrder = (newRows) => {
+    const changed = [];
+    const secs = [];
+    newRows.forEach((r, i) => {
+      if (r.kind === "section") secs.push({ ...r.section, sortOrder: i });
+      else if (r.task.sortOrder !== i) changed.push({ id: r.id, sortOrder: i });
+    });
+    if (changed.length) {
+      const m = Object.fromEntries(changed.map(c => [c.id, c.sortOrder]));
+      setTasks(ts => ts.map(x => m[x.id] !== undefined ? { ...x, sortOrder: m[x.id] } : x));
+      updateTaskOrderDB(changed);
+    }
+    if (JSON.stringify(secs) !== JSON.stringify(sections)) saveSections(secs);
+  };
+
+  const moveRow = (dragId, targetId, after) => {
+    if (dragId === targetId) return;
+    const moving = rows.find(r => r.id === dragId);
+    if (!moving) return;
+    const rest = rows.filter(r => r.id !== dragId);
+    let to = rest.findIndex(r => r.id === targetId);
+    if (to === -1) return;
+    if (after) to++;
+    rest.splice(to, 0, moving);
+    applyOrder(rest);
+  };
+
+  const rowDragProps = (id, enabled) => !enabled ? {} : {
+    draggable: true,
+    onDragStart: e => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", id); setDraggingId(id); },
+    onDragEnd: () => { setDraggingId(null); setDropAt(null); },
+    onDragOver: e => {
+      if (!draggingId) return;
+      e.preventDefault();
+      const r = e.currentTarget.getBoundingClientRect();
+      const after = e.clientY > r.top + r.height / 2;
+      if (dropAt?.id !== id || dropAt.after !== after) setDropAt({ id, after });
+    },
+    onDrop: e => {
+      e.preventDefault();
+      if (draggingId && dropAt) moveRow(draggingId, dropAt.id, dropAt.after);
+      setDraggingId(null); setDropAt(null);
+    },
+  };
+  const dropShadow = (id) => dropAt?.id === id && draggingId && draggingId !== id
+    ? (dropAt.after ? "inset 0 -3px 0 #2563EB" : "inset 0 3px 0 #2563EB") : "none";
+
+  const addSection = () => {
+    const sec = { id: "sec_" + crypto.randomUUID(), title: t(lang, "newSection"), color: activeListObj?.color || "#2563EB" };
+    applyOrder([...rows, { kind: "section", id: sec.id, section: sec }]);
+    setEditingSectionId(sec.id);
+    setSectionValue(sec.title);
+  };
+  const commitSection = (id) => {
+    const title = sectionValue.trim();
+    if (title) saveSections(sections.map(x => x.id === id ? { ...x, title } : x));
+    setEditingSectionId(null);
+  };
+  const cycleSectionColor = (id) => {
+    saveSections(sections.map(x => {
+      if (x.id !== id) return x;
+      const i = SECTION_COLORS.indexOf(x.color);
+      return { ...x, color: SECTION_COLORS[(i + 1) % SECTION_COLORS.length] };
+    }));
+  };
+  const deleteSection = (id) => saveSections(sections.filter(x => x.id !== id));
+
+  const moveList = (dragId, targetId, after) => {
+    if (dragId === targetId) return;
+    const moving = lists.find(l => l.id === dragId);
+    if (!moving) return;
+    const rest = lists.filter(l => l.id !== dragId);
+    let to = rest.findIndex(l => l.id === targetId);
+    if (to === -1) return;
+    if (after) to++;
+    rest.splice(to, 0, moving);
+    setLists(rest);
+    reorderListsDB(rest);
+  };
 
   // Bereken de volgende herhaal-deadline: altijd strikt ná vandaag
   const nextRecurDeadline = (currentDeadline, recurrence) => {
@@ -405,11 +515,28 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
   const addTask = () => {
     if (!newTitle.trim()) return;
     const taskData = { title: newTitle.trim(), priority: "", status: "", deadline: null, list: activeList };
-    addTaskDB(userId, taskData).then(saved => setTasks(t => [...t, saved]));
+    // In een handmatig geordende lijst komt een nieuwe taak onderaan
+    const manualPos = isManual ? rows.length : null;
+    addTaskDB(userId, taskData).then(saved => {
+      if (manualPos != null && saved?.id) {
+        setTasks(t => [...t, { ...saved, sortOrder: manualPos }]);
+        updateTaskOrderDB([{ id: saved.id, sortOrder: manualPos }]);
+      } else {
+        setTasks(t => [...t, saved]);
+      }
+    });
     setNewTitle(""); setAdding(false);
   };
   const cyclePrio = (id) => {
     const next = { "":"hoog", hoog:"midden", midden:"laag", laag:"" };
+    // Handmatige volgorde: prioriteit wijzigen verplaatst de taak niet
+    const current = tasks.find(x => x.id === id);
+    if (isManual && current?.sortOrder != null) {
+      const updated = { ...current, priority: next[current.priority] };
+      updateTaskDB(updated);
+      setTasks(t => t.map(x => x.id === id ? updated : x));
+      return;
+    }
     setTasks(t => t.map(x => {
       if (x.id !== id) return x;
       const updated = { ...x, priority: next[x.priority] };
@@ -499,19 +626,43 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
       <style>{`
         @keyframes fadeStrike { 0% { opacity:1; } 100% { opacity:0; } }
         .fading-task { animation: fadeStrike 2s ease forwards; text-decoration: line-through; }
+        .jmp-grip { opacity: 0; transition: opacity 150ms ease; cursor: grab; user-select: none; color: #9ca3af; font-size: 12px; line-height: 1; }
+        .jmp-row:hover .jmp-grip, .jmp-list:hover .jmp-grip { opacity: 1; }
+        @media (hover: none) { .jmp-grip { opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) { .jmp-grip { transition: none; } }
       `}</style>
 
       {/* Sidebar */}
       <div style={{ width: showSidebar ? 160 : 0, flexShrink:0, background:"#18181b", display:"flex", flexDirection:"column", borderRight: showSidebar ? "1px solid #27272a" : "none", overflow:"hidden", transition:"width 1.5s ease" }}>
         <div style={{ padding:"16px 12px 8px", fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2 }}>{t(lang, 'myLists')}</div>
         {lists.map(l => (
-          <div key={l.id} onClick={() => setActiveList(l.id)} style={{
+          <div key={l.id} className="jmp-list" onClick={() => setActiveList(l.id)}
+            draggable
+            onDragStart={e => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", l.id); setListDragId(l.id); }}
+            onDragEnd={() => { setListDragId(null); setListDropAt(null); }}
+            onDragOver={e => {
+              if (!listDragId) return;
+              e.preventDefault();
+              const r = e.currentTarget.getBoundingClientRect();
+              const after = e.clientY > r.top + r.height / 2;
+              if (listDropAt?.id !== l.id || listDropAt.after !== after) setListDropAt({ id: l.id, after });
+            }}
+            onDrop={e => {
+              e.preventDefault();
+              if (listDragId && listDropAt) moveList(listDragId, listDropAt.id, listDropAt.after);
+              setListDragId(null); setListDropAt(null);
+            }}
+            title={t(lang, 'dragToReorder')}
+            style={{
             display:"flex", alignItems:"center", gap:8, padding:"7px 12px", cursor:"pointer", overflow:"hidden",
             background: activeList===l.id ? "#27272a" : "transparent",
-            borderLeft: activeList===l.id ? "3px solid "+l.color : "3px solid transparent"
+            borderLeft: activeList===l.id ? "3px solid "+l.color : "3px solid transparent",
+            opacity: listDragId===l.id ? 0.4 : 1,
+            boxShadow: listDropAt?.id===l.id && listDragId && listDragId!==l.id ? (listDropAt.after ? "inset 0 -2px 0 #2563EB" : "inset 0 2px 0 #2563EB") : "none",
           }}>
             <div style={{ width:8, height:8, borderRadius:"50%", background:l.color, flexShrink:0 }} />
-            <span style={{ fontSize:12, color: activeList===l.id ? "#f4f4f5" : "#a1a1aa", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", minWidth:0, display:"block" }}>{l.label}</span>
+            <span style={{ flex:1, fontSize:12, color: activeList===l.id ? "#f4f4f5" : "#a1a1aa", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", minWidth:0, display:"block" }}>{l.label}</span>
+            <span className="jmp-grip" style={{ color:"#52525b" }}>⠿</span>
           </div>
         ))}
         {addingList ? (
@@ -652,19 +803,52 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                 <div style={{ width:COL.date, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colDeadline')}</div>
                 <div style={{ width:COL.prio, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", background:"#f9fafb" }}>{t(lang, 'colPriority')}</div>
               </div>
-              {sorted.map(task => {
+              {rows.map(row => {
+                if (row.kind === "section") {
+                  const sec = row.section;
+                  const c = sec.color || activeColor;
+                  return (
+                    <div key={sec.id} className="jmp-row" {...rowDragProps(sec.id, editingSectionId !== sec.id)}
+                      style={{ display:"flex", alignItems:"center", gap:8, marginTop:14, padding:"7px 10px 7px 14px", background:c+"1F", borderTop:"3px solid "+c, borderBottom:"1px solid #e5e7eb", opacity: draggingId===sec.id ? 0.4 : 1, boxShadow: dropShadow(sec.id) }}>
+                      <span className="jmp-grip" title={t(lang, 'dragToReorder')}>⠿</span>
+                      <button onClick={() => cycleSectionColor(sec.id)} title={t(lang, 'sectionColor')} aria-label={t(lang, 'sectionColor')}
+                        style={{ width:12, height:12, borderRadius:"50%", background:c, border:"none", padding:0, cursor:"pointer", flexShrink:0 }} />
+                      {editingSectionId === sec.id ? (
+                        <input value={sectionValue} autoFocus onChange={e => setSectionValue(e.target.value)}
+                          onFocus={e => e.currentTarget.select()}
+                          onBlur={() => commitSection(sec.id)}
+                          onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") { setSectionValue(sec.title); setEditingSectionId(null); } }}
+                          style={{ flex:1, minWidth:0, border:"none", borderBottom:"2px solid "+c, background:"transparent", outline:"none", fontFamily:"'DM Sans', sans-serif", fontSize:12, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", color:"#111827", padding:"1px 0" }} />
+                      ) : (
+                        <span onClick={() => { setEditingSectionId(sec.id); setSectionValue(sec.title); }}
+                          style={{ flex:1, minWidth:0, fontSize:12, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", color:"#111827", cursor:"text", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                          {sec.title}
+                        </span>
+                      )}
+                      <button onClick={() => deleteSection(sec.id)} title={t(lang, 'deleteSection')} aria-label={t(lang, 'deleteSection')}
+                        style={{ background:"none", border:"none", color:"#9ca3af", cursor:"pointer", fontSize:13, lineHeight:1, minWidth:28, minHeight:28, borderRadius:4 }}
+                        onMouseEnter={e => e.currentTarget.style.color="#DC2626"}
+                        onMouseLeave={e => e.currentTarget.style.color="#9ca3af"}>
+                        ✕
+                      </button>
+                    </div>
+                  );
+                }
+                const task = row.task;
                 const tk = getTodayKey();
                 const dlColor = !task.deadline ? "#9ca3af" : task.deadline < tk ? "#DC2626" : task.deadline===tk ? "#2563EB" : "#111827";
                 const dlWeight = task.deadline && task.deadline <= tk ? 700 : 400;
                 const isFading = fadingOut[task.id];
                 const isSettling = prioSettling[task.id];
                 return (
-                  <div key={task.id} className={isFading ? "fading-task" : ""}
-                    style={{ borderBottom:"1px solid #f3f4f6", background:"#fff", opacity: isSettling ? 0.25 : 1, transition:"opacity 0.45s ease" }}
+                  <div key={task.id} className={(isFading ? "fading-task " : "") + "jmp-row"}
+                    {...rowDragProps(task.id, !isShared && !isFading && openNoteId !== task.id)}
+                    style={{ borderBottom:"1px solid #f3f4f6", background:"#fff", opacity: isSettling ? 0.25 : draggingId===task.id ? 0.4 : 1, transition:"opacity 0.45s ease", boxShadow: dropShadow(task.id) }}
                     onMouseEnter={e => { if(!isFading) e.currentTarget.firstChild.style.background="#f9fafb"; }}
                     onMouseLeave={e => { if(e.currentTarget.firstChild) e.currentTarget.firstChild.style.background="#fff"; }}>
                     <div style={{ display:"flex", alignItems:"center", background:"inherit" }}>
-                    <div style={{ width:41, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", ...cb, alignSelf:"stretch" }}>
+                    <div style={{ width:41, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", ...cb, alignSelf:"stretch", position:"relative" }}>
+                      {!isShared && <span className="jmp-grip" title={t(lang, 'dragToReorder')} style={{ position:"absolute", left:3, top:"50%", transform:"translateY(-50%)" }}>⠿</span>}
                       <button onClick={() => !isShared && completeDone(task.id)} style={{ width:15, height:15, borderRadius:"50%", cursor: isShared ? "default" : "pointer", border:"2px solid #d1d5db", background:"transparent", flexShrink:0 }} />
                     </div>
                     <div onClick={() => { if(!isShared) { const next = openNoteId===task.id ? null : task.id; setOpenNoteId(next); if(next) { setNoteValue(task.note||""); setTitleValue(task.title||""); } } }}
@@ -749,10 +933,17 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                   </div>
                 </div>
               ) : (
-                <div onClick={() => setAdding(true)} style={{ padding:"7px 12px 8px 52px", fontSize:12, color:"#9ca3af", cursor:"pointer", borderBottom:"1px solid #f3f4f6" }}
-                  onMouseEnter={e => { e.currentTarget.style.color=activeColor; e.currentTarget.style.background="#f9fafb"; }}
-                  onMouseLeave={e => { e.currentTarget.style.color="#9ca3af"; e.currentTarget.style.background="transparent"; }}>
-                  {t(lang, 'addTask')}
+                <div style={{ display:"flex", alignItems:"stretch", borderBottom:"1px solid #f3f4f6" }}>
+                  <div onClick={() => setAdding(true)} style={{ flex:1, padding:"7px 12px 8px 52px", fontSize:12, color:"#9ca3af", cursor:"pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.color=activeColor; e.currentTarget.style.background="#f9fafb"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color="#9ca3af"; e.currentTarget.style.background="transparent"; }}>
+                    {t(lang, 'addTask')}
+                  </div>
+                  <div onClick={addSection} style={{ padding:"7px 14px 8px", fontSize:12, color:"#9ca3af", cursor:"pointer", whiteSpace:"nowrap" }}
+                    onMouseEnter={e => { e.currentTarget.style.color=activeColor; e.currentTarget.style.background="#f9fafb"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color="#9ca3af"; e.currentTarget.style.background="transparent"; }}>
+                    {t(lang, 'addSection')}
+                  </div>
                 </div>
               ))}
             </div>

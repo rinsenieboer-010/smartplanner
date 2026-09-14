@@ -78,7 +78,18 @@ function dbToTask(r) {
     completedAt:     r.deleted_at || null,
     recurrence:      r.recurrence || null,
     lastCompletedAt: r.last_completed_at || null,
+    sortOrder:       r.sort_order ?? null,
   };
+}
+
+// Handmatige volgorde binnen een lijst. Los van updateTaskDB zodat gewone
+// taak-updates blijven werken, ook als de sort_order-kolom nog ontbreekt.
+export async function updateTaskOrderDB(items) {
+  await Promise.all(
+    items.map(({ id, sortOrder }) =>
+      supabase.from("tasks").update({ sort_order: sortOrder }).eq("id", id)
+    )
+  );
 }
 
 // ── EVENTS ────────────────────────────────────────────────────────────────────
@@ -149,7 +160,12 @@ export async function loadLists(userId) {
     .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
-  return data && data.length > 0 ? data.map(dbToList) : null;
+  if (!data || data.length === 0) return null;
+  // Op handmatige volgorde; lijsten zonder sort_order houden hun aanmaakvolgorde
+  return data
+    .map((r, i) => ({ list: dbToList(r), key: r.sort_order ?? 100000 + i }))
+    .sort((a, b) => a.key - b.key)
+    .map(x => x.list);
 }
 
 // Zaai de standaardlijsten één keer in de database voor een nieuwe gebruiker,
@@ -177,8 +193,18 @@ export async function deleteListDB(id) {
   await supabase.from("lists").delete().eq("id", id);
 }
 
+export async function reorderListsDB(lists) {
+  await Promise.all(
+    lists.map((l, i) => supabase.from("lists").update({ sort_order: i }).eq("id", l.id))
+  );
+}
+
+export async function updateListSectionsDB(listId, sections) {
+  await supabase.from("lists").update({ sections }).eq("id", listId);
+}
+
 function dbToList(r) {
-  return { id: r.id, label: r.label, color: r.color };
+  return { id: r.id, label: r.label, color: r.color, sections: Array.isArray(r.sections) ? r.sections : [] };
 }
 
 // ── SHARE LISTS + PERSON COLORS (granulair delen) ──────────────────────────────
