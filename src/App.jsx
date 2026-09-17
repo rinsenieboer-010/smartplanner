@@ -1254,9 +1254,9 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
         </div>
 
         <div style={{ marginLeft:"auto", display:"flex", gap:4 }}>
-          <button onClick={prevWeek} style={{ background:"none", border:"1px solid #e5e5ea", borderRadius:8, width:28, height:28, cursor:"pointer", color:"#424245", fontSize:14 }}>‹</button>
-          <button onClick={() => setWeekBase(new Date(today))} style={{ background:"none", border:"1px solid #e5e5ea", borderRadius:8, padding:"0 8px", height:28, cursor:"pointer", color:"#424245", fontSize:12, fontWeight:600 }}>{t(lang, 'now')}</button>
-          <button onClick={nextWeek} style={{ background:"none", border:"1px solid #e5e5ea", borderRadius:8, width:28, height:28, cursor:"pointer", color:"#424245", fontSize:14 }}>›</button>
+          <button onClick={prevWeek} style={{ background:"none", border:"1px solid #e5e5ea", borderRadius:8, width:28, height:28, cursor:"pointer", fontFamily:'var(--font-sans)', fontSize:15, fontWeight:600, letterSpacing:"-0.01em", color:"#1d1d1f" }}>‹</button>
+          <button onClick={() => setWeekBase(new Date(today))} style={{ background:"none", border:"1px solid #e5e5ea", borderRadius:8, padding:"0 8px", height:28, cursor:"pointer", fontFamily:'var(--font-sans)', fontSize:15, fontWeight:600, letterSpacing:"-0.01em", color:"#1d1d1f" }}>{t(lang, 'now')}</button>
+          <button onClick={nextWeek} style={{ background:"none", border:"1px solid #e5e5ea", borderRadius:8, width:28, height:28, cursor:"pointer", fontFamily:'var(--font-sans)', fontSize:15, fontWeight:600, letterSpacing:"-0.01em", color:"#1d1d1f" }}>›</button>
         </div>
       </div>
       <div style={{ display:"flex", borderBottom:"1px solid #e5e5ea" }}>
