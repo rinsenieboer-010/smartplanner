@@ -136,6 +136,11 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* Apple-achtige scrollbalken overal (zie src/scrollThumbs.js): native verticale balk verbergen */
+::-webkit-scrollbar {
+  width: 0;
+  height: 8px;
+  background: transparent;
+}
 ::-webkit-scrollbar:vertical,
 *::-webkit-scrollbar:vertical {
   width: 0 !important;
