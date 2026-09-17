@@ -497,7 +497,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
   const rowSort = useSortable(rows.map(r => r.id), moveRowTo);
 
   const addSection = () => {
-    const sec = { id: "sec_" + crypto.randomUUID(), title: t(lang, "newSection"), color: activeListObj?.color || "#2563EB" };
+    const sec = { id: "sec_" + crypto.randomUUID(), title: t(lang, "newSection"), color: SECTION_COLORS.includes(activeListObj?.color) ? activeListObj.color : SECTION_COLORS[0] };
     applyOrder([...rows, { kind: "section", id: sec.id, section: sec }]);
     setEditingSectionId(sec.id);
     setSectionValue(sec.title);
@@ -507,13 +507,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
     if (title) saveSections(sections.map(x => x.id === id ? { ...x, title } : x));
     setEditingSectionId(null);
   };
-  const cycleSectionColor = (id) => {
-    saveSections(sections.map(x => {
-      if (x.id !== id) return x;
-      const i = SECTION_COLORS.indexOf(x.color);
-      return { ...x, color: SECTION_COLORS[(i + 1) % SECTION_COLORS.length] };
-    }));
-  };
+  const setSectionColor = (id, color) => saveSections(sections.map(x => x.id === id ? { ...x, color } : x));
   const deleteSection = (id) => saveSections(sections.filter(x => x.id !== id));
 
   const moveListTo = (dragId, to) => {
@@ -709,6 +703,9 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
         .jmp-grip { opacity: 0; transition: opacity 150ms ease; cursor: grab; user-select: none; color: #9ca3af; font-size: 12px; line-height: 1; }
         .jmp-row:hover .jmp-grip, .jmp-list:hover .jmp-grip { opacity: 1; }
         .jmp-grip { touch-action: none; }
+        .jmp-section-tools { opacity: 0; transition: opacity 150ms ease; }
+        .jmp-section:hover .jmp-section-tools, .jmp-section:focus-within .jmp-section-tools { opacity: 1; }
+        @media (hover: none) { .jmp-section-tools { opacity: 1; } }
         @media (hover: none) { .jmp-grip { opacity: 1; } }
         @media (prefers-reduced-motion: reduce) { .jmp-grip { transition: none; } }
       `}</style>
@@ -874,31 +871,37 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
               {rows.map(row => {
                 if (row.kind === "section") {
                   const sec = row.section;
-                  const c = sec.color || activeColor;
+                  const c = SECTION_COLORS.includes(sec.color) ? sec.color : SECTION_COLORS[0];
                   return (
-                    <div key={sec.id} className="jmp-row" {...rowSort.itemProps(sec.id, editingSectionId !== sec.id)}
-                      style={{ display:"flex", alignItems:"center", gap:8, marginTop:14, padding:"7px 10px 7px 14px", background:c+"1F", borderTop:"3px solid "+c, borderBottom:"1px solid #e5e7eb", ...rowSort.itemStyle(sec.id, "#fff") }}>
-                      <span className="jmp-grip" title={t(lang, 'dragToReorder')}>⠿</span>
-                      <button onClick={() => cycleSectionColor(sec.id)} title={t(lang, 'sectionColor')} aria-label={t(lang, 'sectionColor')}
-                        style={{ width:12, height:12, borderRadius:"50%", background:c, border:"none", padding:0, cursor:"pointer", flexShrink:0 }} />
+                    <div key={sec.id} className="jmp-row jmp-section" {...rowSort.itemProps(sec.id, editingSectionId !== sec.id)}
+                      style={{ display:"flex", alignItems:"center", gap:8, marginTop:14, padding:"6px 8px 6px 41px", minHeight:36, boxSizing:"border-box", position:"relative", background:c, color:"#fff", cursor:"grab", ...rowSort.itemStyle(sec.id, c) }}>
+                      <span className="jmp-grip" title={t(lang, 'dragToReorder')} style={{ position:"absolute", left:3, top:"50%", transform:"translateY(-50%)", color:"rgba(255,255,255,0.85)" }}>⠿</span>
                       {editingSectionId === sec.id ? (
                         <input value={sectionValue} autoFocus onChange={e => setSectionValue(e.target.value)}
                           onFocus={e => e.currentTarget.select()}
                           onBlur={() => commitSection(sec.id)}
                           onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") { setSectionValue(sec.title); setEditingSectionId(null); } }}
-                          style={{ flex:1, minWidth:0, border:"none", borderBottom:"2px solid "+c, background:"transparent", outline:"none", fontFamily:"'DM Sans', sans-serif", fontSize:12, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", color:"#111827", padding:"1px 0" }} />
+                          style={{ flex:1, minWidth:0, border:"none", borderBottom:"2px solid #fff", background:"transparent", outline:"none", fontFamily:"'DM Sans', sans-serif", fontSize:12, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", color:"#fff", padding:"1px 0" }} />
                       ) : (
-                        <span onClick={() => { setEditingSectionId(sec.id); setSectionValue(sec.title); }}
-                          style={{ flex:1, minWidth:0, fontSize:12, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", color:"#111827", cursor:"text", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                        <span onDoubleClick={() => { setEditingSectionId(sec.id); setSectionValue(sec.title); }} title={t(lang, 'renameSection')}
+                          style={{ flex:1, minWidth:0, fontSize:12, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", color:"#fff", userSelect:"none", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                           {sec.title}
                         </span>
                       )}
-                      <button onClick={() => deleteSection(sec.id)} title={t(lang, 'deleteSection')} aria-label={t(lang, 'deleteSection')}
-                        style={{ background:"none", border:"none", color:"#9ca3af", cursor:"pointer", fontSize:13, lineHeight:1, minWidth:28, minHeight:28, borderRadius:4 }}
-                        onMouseEnter={e => e.currentTarget.style.color="#DC2626"}
-                        onMouseLeave={e => e.currentTarget.style.color="#9ca3af"}>
-                        ✕
-                      </button>
+                      <div className="jmp-section-tools" style={{ display:"flex", alignItems:"center", gap:2 }}>
+                        {SECTION_COLORS.map(col => (
+                          <button key={col} onClick={() => setSectionColor(sec.id, col)} title={t(lang, 'sectionColor')} aria-label={t(lang, 'sectionColor')} aria-pressed={col === c}
+                            style={{ width:28, height:28, display:"flex", alignItems:"center", justifyContent:"center", background:"none", border:"none", padding:0, cursor:"pointer" }}>
+                            <span style={{ width:14, height:14, borderRadius:"50%", background:col, boxShadow: col === c ? "0 0 0 2px #fff, 0 0 0 3px rgba(0,0,0,0.25)" : "0 0 0 1.5px rgba(255,255,255,0.8)" }} />
+                          </button>
+                        ))}
+                        <button onClick={() => deleteSection(sec.id)} title={t(lang, 'deleteSection')} aria-label={t(lang, 'deleteSection')}
+                          style={{ background:"none", border:"none", color:"rgba(255,255,255,0.85)", cursor:"pointer", fontSize:13, lineHeight:1, minWidth:28, minHeight:28, borderRadius:4 }}
+                          onMouseEnter={e => e.currentTarget.style.color="#fff"}
+                          onMouseLeave={e => e.currentTarget.style.color="rgba(255,255,255,0.85)"}>
+                          ✕
+                        </button>
+                      </div>
                     </div>
                   );
                 }
