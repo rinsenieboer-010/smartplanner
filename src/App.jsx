@@ -2430,12 +2430,18 @@ export default function App() {
           }
           return [t, c, a, prev[3]];
         } else if (side === "mid") {
-          // Calendar ↔ Assistant; Tasks and Agents fixed
-          const avail = total - prev[0] - prev[3] - 18;
-          const raw = Math.max(min, Math.min(cursor - prev[0] - 6, avail - min));
+          // Calendar ↔ Assistant with cascade push: assistant growing pushes calendar → tasks; Agents fixed
+          const calRaw = cursor - prev[0] - 6;
+          let t = prev[0];
+          if (calRaw < min) {
+            // calendar already closed: keep pushing, tasks shrink
+            t = Math.max(min, prev[0] - (min - calRaw));
+          }
+          const avail = total - t - prev[3] - 18;
+          const raw = Math.max(min, Math.min(calRaw, avail - min));
           let cal = snap ? snapOnRelease(raw, total) : raw;
           cal = Math.max(min, Math.min(cal, avail - min));
-          return [prev[0], cal, avail - cal, prev[3]];
+          return [t, cal, avail - cal, prev[3]];
         } else {
           // AI ↔ Agents with cascade push: agents growing pushes assistant → calendar → tasks
           const agentRaw = total - cursor - 3;

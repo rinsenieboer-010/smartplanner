@@ -71,9 +71,9 @@ function place(scroller, t) {
     t.el.style.display = "none";
     return;
   }
-  const height = Math.max(MIN_HEIGHT, (track * viewH) / scroller.scrollHeight / 4);
+  const height = Math.max(MIN_HEIGHT, (track * viewH) / scroller.scrollHeight / 2);
   const y = rect.top + top + (track - height) * (scroller.scrollTop / max);
-  const x = rect.left + (isPage ? window.innerWidth : scroller.clientWidth) - 11 - EDGE;
+  const x = rect.left + (isPage ? window.innerWidth : scroller.clientWidth) - 10 - EDGE;
 
   // Niet tonen als het scrollgebied op die plek bedekt is (bijv. door een modal)
   const probe = document.elementFromPoint(x - 4, y + height / 2);
