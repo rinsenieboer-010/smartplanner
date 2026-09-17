@@ -1,0 +1,88 @@
+/* Apple-stijl: gedeelde basis voor alle apps van Rinse (beheer: Wes).
+   Op iPhone/Mac rendert dit het echte SF Pro; elders Inter als lookalike.
+   Merkkleuren blijven per app; dit bestand regelt font en feel. */
+
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-rounded: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+  --apple-label: #1d1d1f;
+  --apple-secondary-label: #6e6e73;
+  --apple-tertiary-label: #86868b;
+  --apple-separator: rgba(60, 60, 67, 0.18);
+  --apple-grouped-bg: #f5f5f7;
+  --apple-surface: #ffffff;
+  --apple-material: rgba(255, 255, 255, 0.72);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 980px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+
+  --ease-apple: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --duration-fast: 150ms;
+  --duration: 250ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --apple-label: #f5f5f7;
+    --apple-secondary-label: #a1a1a6;
+    --apple-tertiary-label: #8e8e93;
+    --apple-separator: rgba(84, 84, 88, 0.6);
+    --apple-grouped-bg: #000000;
+    --apple-surface: #1c1c1e;
+    --apple-material: rgba(30, 30, 30, 0.72);
+  }
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.022em;
+}
+
+code, kbd, pre, samp {
+  font-family: var(--font-mono);
+}
+
+.tabular, time, td {
+  font-variant-numeric: tabular-nums;
+}
+
+.apple-material {
+  background: var(--apple-material);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
