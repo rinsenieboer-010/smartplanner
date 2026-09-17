@@ -135,8 +135,21 @@ input:focus, textarea:focus, select:focus {
   cursor: col-resize;
 }
 
-/* Subtiele, lichte scrollbalken zoals op macOS */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+/* Takenlijst: eigen Apple-achtige scrollbalk (zie ScrollThumb), native verticale balk verbergen */
+.jmp-thumb-scroll::-webkit-scrollbar:vertical {
+  width: 0;
+}
+@supports not selector(::-webkit-scrollbar) {
+  .jmp-thumb-scroll {
+    scrollbar-width: none;
+  }
+}
+.jmp-thumb {
+  background: rgba(0, 0, 0, 0.22);
+  transition: background-color var(--duration-fast) var(--ease-apple);
+  cursor: default;
+}
+.jmp-thumb:hover,
+.jmp-thumb:active {
+  background: rgba(0, 0, 0, 0.38);
 }

@@ -685,6 +685,8 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
   const COL = { name: 200, date: 100, prio: 88, status: 80 };
   const TABLE_MIN = COL.name + COL.date + COL.prio + 41;
   const cb = { borderRight: "1px solid #e5e5ea" };
+  const taskScrollRef = useRef(null);
+  const trashScrollRef = useRef(null);
   const prioLabel   = (p) => p==="hoog" ? t(lang,'prioHigh') : p==="midden" ? t(lang,'prioMid') : p==="laag" ? t(lang,'prioLow') : "—";
   const statusLabel = (s) => s==="open" ? t(lang,'statusOpen') : s==="bezig" ? t(lang,'statusBusy') : s==="klaar" ? t(lang,'statusDone') : "—";
   // Aantal kalenderdagen achterstand t.o.v. vandaag
@@ -822,12 +824,13 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
 
         {/* TRASH VIEW */}
         {isTrash ? (
-          <div style={{ flex:1, overflowY:"auto" }}>
+          <div style={{ flex:1, minHeight:0, position:"relative", display:"flex", flexDirection:"column" }}>
+            <div ref={trashScrollRef} className="jmp-thumb-scroll" style={{ flex:1, overflowY:"auto" }}>
             {visibleTrash.length === 0 ? (
               <div style={{ padding:"40px 24px", textAlign:"center", color:"#76767b", fontSize:13 }}>{t(lang, 'trashEmpty')}</div>
             ) : (
               <div style={{ minWidth:TABLE_MIN }}>
-                <div style={{ display:"flex", alignItems:"stretch", borderBottom:"2px solid #e5e5ea", background:"#f5f5f7", position:"sticky", top:0, zIndex:5 }}>
+                <div data-sticky-header style={{ display:"flex", alignItems:"stretch", borderBottom:"2px solid #e5e5ea", background:"#f5f5f7", position:"sticky", top:0, zIndex:5 }}>
                   <div style={{ width:COL.name+41, flexShrink:0, fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, padding:"6px 10px", ...cb, background:"#f5f5f7" }}>{t(lang, 'colName')}</div>
                   <div style={{ width:COL.date, flexShrink:0, fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, padding:"6px 10px", ...cb, background:"#f5f5f7" }}>{t(lang, 'colCompletedOn')}</div>
                   <div style={{ width:COL.prio, flexShrink:0, fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, padding:"6px 10px", textAlign:"center", ...cb, background:"#f5f5f7" }}>{t(lang, 'colPriority')}</div>
@@ -858,12 +861,15 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
               </div>
             )}
           </div>
+            <ScrollThumb targetRef={trashScrollRef} />
+          </div>
         ) : (
           /* NORMAL TASK VIEW */
-          <div style={{ flex:1, overflowY:"auto", overflowX:"auto" }}>
+          <div style={{ flex:1, minHeight:0, position:"relative", display:"flex", flexDirection:"column" }}>
+            <div ref={taskScrollRef} className="jmp-thumb-scroll" style={{ flex:1, overflowY:"auto", overflowX:"auto" }}>
             <div ref={rowSort.containerRef} style={{ minWidth:TABLE_MIN, position:"relative" }}>
               {rowSort.placeholder}
-              <div style={{ display:"flex", alignItems:"stretch", borderBottom:"2px solid #e5e5ea", background:"#f5f5f7", position:"sticky", top:0, zIndex:5 }}>
+              <div data-sticky-header style={{ display:"flex", alignItems:"stretch", borderBottom:"2px solid #e5e5ea", background:"#f5f5f7", position:"sticky", top:0, zIndex:5 }}>
                 <div style={{ flex:1, minWidth:COL.name+41, fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, padding:"6px 10px", ...cb, background:"#f5f5f7" }}>{t(lang, 'colName')}</div>
                 <div style={{ width:COL.date, flexShrink:0, fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, padding:"6px 10px", ...cb, background:"#f5f5f7" }}>{t(lang, 'colDeadline')}</div>
                 <div style={{ width:COL.prio, flexShrink:0, fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, padding:"6px 10px", textAlign:"center", background:"#f5f5f7" }}>{t(lang, 'colPriority')}</div>
@@ -1019,6 +1025,8 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                 </div>
               ))}
             </div>
+          </div>
+            <ScrollThumb targetRef={taskScrollRef} />
           </div>
         )}
       </div>
@@ -1906,6 +1914,61 @@ function AgentsPanel({ session }) {
         ))}
       </div>
     </div>
+  );
+}
+
+
+// Apple-achtige scrollbalk: begint onder de kolomkoppen, half zo lang als de native balk
+function ScrollThumb({ targetRef }) {
+  const [thumb, setThumb] = useState(null);
+  const dragRef = useRef(null);
+
+  useEffect(() => {
+    const el = targetRef.current;
+    if (!el) return;
+    const update = () => {
+      const header = el.querySelector("[data-sticky-header]");
+      const top = header ? header.offsetHeight : 0;
+      const hBar = el.offsetHeight - el.clientHeight;
+      const track = el.clientHeight - top - 4;
+      const max = el.scrollHeight - el.clientHeight;
+      if (max <= 1 || track <= 0) { setThumb(null); return; }
+      const height = Math.max(24, (track * el.clientHeight / el.scrollHeight) / 2);
+      const offset = top + 2 + (track - height) * (el.scrollTop / max);
+      setThumb({ height, offset, bottomGap: hBar, track, top, max });
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
+  }, [targetRef]);
+
+  if (!thumb) return null;
+
+  const onPointerDown = (e) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = { y: e.clientY, scrollTop: targetRef.current.scrollTop };
+  };
+  const onPointerMove = (e) => {
+    if (!dragRef.current) return;
+    const el = targetRef.current;
+    const ratio = thumb.max / Math.max(1, thumb.track - thumb.height);
+    el.scrollTop = dragRef.current.scrollTop + (e.clientY - dragRef.current.y) * ratio;
+  };
+  const onPointerUp = () => { dragRef.current = null; };
+
+  return (
+    <div
+      aria-hidden="true"
+      className="jmp-thumb"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      style={{ position:"absolute", right:2, top:thumb.offset, height:thumb.height, width:8, borderRadius:4, zIndex:6, touchAction:"none" }}
+    />
   );
 }
 
