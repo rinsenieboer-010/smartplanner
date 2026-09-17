@@ -111,3 +111,64 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* Apple-feel: rustige interactie op alle knoppen */
+button {
+  transition: background-color var(--duration-fast) var(--ease-apple), color var(--duration-fast) var(--ease-apple), transform var(--duration-fast) var(--ease-apple), box-shadow var(--duration) var(--ease-apple);
+}
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: 2px;
+}
+input:focus, textarea:focus, select:focus {
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+/* Panelen direct laten meebewegen tijdens slepen; alleen de snap bij loslaten animeert */
+[data-resizing] > div {
+  transition: none !important;
+}
+[data-resizing] {
+  cursor: col-resize;
+}
+
+/* Apple-achtige scrollbalken overal (zie src/scrollThumbs.js): native verticale balk verbergen */
+::-webkit-scrollbar {
+  width: 0;
+  height: 8px;
+  background: transparent;
+}
+::-webkit-scrollbar:vertical,
+*::-webkit-scrollbar:vertical {
+  width: 0 !important;
+}
+*::-webkit-scrollbar:horizontal {
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb:horizontal {
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 4px;
+}
+.jmp-thumb {
+  position: fixed;
+  width: 11px;
+  border-radius: 5.5px;
+  background: rgba(0, 0, 0, 0.22);
+  z-index: 2147483000;
+  touch-action: none;
+  transition: background-color var(--duration-fast) var(--ease-apple), opacity var(--duration) var(--ease-apple);
+}
+.jmp-thumb.on-dark {
+  background: rgba(255, 255, 255, 0.28);
+}
+.jmp-thumb:hover,
+.jmp-thumb.dragging {
+  background: rgba(0, 0, 0, 0.38);
+}
+.jmp-thumb.on-dark:hover,
+.jmp-thumb.on-dark.dragging {
+  background: rgba(255, 255, 255, 0.45);
+}
