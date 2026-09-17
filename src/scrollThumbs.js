@@ -73,7 +73,7 @@ function place(scroller, t) {
   }
   const height = Math.max(MIN_HEIGHT, (track * viewH) / scroller.scrollHeight / 2);
   const y = rect.top + top + (track - height) * (scroller.scrollTop / max);
-  const x = rect.left + (isPage ? window.innerWidth : scroller.clientWidth) - 9 - EDGE;
+  const x = rect.left + (isPage ? window.innerWidth : scroller.clientWidth) - 8 - EDGE;
 
   // Niet tonen als het scrollgebied op die plek bedekt is (bijv. door een modal)
   const probe = document.elementFromPoint(x - 4, y + height / 2);
