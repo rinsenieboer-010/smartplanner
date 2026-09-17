@@ -135,21 +135,34 @@ input:focus, textarea:focus, select:focus {
   cursor: col-resize;
 }
 
-/* Takenlijst: eigen Apple-achtige scrollbalk (zie ScrollThumb), native verticale balk verbergen */
-.jmp-thumb-scroll::-webkit-scrollbar:vertical {
-  width: 0;
+/* Apple-achtige scrollbalken overal (zie src/scrollThumbs.js): native verticale balk verbergen */
+*::-webkit-scrollbar:vertical {
+  width: 0 !important;
 }
-@supports not selector(::-webkit-scrollbar) {
-  .jmp-thumb-scroll {
-    scrollbar-width: none;
-  }
+*::-webkit-scrollbar:horizontal {
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb:horizontal {
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 4px;
 }
 .jmp-thumb {
+  position: fixed;
+  width: 8px;
+  border-radius: 4px;
   background: rgba(0, 0, 0, 0.22);
-  transition: background-color var(--duration-fast) var(--ease-apple);
-  cursor: default;
+  z-index: 2147483000;
+  touch-action: none;
+  transition: background-color var(--duration-fast) var(--ease-apple), opacity var(--duration) var(--ease-apple);
+}
+.jmp-thumb.on-dark {
+  background: rgba(255, 255, 255, 0.28);
 }
 .jmp-thumb:hover,
-.jmp-thumb:active {
+.jmp-thumb.dragging {
   background: rgba(0, 0, 0, 0.38);
+}
+.jmp-thumb.on-dark:hover,
+.jmp-thumb.on-dark.dragging {
+  background: rgba(255, 255, 255, 0.45);
 }
