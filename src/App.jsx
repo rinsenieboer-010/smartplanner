@@ -276,6 +276,116 @@ function DatePicker({ value, recurrence, onSave, onClose }) {
 }
 
 // ── TASK PANEL ────────────────────────────────────────────────────────────────
+// Slepen om te ordenen. Het hele vak beweegt mee met de muis, de andere rijen
+// schuiven geanimeerd opzij en een blauw kader toont waar het terechtkomt.
+// Muis: overal op de rij vastpakken. Touch: alleen via de ⠿, zodat scrollen blijft werken.
+const SORT_EASE = "cubic-bezier(.2,0,0,1)";
+function useSortable(ids, onMove) {
+  const containerRef = useRef(null);
+  const [drag, setDrag] = useState(null); // { id, from, to, dy, h, slotTop }
+  const [settling, setSettling] = useState(false);
+  const idsRef = useRef(ids);
+  const moveRef = useRef(onMove);
+  useEffect(() => { idsRef.current = ids; moveRef.current = onMove; });
+  const reduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+  const onPointerDown = (id, e) => {
+    if (e.button !== 0) return;
+    const grip = e.target.closest(".jmp-grip");
+    if (!grip && (e.pointerType !== "mouse" || e.target.closest("input,textarea,select,button,[contenteditable='true']"))) return;
+    const box = containerRef.current;
+    if (!box) return;
+    const boxTop = box.getBoundingClientRect().top;
+    const els = new Map([...box.querySelectorAll("[data-sort-id]")].map(el => [el.dataset.sortId, el]));
+    const items = idsRef.current.map(i => {
+      const el = els.get(i);
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      const mt = parseFloat(getComputedStyle(el).marginTop) || 0;
+      return { top: r.top - boxTop - mt, h: r.height + mt };
+    });
+    const from = idsRef.current.indexOf(id);
+    if (from === -1 || items.some(x => !x)) return;
+    if (grip) e.preventDefault();
+
+    const st = { id, from, to: from, items, startY: e.clientY - boxTop, lastY: e.clientY, active: false };
+    const update = (clientY) => {
+      st.lastY = clientY;
+      const dy = clientY - box.getBoundingClientRect().top - st.startY;
+      if (!st.active) {
+        if (Math.abs(dy) < 5) return;
+        st.active = true;
+        document.body.style.userSelect = "none";
+        window.getSelection()?.removeAllRanges();
+      }
+      const h = items[from].h;
+      const center = items[from].top + h / 2 + dy;
+      let to = 0;
+      items.forEach((it, i) => { if (i !== from && it.top + it.h / 2 < center) to++; });
+      st.to = to;
+      const slotTop = to > from ? items[to].top + items[to].h - h : items[to].top;
+      setDrag({ id, from, to, dy, h, slotTop });
+    };
+    const onMoveEv = ev => update(ev.clientY);
+    const onScroll = () => update(st.lastY);
+    const cleanup = () => {
+      window.removeEventListener("pointermove", onMoveEv);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+      window.removeEventListener("scroll", onScroll, true);
+      document.body.style.userSelect = "";
+    };
+    const onUp = () => {
+      cleanup();
+      if (!st.active) return;
+      // De klik die na het loslaten volgt mag geen taak openen
+      const swallow = ev => { ev.stopPropagation(); ev.preventDefault(); };
+      window.addEventListener("click", swallow, { capture: true, once: true });
+      setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
+      // Zonder transitie terug, anders springen de rijen na het herordenen
+      setSettling(true);
+      setDrag(null);
+      if (st.to !== from) moveRef.current(id, st.to);
+      requestAnimationFrame(() => requestAnimationFrame(() => setSettling(false)));
+    };
+    const onCancel = () => { cleanup(); setDrag(null); };
+    window.addEventListener("pointermove", onMoveEv);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+    window.addEventListener("scroll", onScroll, true);
+  };
+
+  const itemProps = (id, enabled = true) => ({
+    "data-sort-id": id,
+    ...(enabled ? { onPointerDown: e => onPointerDown(id, e) } : {}),
+  });
+
+  const itemStyle = (id, draggedBg) => {
+    if (!drag) return settling ? { transition: "none" } : {};
+    if (id === drag.id) return {
+      transform: `translateY(${drag.dy}px) scale(1.02)`, position: "relative", zIndex: 20,
+      background: draggedBg, boxShadow: "0 12px 28px rgba(0,0,0,0.22)", borderRadius: 6,
+      cursor: "grabbing", opacity: 1, transition: reduced ? "none" : "box-shadow 150ms ease",
+    };
+    const i = ids.indexOf(id);
+    let shift = 0;
+    if (drag.to > drag.from && i > drag.from && i <= drag.to) shift = -drag.h;
+    if (drag.to < drag.from && i >= drag.to && i < drag.from) shift = drag.h;
+    return { transform: shift ? `translateY(${shift}px)` : "none", transition: reduced ? "none" : `transform 200ms ${SORT_EASE}` };
+  };
+
+  const placeholder = drag ? (
+    <div aria-hidden="true" style={{
+      position: "absolute", left: 4, right: 4, top: drag.slotTop + 2, height: Math.max(drag.h - 4, 8),
+      border: "3px solid #2563EB", borderRadius: 6, background: "rgba(37,99,235,0.10)",
+      pointerEvents: "none", zIndex: 1, boxSizing: "border-box",
+      transition: reduced ? "none" : `top 200ms ${SORT_EASE}`,
+    }} />
+  ) : null;
+
+  return { containerRef, itemProps, itemStyle, placeholder, draggingId: drag?.id ?? null };
+}
+
 function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLists = [], sharedTasks = [], personColors = {}, userId, panelWidth }) {
   const lang = useLang();
   const showSidebar = panelWidth > 400;
@@ -291,10 +401,6 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
   const [noteValue, setNoteValue] = useState("");
   const [titleValue, setTitleValue] = useState("");
   // Slepen: taken + secties binnen een lijst, en lijsten in de zijbalk
-  const [draggingId, setDraggingId] = useState(null);
-  const [dropAt, setDropAt] = useState(null); // { id, after }
-  const [listDragId, setListDragId] = useState(null);
-  const [listDropAt, setListDropAt] = useState(null); // { id, after }
   const [editingSectionId, setEditingSectionId] = useState(null);
   const [sectionValue, setSectionValue] = useState("");
 
@@ -381,37 +487,14 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
     if (JSON.stringify(secs) !== JSON.stringify(sections)) saveSections(secs);
   };
 
-  const moveRow = (dragId, targetId, after) => {
-    if (dragId === targetId) return;
+  const moveRowTo = (dragId, to) => {
     const moving = rows.find(r => r.id === dragId);
     if (!moving) return;
     const rest = rows.filter(r => r.id !== dragId);
-    let to = rest.findIndex(r => r.id === targetId);
-    if (to === -1) return;
-    if (after) to++;
     rest.splice(to, 0, moving);
     applyOrder(rest);
   };
-
-  const rowDragProps = (id, enabled) => !enabled ? {} : {
-    draggable: true,
-    onDragStart: e => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", id); setDraggingId(id); },
-    onDragEnd: () => { setDraggingId(null); setDropAt(null); },
-    onDragOver: e => {
-      if (!draggingId) return;
-      e.preventDefault();
-      const r = e.currentTarget.getBoundingClientRect();
-      const after = e.clientY > r.top + r.height / 2;
-      if (dropAt?.id !== id || dropAt.after !== after) setDropAt({ id, after });
-    },
-    onDrop: e => {
-      e.preventDefault();
-      if (draggingId && dropAt) moveRow(draggingId, dropAt.id, dropAt.after);
-      setDraggingId(null); setDropAt(null);
-    },
-  };
-  const dropShadow = (id) => dropAt?.id === id && draggingId && draggingId !== id
-    ? (dropAt.after ? "inset 0 -3px 0 #2563EB" : "inset 0 3px 0 #2563EB") : "none";
+  const rowSort = useSortable(rows.map(r => r.id), moveRowTo);
 
   const addSection = () => {
     const sec = { id: "sec_" + crypto.randomUUID(), title: t(lang, "newSection"), color: activeListObj?.color || "#2563EB" };
@@ -433,18 +516,15 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
   };
   const deleteSection = (id) => saveSections(sections.filter(x => x.id !== id));
 
-  const moveList = (dragId, targetId, after) => {
-    if (dragId === targetId) return;
+  const moveListTo = (dragId, to) => {
     const moving = lists.find(l => l.id === dragId);
     if (!moving) return;
     const rest = lists.filter(l => l.id !== dragId);
-    let to = rest.findIndex(l => l.id === targetId);
-    if (to === -1) return;
-    if (after) to++;
     rest.splice(to, 0, moving);
     setLists(rest);
     reorderListsDB(rest);
   };
+  const listSort = useSortable(lists.map(l => l.id), moveListTo);
 
   // Bereken de volgende herhaal-deadline: altijd strikt ná vandaag
   const nextRecurDeadline = (currentDeadline, recurrence) => {
@@ -628,37 +708,24 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
         .fading-task { animation: fadeStrike 2s ease forwards; text-decoration: line-through; }
         .jmp-grip { opacity: 0; transition: opacity 150ms ease; cursor: grab; user-select: none; color: #9ca3af; font-size: 12px; line-height: 1; }
         .jmp-row:hover .jmp-grip, .jmp-list:hover .jmp-grip { opacity: 1; }
+        .jmp-grip { touch-action: none; }
         @media (hover: none) { .jmp-grip { opacity: 1; } }
         @media (prefers-reduced-motion: reduce) { .jmp-grip { transition: none; } }
       `}</style>
 
       {/* Sidebar */}
-      <div style={{ width: showSidebar ? 160 : 0, flexShrink:0, background:"#18181b", display:"flex", flexDirection:"column", borderRight: showSidebar ? "1px solid #27272a" : "none", overflow:"hidden", transition:"width 1.5s ease" }}>
+      <div ref={listSort.containerRef} style={{ position:"relative", width: showSidebar ? 160 : 0, flexShrink:0, background:"#18181b", display:"flex", flexDirection:"column", borderRight: showSidebar ? "1px solid #27272a" : "none", overflow:"hidden", transition:"width 1.5s ease" }}>
         <div style={{ padding:"16px 12px 8px", fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2 }}>{t(lang, 'myLists')}</div>
+        {listSort.placeholder}
         {lists.map(l => (
           <div key={l.id} className="jmp-list" onClick={() => setActiveList(l.id)}
-            draggable
-            onDragStart={e => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", l.id); setListDragId(l.id); }}
-            onDragEnd={() => { setListDragId(null); setListDropAt(null); }}
-            onDragOver={e => {
-              if (!listDragId) return;
-              e.preventDefault();
-              const r = e.currentTarget.getBoundingClientRect();
-              const after = e.clientY > r.top + r.height / 2;
-              if (listDropAt?.id !== l.id || listDropAt.after !== after) setListDropAt({ id: l.id, after });
-            }}
-            onDrop={e => {
-              e.preventDefault();
-              if (listDragId && listDropAt) moveList(listDragId, listDropAt.id, listDropAt.after);
-              setListDragId(null); setListDropAt(null);
-            }}
+            {...listSort.itemProps(l.id)}
             title={t(lang, 'dragToReorder')}
             style={{
             display:"flex", alignItems:"center", gap:8, padding:"7px 12px", cursor:"pointer", overflow:"hidden",
             background: activeList===l.id ? "#27272a" : "transparent",
             borderLeft: activeList===l.id ? "3px solid "+l.color : "3px solid transparent",
-            opacity: listDragId===l.id ? 0.4 : 1,
-            boxShadow: listDropAt?.id===l.id && listDragId && listDragId!==l.id ? (listDropAt.after ? "inset 0 -2px 0 #2563EB" : "inset 0 2px 0 #2563EB") : "none",
+            ...listSort.itemStyle(l.id, "#3f3f46"),
           }}>
             <div style={{ width:8, height:8, borderRadius:"50%", background:l.color, flexShrink:0 }} />
             <span style={{ flex:1, fontSize:12, color: activeList===l.id ? "#f4f4f5" : "#a1a1aa", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", minWidth:0, display:"block" }}>{l.label}</span>
@@ -797,7 +864,8 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
         ) : (
           /* NORMAL TASK VIEW */
           <div style={{ flex:1, overflowY:"auto", overflowX:"auto" }}>
-            <div style={{ minWidth:TABLE_MIN }}>
+            <div ref={rowSort.containerRef} style={{ minWidth:TABLE_MIN, position:"relative" }}>
+              {rowSort.placeholder}
               <div style={{ display:"flex", alignItems:"stretch", borderBottom:"2px solid #e5e7eb", background:"#f9fafb", position:"sticky", top:0, zIndex:5 }}>
                 <div style={{ flex:1, minWidth:COL.name+41, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colName')}</div>
                 <div style={{ width:COL.date, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colDeadline')}</div>
@@ -808,8 +876,8 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                   const sec = row.section;
                   const c = sec.color || activeColor;
                   return (
-                    <div key={sec.id} className="jmp-row" {...rowDragProps(sec.id, editingSectionId !== sec.id)}
-                      style={{ display:"flex", alignItems:"center", gap:8, marginTop:14, padding:"7px 10px 7px 14px", background:c+"1F", borderTop:"3px solid "+c, borderBottom:"1px solid #e5e7eb", opacity: draggingId===sec.id ? 0.4 : 1, boxShadow: dropShadow(sec.id) }}>
+                    <div key={sec.id} className="jmp-row" {...rowSort.itemProps(sec.id, editingSectionId !== sec.id)}
+                      style={{ display:"flex", alignItems:"center", gap:8, marginTop:14, padding:"7px 10px 7px 14px", background:c+"1F", borderTop:"3px solid "+c, borderBottom:"1px solid #e5e7eb", ...rowSort.itemStyle(sec.id, "#fff") }}>
                       <span className="jmp-grip" title={t(lang, 'dragToReorder')}>⠿</span>
                       <button onClick={() => cycleSectionColor(sec.id)} title={t(lang, 'sectionColor')} aria-label={t(lang, 'sectionColor')}
                         style={{ width:12, height:12, borderRadius:"50%", background:c, border:"none", padding:0, cursor:"pointer", flexShrink:0 }} />
@@ -842,8 +910,8 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                 const isSettling = prioSettling[task.id];
                 return (
                   <div key={task.id} className={(isFading ? "fading-task " : "") + "jmp-row"}
-                    {...rowDragProps(task.id, !isShared && !isFading && openNoteId !== task.id)}
-                    style={{ borderBottom:"1px solid #f3f4f6", background:"#fff", opacity: isSettling ? 0.25 : draggingId===task.id ? 0.4 : 1, transition:"opacity 0.45s ease", boxShadow: dropShadow(task.id) }}
+                    {...rowSort.itemProps(task.id, !isShared && !isFading && openNoteId !== task.id)}
+                    style={{ borderBottom:"1px solid #f3f4f6", background:"#fff", opacity: isSettling ? 0.25 : 1, transition:"opacity 0.45s ease", ...rowSort.itemStyle(task.id, "#fff") }}
                     onMouseEnter={e => { if(!isFading) e.currentTarget.firstChild.style.background="#f9fafb"; }}
                     onMouseLeave={e => { if(e.currentTarget.firstChild) e.currentTarget.firstChild.style.background="#fff"; }}>
                     <div style={{ display:"flex", alignItems:"center", background:"inherit" }}>
