@@ -58,18 +58,22 @@ function place(scroller, t) {
     for (let n = h.parentElement; n && n !== scroller; n = n.parentElement) if (thumbs.has(n)) return false;
     return true;
   });
-  const top = header ? header.offsetHeight : 0;
+  // Balk begint op de bovenrand van het eerste taakvakje onder de kolomkop
+  const firstRow = header?.nextElementSibling;
+  const top = !header ? 0 : firstRow
+    ? firstRow.getBoundingClientRect().top - rect.top + scroller.scrollTop
+    : header.offsetHeight;
   const hBar = scroller.offsetHeight - scroller.clientHeight;
   const viewH = isPage ? window.innerHeight : scroller.clientHeight;
-  const track = viewH - top - EDGE * 2;
+  const track = viewH - top - EDGE;
   const max = scroller.scrollHeight - viewH;
   if (track < MIN_HEIGHT || max <= 1 || rect.width === 0) {
     t.el.style.display = "none";
     return;
   }
-  const height = Math.max(MIN_HEIGHT, (track * viewH) / scroller.scrollHeight / 2);
-  const y = rect.top + top + EDGE + (track - height) * (scroller.scrollTop / max);
-  const x = rect.left + (isPage ? window.innerWidth : scroller.clientWidth) - 8 - EDGE;
+  const height = Math.max(MIN_HEIGHT, (track * viewH) / scroller.scrollHeight / 4);
+  const y = rect.top + top + (track - height) * (scroller.scrollTop / max);
+  const x = rect.left + (isPage ? window.innerWidth : scroller.clientWidth) - 11 - EDGE;
 
   // Niet tonen als het scrollgebied op die plek bedekt is (bijv. door een modal)
   const probe = document.elementFromPoint(x - 4, y + height / 2);
