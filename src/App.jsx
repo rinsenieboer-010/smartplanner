@@ -712,7 +712,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
 
       {/* Sidebar */}
       <div ref={listSort.containerRef} style={{ position:"relative", width: showSidebar ? 160 : 0, flexShrink:0, background:"#1c1c1e", display:"flex", flexDirection:"column", borderRight: showSidebar ? "1px solid #2c2c2e" : "none", overflow:"hidden", transition:"width 1.5s cubic-bezier(0.25,0.1,0.25,1)" }}>
-        <div style={{ padding:"16px 12px 8px", fontSize:12, fontWeight:600, color:"#636366", letterSpacing:0.4 }}>{t(lang, 'myLists')}</div>
+        <div style={{ padding:"16px 12px 8px", fontSize:13, fontWeight:600, color:"#8e8e93" }}>{t(lang, 'myLists')}</div>
         {listSort.placeholder}
         {lists.map(l => (
           <div key={l.id} className="jmp-list" onClick={() => setActiveList(l.id)}
@@ -737,7 +737,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
               style={{ width:"100%", background:"#2c2c2e", border:"none", borderBottom:"2px solid #2563EB", color:"#f2f2f7", fontSize:12, padding:"4px", outline:"none", boxSizing:"border-box" }} />
           </div>
         ) : (
-          <div onClick={() => setAddingList(true)} style={{ padding:"6px 12px", fontSize:12, color:"#636366", cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
+          <div onClick={() => setAddingList(true)} style={{ padding:"6px 12px", fontSize:13, fontWeight:600, color:"#8e8e93", cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
             {t(lang, 'newList')}
           </div>
         )}
@@ -801,10 +801,10 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
             <input value={editListValue} onChange={e => setEditListValue(e.target.value)} autoFocus
               onKeyDown={e => { if(e.key==="Enter") confirmRename(); if(e.key==="Escape") setEditingListName(false); }}
               onBlur={confirmRename}
-              style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:600, color:"#1d1d1f", border:"none", borderBottom:"2px solid #2563EB", outline:"none", background:"transparent", padding:"0 2px", minWidth:40, maxWidth:200 }} />
+              style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:600, letterSpacing:"-0.01em", color:"#1d1d1f", border:"none", borderBottom:"2px solid #2563EB", outline:"none", background:"transparent", padding:"0 2px", minWidth:40, maxWidth:200 }} />
           ) : (
             <div onClick={() => { if(!isTrash && !isShared) { setShowColorPicker(false); startRename(); } }}
-              style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:600, color:"#1d1d1f", cursor: !isTrash && !isShared ? "text" : "default" }}>
+              style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:600, letterSpacing:"-0.01em", color:"#1d1d1f", cursor: !isTrash && !isShared ? "text" : "default" }}>
               {activeLabel}
             </div>
           )}
@@ -1207,7 +1207,7 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
         {/* Month picker */}
         <div style={{ position:"relative" }}>
           <span onClick={e => { e.stopPropagation(); setMonthPickerOpen(o => !o); setYearPickerOpen(false); }}
-            style={{ fontFamily:'var(--font-sans)', fontSize:18, color:"#1d1d1f", cursor:"pointer", borderBottom: monthPickerOpen ? "2px solid #2563EB" : "2px solid transparent", paddingBottom:1 }}>
+            style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:600, letterSpacing:"-0.01em", color:"#1d1d1f", cursor:"pointer", borderBottom: monthPickerOpen ? "2px solid #2563EB" : "2px solid transparent", paddingBottom:1 }}>
             {MONTHS_BY_LANG[lang][currentMonth]}
           </span>
           {monthPickerOpen && (
@@ -1231,7 +1231,7 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
         {/* Year picker */}
         <div style={{ position:"relative" }}>
           <span onClick={e => { e.stopPropagation(); setYearPickerOpen(o => !o); setMonthPickerOpen(false); }}
-            style={{ fontFamily:'var(--font-sans)', fontSize:18, color:"#1d1d1f", cursor:"pointer", borderBottom: yearPickerOpen ? "2px solid #2563EB" : "2px solid transparent", paddingBottom:1 }}>
+            style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:600, letterSpacing:"-0.01em", color:"#1d1d1f", cursor:"pointer", borderBottom: yearPickerOpen ? "2px solid #2563EB" : "2px solid transparent", paddingBottom:1 }}>
             {currentYear}
           </span>
           {yearPickerOpen && (
@@ -1691,7 +1691,7 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%", background:"#fbfbfd" }}>
       <div style={{ padding:"18px 16px 12px", borderBottom:"1px solid #e5e5ea" }}>
-        <div style={{ fontFamily:'var(--font-sans)', fontSize:18, color:"#1d1d1f" }}>{t(lang, 'assistant')}</div>
+        <div style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:600, letterSpacing:"-0.01em", color:"#1d1d1f" }}>{t(lang, 'assistant')}</div>
         <div style={{ fontSize:12, color:"#76767b", marginTop:2 }}>{tasks.length} {t(lang, 'aiTasks')} - {events.length} {t(lang, 'aiEvents')}</div>
       </div>
       <div style={{ flex:1, overflowY:"auto", padding:"12px 14px", display:"flex", flexDirection:"column", gap:10 }}>
@@ -2555,7 +2555,7 @@ export default function App() {
         @keyframes bounce { 0%,80%,100% { transform:scale(0.6); opacity:0.4 } 40% { transform:scale(1); opacity:1 } }
       `}</style>
       <div style={{ height:44, background:"#1d1d1f", display:"flex", alignItems:"center", padding:"0 20px", gap:16, flexShrink:0 }}>
-        <span style={{ fontFamily:'var(--font-sans)', fontSize:16, fontWeight:600, color:"#f5f5f7", letterSpacing:0.4 }}>justmyplan</span>
+        <span style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:600, color:"#f5f5f7", letterSpacing:"-0.01em" }}>justmyplan</span>
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#DC2626" }} />
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#E6B400" }} />
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#2563EB" }} />
