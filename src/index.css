@@ -111,3 +111,18 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* Apple-feel: rustige interactie op alle knoppen */
+button {
+  transition: background-color var(--duration-fast) var(--ease-apple), color var(--duration-fast) var(--ease-apple), transform var(--duration-fast) var(--ease-apple), box-shadow var(--duration) var(--ease-apple);
+}
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: 2px;
+}
+input:focus, textarea:focus, select:focus {
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}

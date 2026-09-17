@@ -41,17 +41,17 @@ function formatDeadline(dk, lang) {
   return d.getDate() + " " + ms[d.getMonth()];
 }
 
-const PRIO_COLOR = { "": "#9ca3af", hoog: "#DC2626", midden: "#E6B400", laag: "#2563EB" };
-const PRIO_BG    = { "": "#f3f4f6", hoog: "#FEE2E2", midden: "#FFF176", laag: "#DBEAFE" };
-const STATUS_COLOR = { "": "#9ca3af", open: "#2563EB", bezig: "#E6B400", klaar: "#2563EB" };
-const STATUS_BG    = { "": "#f3f4f6", open: "#DBEAFE", bezig: "#FFF176", klaar: "#DBEAFE" };
+const PRIO_COLOR = { "": "#76767b", hoog: "#DC2626", midden: "#E6B400", laag: "#2563EB" };
+const PRIO_BG    = { "": "#f2f2f7", hoog: "#FEE2E2", midden: "#FFF176", laag: "#DBEAFE" };
+const STATUS_COLOR = { "": "#76767b", open: "#2563EB", bezig: "#E6B400", klaar: "#2563EB" };
+const STATUS_BG    = { "": "#f2f2f7", open: "#DBEAFE", bezig: "#FFF176", klaar: "#DBEAFE" };
 const EVENT_BG     = { blue: "#DBEAFE", red: "#FEE2E2", yellow: "#FFF176" };
 const EVENT_BORDER = { blue: "#2563EB", red: "#DC2626", yellow: "#E6B400" };
 
 // Secundaire kleuren — uitsluitend voor uitgenodigde personen (toegewezen in instellingen)
 const PERSON_COLOR_KEYS = ["zwart", "oranje", "paars", "groen"];
 const PERSON_COLORS = {
-  zwart:  { dot: "#111827", bg: "#E5E7EB", border: "#111827", text: "#111827" },
+  zwart:  { dot: "#1d1d1f", bg: "#e5e5ea", border: "#1d1d1f", text: "#1d1d1f" },
   oranje: { dot: "#EA580C", bg: "#FFEDD5", border: "#EA580C", text: "#9A3412" },
   paars:  { dot: "#9333EA", bg: "#F3E8FF", border: "#9333EA", text: "#6B21A8" },
   groen:  { dot: "#16A34A", bg: "#DCFCE7", border: "#15803D", text: "#15803D" },
@@ -158,35 +158,35 @@ function DatePicker({ value, recurrence, onSave, onClose }) {
   const todayKey2 = getTodayKey();
 
   return (
-    <div style={{ position:"absolute", zIndex:100, background:"#fff", border:"1px solid #e5e7eb", borderRadius:8, boxShadow:"0 8px 24px rgba(0,0,0,0.12)", width:260, padding:0, overflow:"hidden" }}
+    <div style={{ position:"absolute", zIndex:100, background:"#fff", border:"1px solid #e5e5ea", borderRadius:12, boxShadow:"0 8px 30px rgba(0,0,0,0.10)", width:260, padding:0, overflow:"hidden" }}
       onClick={e => e.stopPropagation()}>
       {/* Header */}
-      <div style={{ display:"flex", alignItems:"center", padding:"10px 12px 6px", borderBottom:"1px solid #f3f4f6" }}>
-        <button onClick={prevMonth} style={{ background:"none", border:"none", cursor:"pointer", color:"#374151", fontSize:16, padding:"2px 6px" }}>‹</button>
-        <div style={{ flex:1, textAlign:"center", fontSize:13, fontWeight:700, color:"#111827" }}>
+      <div style={{ display:"flex", alignItems:"center", padding:"10px 12px 6px", borderBottom:"1px solid #f2f2f7" }}>
+        <button onClick={prevMonth} style={{ background:"none", border:"none", cursor:"pointer", color:"#424245", fontSize:16, padding:"2px 6px" }}>‹</button>
+        <div style={{ flex:1, textAlign:"center", fontSize:13, fontWeight:600, color:"#1d1d1f" }}>
           {MONTHS_BY_LANG[lang][viewMonth]} {viewYear}
         </div>
-        <button onClick={nextMonth} style={{ background:"none", border:"none", cursor:"pointer", color:"#374151", fontSize:16, padding:"2px 6px" }}>›</button>
+        <button onClick={nextMonth} style={{ background:"none", border:"none", cursor:"pointer", color:"#424245", fontSize:16, padding:"2px 6px" }}>›</button>
       </div>
 
       {/* Month scroll */}
       <div ref={monthListRef} style={{ display:"flex", gap:4, overflowX:"auto", padding:"6px 12px 4px", scrollbarWidth:"none" }}>
         {MONTHS_SHORT_BY_LANG[lang].map((m, i) => (
           <button key={i} data-active={i === viewMonth ? "true" : "false"} onClick={() => setViewMonth(i)} style={{
-            flexShrink:0, padding:"4px 9px", borderRadius:4, border:"none", cursor:"pointer", fontSize:11, fontWeight:700,
-            background: i === viewMonth ? "#2563EB" : "#f3f4f6",
-            color: i === viewMonth ? "#fff" : "#6b7280"
+            flexShrink:0, padding:"4px 9px", borderRadius:8, border:"none", cursor:"pointer", fontSize:12, fontWeight:600,
+            background: i === viewMonth ? "#2563EB" : "#f2f2f7",
+            color: i === viewMonth ? "#fff" : "#6e6e73"
           }}>{m}</button>
         ))}
       </div>
 
       {/* Year */}
-      <div style={{ display:"flex", gap:4, padding:"0 12px 6px", borderBottom:"1px solid #f3f4f6" }}>
+      <div style={{ display:"flex", gap:4, padding:"0 12px 6px", borderBottom:"1px solid #f2f2f7" }}>
         {years.map(y => (
           <button key={y} onClick={() => setViewYear(y)} style={{
-            flexShrink:0, padding:"3px 9px", borderRadius:4, border:"none", cursor:"pointer", fontSize:10, fontWeight:700,
+            flexShrink:0, padding:"3px 9px", borderRadius:8, border:"none", cursor:"pointer", fontSize:11, fontWeight:600,
             background: y === viewYear ? "#DBEAFE" : "transparent",
-            color: y === viewYear ? "#2563EB" : "#9ca3af"
+            color: y === viewYear ? "#2563EB" : "#76767b"
           }}>{y}</button>
         ))}
       </div>
@@ -194,7 +194,7 @@ function DatePicker({ value, recurrence, onSave, onClose }) {
       {/* Day headers */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", padding:"6px 8px 2px" }}>
         {DAYS_BY_LANG[lang].map(d => (
-          <div key={d} style={{ textAlign:"center", fontSize:10, fontWeight:700, color:"#9ca3af", padding:"2px 0" }}>{d}</div>
+          <div key={d} style={{ textAlign:"center", fontSize:11, fontWeight:600, color:"#76767b", padding:"2px 0" }}>{d}</div>
         ))}
       </div>
 
@@ -207,9 +207,9 @@ function DatePicker({ value, recurrence, onSave, onClose }) {
           const isToday = key === todayKey2;
           return (
             <button key={i} onClick={() => selectDay(day)} style={{
-              textAlign:"center", fontSize:12, padding:"5px 2px", borderRadius:4, border:"none", cursor:"pointer",
+              textAlign:"center", fontSize:12, padding:"5px 2px", borderRadius:8, border:"none", cursor:"pointer",
               background: isSelected ? "#2563EB" : isToday ? "#DBEAFE" : "transparent",
-              color: isSelected ? "#fff" : isToday ? "#2563EB" : "#111827",
+              color: isSelected ? "#fff" : isToday ? "#2563EB" : "#1d1d1f",
               fontWeight: isSelected || isToday ? 700 : 400
             }}>{day}</button>
           );
@@ -217,8 +217,8 @@ function DatePicker({ value, recurrence, onSave, onClose }) {
       </div>
 
       {/* Repeat */}
-      <div style={{ borderTop:"1px solid #f3f4f6", padding:"8px 12px" }}>
-        <div style={{ fontSize:10, fontWeight:700, color:"#9ca3af", letterSpacing:0.8, marginBottom:6 }}>{t(lang, 'repeat')}</div>
+      <div style={{ borderTop:"1px solid #f2f2f7", padding:"8px 12px" }}>
+        <div style={{ fontSize:11, fontWeight:600, color:"#76767b", letterSpacing:0.4, marginBottom:6 }}>{t(lang, 'repeat')}</div>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:4 }}>
           {[
             ["daily", "recurDaily"],
@@ -226,27 +226,27 @@ function DatePicker({ value, recurrence, onSave, onClose }) {
             ["monthly", "recurMonthly"],
           ].map(([key, label]) => (
             <button key={key} onClick={() => setRecurrence(key)} style={{
-              border:"none", borderRadius:4, padding:"5px 6px", cursor:"pointer", fontSize:11, fontWeight:700,
-              background: !customOpen && selectedRecurrence === key ? "#DBEAFE" : "#f3f4f6",
-              color: !customOpen && selectedRecurrence === key ? "#2563EB" : "#6b7280"
+              border:"none", borderRadius:8, padding:"5px 6px", cursor:"pointer", fontSize:12, fontWeight:600,
+              background: !customOpen && selectedRecurrence === key ? "#DBEAFE" : "#f2f2f7",
+              color: !customOpen && selectedRecurrence === key ? "#2563EB" : "#6e6e73"
             }}>{t(lang, label)}</button>
           ))}
           <button onClick={() => setCustomOpen(true)} style={{
-            border:"none", borderRadius:4, padding:"5px 6px", cursor:"pointer", fontSize:11, fontWeight:700,
-            background: customOpen ? "#DBEAFE" : "#f3f4f6",
-            color: customOpen ? "#2563EB" : "#6b7280"
+            border:"none", borderRadius:8, padding:"5px 6px", cursor:"pointer", fontSize:12, fontWeight:600,
+            background: customOpen ? "#DBEAFE" : "#f2f2f7",
+            color: customOpen ? "#2563EB" : "#6e6e73"
           }}>{t(lang, 'recurCustom')}</button>
         </div>
         {customOpen && (
           <div style={{ marginTop:6 }}>
             <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-              <span style={{ fontSize:11, color:"#6b7280" }}>{t(lang, 'repeatEvery')}</span>
+              <span style={{ fontSize:12, color:"#6e6e73" }}>{t(lang, 'repeatEvery')}</span>
               <select value={customInterval} onChange={e => setCustomInterval(Number(e.target.value))}
-                style={{ border:"1px solid #e5e7eb", borderRadius:4, padding:"3px 4px", fontSize:11, color:"#374151", background:"#fff" }}>
+                style={{ border:"1px solid #e5e5ea", borderRadius:8, padding:"3px 4px", fontSize:12, color:"#424245", background:"#fff" }}>
                 {Array.from({ length: 12 }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}
               </select>
               <select value={customUnit} onChange={e => setCustomUnit(e.target.value)}
-                style={{ flex:1, border:"1px solid #e5e7eb", borderRadius:4, padding:"3px 4px", fontSize:11, color:"#374151", background:"#fff" }}>
+                style={{ flex:1, border:"1px solid #e5e5ea", borderRadius:8, padding:"3px 4px", fontSize:12, color:"#424245", background:"#fff" }}>
                 <option value="days">{t(lang, 'repeatDays')}</option>
                 <option value="weeks">{t(lang, 'repeatWeeks')}</option>
                 <option value="months">{t(lang, 'repeatMonths')}</option>
@@ -255,19 +255,19 @@ function DatePicker({ value, recurrence, onSave, onClose }) {
           </div>
         )}
         {(selectedRecurrence || customOpen) && (
-          <button onClick={() => { setSelectedRecurrence(null); setCustomOpen(false); }} style={{ marginTop:6, padding:0, fontSize:10, color:"#9ca3af", background:"none", border:"none", cursor:"pointer" }}>
+          <button onClick={() => { setSelectedRecurrence(null); setCustomOpen(false); }} style={{ marginTop:6, padding:0, fontSize:11, color:"#76767b", background:"none", border:"none", cursor:"pointer" }}>
             {t(lang, 'recurNone')}
           </button>
         )}
       </div>
 
-      <div style={{ borderTop:"1px solid #f3f4f6", padding:"6px 12px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <button onClick={clearDate} style={{ fontSize:11, color:"#9ca3af", background:"none", border:"none", cursor:"pointer" }}>{t(lang, 'clearDate')}</button>
+      <div style={{ borderTop:"1px solid #f2f2f7", padding:"6px 12px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <button onClick={clearDate} style={{ fontSize:12, color:"#76767b", background:"none", border:"none", cursor:"pointer" }}>{t(lang, 'clearDate')}</button>
         <button onClick={() => {
           const nextRecurrence = customOpen ? `custom:${customInterval}:${customUnit}` : selectedRecurrence;
           onSave(selectedDate, nextRecurrence);
           onClose();
-        }} style={{ background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"4px 12px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+        }} style={{ background:"#2563EB", color:"#fff", border:"none", borderRadius:8, padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
           {t(lang, 'save')}
         </button>
       </div>
@@ -684,7 +684,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
 
   const COL = { name: 200, date: 100, prio: 88, status: 80 };
   const TABLE_MIN = COL.name + COL.date + COL.prio + 41;
-  const cb = { borderRight: "1px solid #e5e7eb" };
+  const cb = { borderRight: "1px solid #e5e5ea" };
   const prioLabel   = (p) => p==="hoog" ? t(lang,'prioHigh') : p==="midden" ? t(lang,'prioMid') : p==="laag" ? t(lang,'prioLow') : "—";
   const statusLabel = (s) => s==="open" ? t(lang,'statusOpen') : s==="bezig" ? t(lang,'statusBusy') : s==="klaar" ? t(lang,'statusDone') : "—";
   // Aantal kalenderdagen achterstand t.o.v. vandaag
@@ -700,7 +700,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
       <style>{`
         @keyframes fadeStrike { 0% { opacity:1; } 100% { opacity:0; } }
         .fading-task { animation: fadeStrike 2s ease forwards; text-decoration: line-through; }
-        .jmp-grip { opacity: 0; transition: opacity 150ms ease; cursor: grab; user-select: none; color: #9ca3af; font-size: 12px; line-height: 1; }
+        .jmp-grip { opacity: 0; transition: opacity 150ms ease; cursor: grab; user-select: none; color: #76767b; font-size: 12px; line-height: 1; }
         .jmp-row:hover .jmp-grip, .jmp-list:hover .jmp-grip { opacity: 1; }
         .jmp-grip { touch-action: none; }
         .jmp-section-tools { opacity: 0; transition: opacity 150ms ease; }
@@ -711,8 +711,8 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
       `}</style>
 
       {/* Sidebar */}
-      <div ref={listSort.containerRef} style={{ position:"relative", width: showSidebar ? 160 : 0, flexShrink:0, background:"#18181b", display:"flex", flexDirection:"column", borderRight: showSidebar ? "1px solid #27272a" : "none", overflow:"hidden", transition:"width 1.5s ease" }}>
-        <div style={{ padding:"16px 12px 8px", fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2 }}>{t(lang, 'myLists')}</div>
+      <div ref={listSort.containerRef} style={{ position:"relative", width: showSidebar ? 160 : 0, flexShrink:0, background:"#1c1c1e", display:"flex", flexDirection:"column", borderRight: showSidebar ? "1px solid #2c2c2e" : "none", overflow:"hidden", transition:"width 1.5s cubic-bezier(0.25,0.1,0.25,1)" }}>
+        <div style={{ padding:"16px 12px 8px", fontSize:12, fontWeight:600, color:"#636366", letterSpacing:0.4 }}>{t(lang, 'myLists')}</div>
         {listSort.placeholder}
         {lists.map(l => (
           <div key={l.id} className="jmp-list" onClick={() => setActiveList(l.id)}
@@ -720,13 +720,13 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
             title={t(lang, 'dragToReorder')}
             style={{
             display:"flex", alignItems:"center", gap:8, padding:"7px 12px", cursor:"pointer", overflow:"hidden",
-            background: activeList===l.id ? "#27272a" : "transparent",
+            background: activeList===l.id ? "#2c2c2e" : "transparent",
             borderLeft: activeList===l.id ? "3px solid "+l.color : "3px solid transparent",
-            ...listSort.itemStyle(l.id, "#3f3f46"),
+            ...listSort.itemStyle(l.id, "#3a3a3c"),
           }}>
             <div style={{ width:8, height:8, borderRadius:"50%", background:l.color, flexShrink:0 }} />
-            <span style={{ flex:1, fontSize:12, color: activeList===l.id ? "#f4f4f5" : "#a1a1aa", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", minWidth:0, display:"block" }}>{l.label}</span>
-            <span className="jmp-grip" style={{ color:"#52525b" }}>⠿</span>
+            <span style={{ flex:1, fontSize:12, color: activeList===l.id ? "#f2f2f7" : "#aeaeb2", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", minWidth:0, display:"block" }}>{l.label}</span>
+            <span className="jmp-grip" style={{ color:"#636366" }}>⠿</span>
           </div>
         ))}
         {addingList ? (
@@ -734,16 +734,16 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
             <input value={newListName} onChange={e => setNewListName(e.target.value)}
               onKeyDown={e => { if(e.key==="Enter") addList(); if(e.key==="Escape"){ setAddingList(false); setNewListName(""); } }}
               placeholder={t(lang, 'listNamePlaceholder')} autoFocus
-              style={{ width:"100%", background:"#27272a", border:"none", borderBottom:"2px solid #2563EB", color:"#f4f4f5", fontSize:12, padding:"4px", outline:"none", boxSizing:"border-box" }} />
+              style={{ width:"100%", background:"#2c2c2e", border:"none", borderBottom:"2px solid #2563EB", color:"#f2f2f7", fontSize:12, padding:"4px", outline:"none", boxSizing:"border-box" }} />
           </div>
         ) : (
-          <div onClick={() => setAddingList(true)} style={{ padding:"6px 12px", fontSize:11, color:"#52525b", cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
+          <div onClick={() => setAddingList(true)} style={{ padding:"6px 12px", fontSize:12, color:"#636366", cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
             {t(lang, 'newList')}
           </div>
         )}
 
         {sharedLists.length > 0 && (
-          <div style={{ padding:"14px 12px 8px", fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2, marginTop:8, borderTop:"1px solid #27272a" }}>
+          <div style={{ padding:"14px 12px 8px", fontSize:12, fontWeight:600, color:"#636366", letterSpacing:0.4, marginTop:8, borderTop:"1px solid #2c2c2e" }}>
             <span>{t(lang, 'shared')}</span>
           </div>
         )}
@@ -752,13 +752,13 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
           return (
             <div key={l.id} onClick={() => setActiveList(l.id)} style={{
               display:"flex", alignItems:"center", gap:8, padding:"7px 12px", cursor:"pointer", overflow:"hidden",
-              background: activeList===l.id ? "#27272a" : "transparent",
+              background: activeList===l.id ? "#2c2c2e" : "transparent",
               borderLeft: activeList===l.id ? "3px solid "+c : "3px solid transparent"
             }}>
               <div style={{ width:8, height:8, borderRadius:"50%", background:c, flexShrink:0 }} />
               <div style={{ minWidth:0, flex:1 }}>
-                <div style={{ fontSize:12, color: activeList===l.id ? "#f4f4f5" : "#a1a1aa", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{l.label}</div>
-                <div style={{ fontSize:10, color:"#52525b", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{(l.ownerEmail||"").split("@")[0]}</div>
+                <div style={{ fontSize:12, color: activeList===l.id ? "#f2f2f7" : "#aeaeb2", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{l.label}</div>
+                <div style={{ fontSize:11, color:"#636366", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{(l.ownerEmail||"").split("@")[0]}</div>
               </div>
             </div>
           );
@@ -767,30 +767,30 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
         {/* Trash — pinned to bottom */}
         <div style={{ flex:1 }} />
         <div onClick={() => setActiveList("trash")} style={{
-          display:"flex", alignItems:"center", gap:8, padding:"10px 12px", cursor:"pointer", borderTop:"1px solid #27272a",
-          background: activeList==="trash" ? "#27272a" : "transparent",
-          borderLeft: activeList==="trash" ? "3px solid #6b7280" : "3px solid transparent"
+          display:"flex", alignItems:"center", gap:8, padding:"10px 12px", cursor:"pointer", borderTop:"1px solid #2c2c2e",
+          background: activeList==="trash" ? "#2c2c2e" : "transparent",
+          borderLeft: activeList==="trash" ? "3px solid #6e6e73" : "3px solid transparent"
         }}>
           <span style={{ fontSize:14 }}>🗑</span>
           <div style={{ minWidth:0 }}>
-            <div style={{ fontSize:12, color: activeList==="trash" ? "#f4f4f5" : "#71717a" }}>{t(lang, 'trash')}</div>
-            {visibleTrash.length > 0 && <div style={{ fontSize:10, color:"#52525b" }}>{visibleTrash.length} {t(lang, 'completed')}</div>}
+            <div style={{ fontSize:12, color: activeList==="trash" ? "#f2f2f7" : "#8e8e93" }}>{t(lang, 'trash')}</div>
+            {visibleTrash.length > 0 && <div style={{ fontSize:11, color:"#636366" }}>{visibleTrash.length} {t(lang, 'completed')}</div>}
           </div>
         </div>
       </div>
 
       {/* Table */}
       <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0 }} onClick={() => setDatePickerOpen(null)}>
-        <div style={{ padding:"14px 16px 10px", borderBottom:"1px solid #e5e7eb", flexShrink:0, display:"flex", alignItems:"center", gap:10, position:"relative" }}>
+        <div style={{ padding:"14px 16px 10px", borderBottom:"1px solid #e5e5ea", flexShrink:0, display:"flex", alignItems:"center", gap:10, position:"relative" }}>
           {isTrash ? <span style={{ fontSize:16 }}>🗑</span> : (
             <div style={{ position:"relative" }}>
               <div onClick={() => !isTrash && !isShared && setShowColorPicker(p => !p)}
                 style={{ width:14, height:14, borderRadius:"50%", background:activeColor, cursor: !isTrash && !isShared ? "pointer" : "default", flexShrink:0 }} />
               {showColorPicker && !isTrash && !isShared && (
-                <div style={{ position:"absolute", top:20, left:0, background:"#fff", border:"1px solid #e5e7eb", borderRadius:6, padding:"8px", display:"flex", gap:8, boxShadow:"0 4px 12px rgba(0,0,0,0.1)", zIndex:20 }}>
+                <div style={{ position:"absolute", top:20, left:0, background:"#fff", border:"1px solid #e5e5ea", borderRadius:10, padding:"8px", display:"flex", gap:8, boxShadow:"0 4px 16px rgba(0,0,0,0.08)", zIndex:20 }}>
                   {["#2563EB","#DC2626","#E6B400"].map(hex => (
                     <div key={hex} onClick={() => { setLists(l => l.map(x => { if (x.id!==activeList) return x; const u={...x,color:hex}; updateListDB(u); return u; })); setShowColorPicker(false); }}
-                      style={{ width:18, height:18, borderRadius:"50%", background:hex, cursor:"pointer", border: activeColor===hex ? "3px solid #111827" : "2px solid transparent", boxSizing:"border-box" }} />
+                      style={{ width:18, height:18, borderRadius:"50%", background:hex, cursor:"pointer", border: activeColor===hex ? "3px solid #1d1d1f" : "2px solid transparent", boxSizing:"border-box" }} />
                   ))}
                 </div>
               )}
@@ -801,20 +801,20 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
             <input value={editListValue} onChange={e => setEditListValue(e.target.value)} autoFocus
               onKeyDown={e => { if(e.key==="Enter") confirmRename(); if(e.key==="Escape") setEditingListName(false); }}
               onBlur={confirmRename}
-              style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:700, color:"#111827", border:"none", borderBottom:"2px solid #2563EB", outline:"none", background:"transparent", padding:"0 2px", minWidth:40, maxWidth:200 }} />
+              style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:600, color:"#1d1d1f", border:"none", borderBottom:"2px solid #2563EB", outline:"none", background:"transparent", padding:"0 2px", minWidth:40, maxWidth:200 }} />
           ) : (
             <div onClick={() => { if(!isTrash && !isShared) { setShowColorPicker(false); startRename(); } }}
-              style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:700, color:"#111827", cursor: !isTrash && !isShared ? "text" : "default" }}>
+              style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:600, color:"#1d1d1f", cursor: !isTrash && !isShared ? "text" : "default" }}>
               {activeLabel}
             </div>
           )}
-          {isShared && <span style={{ fontSize:10, background:"#f3f4f6", color:"#6b7280", borderRadius:4, padding:"2px 6px", fontWeight:700 }}>{t(lang, 'sharedBadge')}</span>}
-          {isTrash && <span style={{ fontSize:11, color:"#9ca3af", marginLeft:4 }}>{t(lang, 'trashAutoDelete')}</span>}
+          {isShared && <span style={{ fontSize:11, background:"#f2f2f7", color:"#6e6e73", borderRadius:8, padding:"2px 6px", fontWeight:600 }}>{t(lang, 'sharedBadge')}</span>}
+          {isTrash && <span style={{ fontSize:12, color:"#76767b", marginLeft:4 }}>{t(lang, 'trashAutoDelete')}</span>}
           {!isTrash && !isShared && activeList !== "mine" && lists.length > 1 && (
             <button onClick={deleteList} title={t(lang, 'deleteList')}
-              style={{ marginLeft:"auto", background:"none", border:"none", color:"#d1d5db", cursor:"pointer", fontSize:16, lineHeight:1, padding:"2px 4px", borderRadius:3 }}
+              style={{ marginLeft:"auto", background:"none", border:"none", color:"#d1d1d6", cursor:"pointer", fontSize:16, lineHeight:1, padding:"2px 4px", borderRadius:8 }}
               onMouseEnter={e => e.currentTarget.style.color="#DC2626"}
-              onMouseLeave={e => e.currentTarget.style.color="#d1d5db"}>
+              onMouseLeave={e => e.currentTarget.style.color="#d1d1d6"}>
               🗑
             </button>
           )}
@@ -824,33 +824,33 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
         {isTrash ? (
           <div style={{ flex:1, overflowY:"auto" }}>
             {visibleTrash.length === 0 ? (
-              <div style={{ padding:"40px 24px", textAlign:"center", color:"#9ca3af", fontSize:13 }}>{t(lang, 'trashEmpty')}</div>
+              <div style={{ padding:"40px 24px", textAlign:"center", color:"#76767b", fontSize:13 }}>{t(lang, 'trashEmpty')}</div>
             ) : (
               <div style={{ minWidth:TABLE_MIN }}>
-                <div style={{ display:"flex", alignItems:"stretch", borderBottom:"2px solid #e5e7eb", background:"#f9fafb", position:"sticky", top:0, zIndex:5 }}>
-                  <div style={{ width:COL.name+41, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colName')}</div>
-                  <div style={{ width:COL.date, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colCompletedOn')}</div>
-                  <div style={{ width:COL.prio, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", ...cb, background:"#f9fafb" }}>{t(lang, 'colPriority')}</div>
-                  <div style={{ flex:1, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", background:"#f9fafb" }}>{t(lang, 'colActions')}</div>
+                <div style={{ display:"flex", alignItems:"stretch", borderBottom:"2px solid #e5e5ea", background:"#f5f5f7", position:"sticky", top:0, zIndex:5 }}>
+                  <div style={{ width:COL.name+41, flexShrink:0, fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, padding:"6px 10px", ...cb, background:"#f5f5f7" }}>{t(lang, 'colName')}</div>
+                  <div style={{ width:COL.date, flexShrink:0, fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, padding:"6px 10px", ...cb, background:"#f5f5f7" }}>{t(lang, 'colCompletedOn')}</div>
+                  <div style={{ width:COL.prio, flexShrink:0, fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, padding:"6px 10px", textAlign:"center", ...cb, background:"#f5f5f7" }}>{t(lang, 'colPriority')}</div>
+                  <div style={{ flex:1, flexShrink:0, fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, padding:"6px 10px", background:"#f5f5f7" }}>{t(lang, 'colActions')}</div>
                 </div>
                 {[...visibleTrash].sort((a,b) => b.completedAt > a.completedAt ? 1 : -1).map(task => {
                   const d = new Date(task.completedAt);
                   const completedStr = d.getDate() + " " + (MONTHS_SHORT_BY_LANG[lang] || MONTHS_SHORT_NL)[d.getMonth()];
                   return (
-                    <div key={task.id} style={{ display:"flex", alignItems:"center", borderBottom:"1px solid #f3f4f6", background:"#fff" }}
-                      onMouseEnter={e => e.currentTarget.style.background="#f9fafb"}
+                    <div key={task.id} style={{ display:"flex", alignItems:"center", borderBottom:"1px solid #f2f2f7", background:"#fff" }}
+                      onMouseEnter={e => e.currentTarget.style.background="#f5f5f7"}
                       onMouseLeave={e => e.currentTarget.style.background="#fff"}>
                       <div style={{ width:41, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", ...cb, alignSelf:"stretch" }}>
                         <div style={{ width:15, height:15, borderRadius:"50%", background:"#2563EB", border:"2px solid #2563EB", flexShrink:0 }} />
                       </div>
-                      <div style={{ width:COL.name, flexShrink:0, fontSize:13, color:"#6b7280", padding:"8px 10px", textDecoration:"line-through", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", ...cb }}>{task.title}</div>
-                      <div style={{ width:COL.date, flexShrink:0, fontSize:12, color:"#6b7280", padding:"8px 10px", ...cb }}>{completedStr}</div>
+                      <div style={{ width:COL.name, flexShrink:0, fontSize:13, color:"#6e6e73", padding:"8px 10px", textDecoration:"line-through", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", ...cb }}>{task.title}</div>
+                      <div style={{ width:COL.date, flexShrink:0, fontSize:12, color:"#6e6e73", padding:"8px 10px", ...cb }}>{completedStr}</div>
                       <div style={{ width:COL.prio, flexShrink:0, display:"flex", justifyContent:"center", padding:"8px 6px", ...cb }}>
-                        <span style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:4, background:PRIO_BG[task.priority], color:PRIO_COLOR[task.priority] }}>{prioLabel(task.priority)}</span>
+                        <span style={{ fontSize:12, fontWeight:600, padding:"2px 8px", borderRadius:8, background:PRIO_BG[task.priority], color:PRIO_COLOR[task.priority] }}>{prioLabel(task.priority)}</span>
                       </div>
                       <div style={{ flex:1, display:"flex", alignItems:"center", gap:8, padding:"8px 10px" }}>
-                        <button onClick={() => restoreTask(task.id)} style={{ fontSize:11, background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"3px 10px", cursor:"pointer", fontWeight:700 }}>{t(lang, 'restore')}</button>
-                        <button onClick={() => deleteForever(task.id)} style={{ fontSize:11, background:"none", color:"#DC2626", border:"1px solid #DC2626", borderRadius:3, padding:"3px 10px", cursor:"pointer" }}>{t(lang, 'deleteForever')}</button>
+                        <button onClick={() => restoreTask(task.id)} style={{ fontSize:12, background:"#2563EB", color:"#fff", border:"none", borderRadius:8, padding:"3px 10px", cursor:"pointer", fontWeight:600 }}>{t(lang, 'restore')}</button>
+                        <button onClick={() => deleteForever(task.id)} style={{ fontSize:12, background:"none", color:"#DC2626", border:"1px solid #DC2626", borderRadius:8, padding:"3px 10px", cursor:"pointer" }}>{t(lang, 'deleteForever')}</button>
                       </div>
                     </div>
                   );
@@ -863,16 +863,16 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
           <div style={{ flex:1, overflowY:"auto", overflowX:"auto" }}>
             <div ref={rowSort.containerRef} style={{ minWidth:TABLE_MIN, position:"relative" }}>
               {rowSort.placeholder}
-              <div style={{ display:"flex", alignItems:"stretch", borderBottom:"2px solid #e5e7eb", background:"#f9fafb", position:"sticky", top:0, zIndex:5 }}>
-                <div style={{ flex:1, minWidth:COL.name+41, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colName')}</div>
-                <div style={{ width:COL.date, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", ...cb, background:"#f9fafb" }}>{t(lang, 'colDeadline')}</div>
-                <div style={{ width:COL.prio, flexShrink:0, fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, padding:"6px 10px", textAlign:"center", background:"#f9fafb" }}>{t(lang, 'colPriority')}</div>
+              <div style={{ display:"flex", alignItems:"stretch", borderBottom:"2px solid #e5e5ea", background:"#f5f5f7", position:"sticky", top:0, zIndex:5 }}>
+                <div style={{ flex:1, minWidth:COL.name+41, fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, padding:"6px 10px", ...cb, background:"#f5f5f7" }}>{t(lang, 'colName')}</div>
+                <div style={{ width:COL.date, flexShrink:0, fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, padding:"6px 10px", ...cb, background:"#f5f5f7" }}>{t(lang, 'colDeadline')}</div>
+                <div style={{ width:COL.prio, flexShrink:0, fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, padding:"6px 10px", textAlign:"center", background:"#f5f5f7" }}>{t(lang, 'colPriority')}</div>
               </div>
               {rows.map(row => {
                 if (row.kind === "section") {
                   const sec = row.section;
                   const c = SECTION_COLORS.includes(sec.color) ? sec.color : SECTION_COLORS[0];
-                  const fg = c === "#E6B400" ? "#111827" : "#fff"; // zwarte tekst op geel
+                  const fg = c === "#E6B400" ? "#1d1d1f" : "#fff"; // zwarte tekst op geel
                   return (
                     <div key={sec.id} className="jmp-row jmp-section" {...rowSort.itemProps(sec.id, editingSectionId !== sec.id)}
                       style={{ display:"flex", alignItems:"center", gap:8, marginTop:14, padding:"6px 8px 6px 41px", minHeight:36, boxSizing:"border-box", position:"relative", background:c, color:fg, cursor:"grab", ...rowSort.itemStyle(sec.id, c) }}>
@@ -882,10 +882,10 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                           onFocus={e => e.currentTarget.select()}
                           onBlur={() => commitSection(sec.id)}
                           onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") { setSectionValue(sec.title); setEditingSectionId(null); } }}
-                          style={{ flex:1, minWidth:0, border:"none", borderBottom:"2px solid "+fg, background:"transparent", outline:"none", fontFamily:'var(--font-sans)', fontSize:12, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", color:fg, padding:"1px 0" }} />
+                          style={{ flex:1, minWidth:0, border:"none", borderBottom:"2px solid "+fg, background:"transparent", outline:"none", fontFamily:'var(--font-sans)', fontSize:12, fontWeight:600, letterSpacing:0.4, textTransform:"uppercase", color:fg, padding:"1px 0" }} />
                       ) : (
                         <span onDoubleClick={() => { setEditingSectionId(sec.id); setSectionValue(sec.title); }} title={t(lang, 'renameSection')}
-                          style={{ flex:1, minWidth:0, fontSize:12, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", color:fg, userSelect:"none", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                          style={{ flex:1, minWidth:0, fontSize:12, fontWeight:600, letterSpacing:0.4, textTransform:"uppercase", color:fg, userSelect:"none", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                           {sec.title}
                         </span>
                       )}
@@ -897,7 +897,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                           </button>
                         ))}
                         <button onClick={() => deleteSection(sec.id)} title={t(lang, 'deleteSection')} aria-label={t(lang, 'deleteSection')}
-                          style={{ background:"none", border:"none", color:fg, opacity:0.85, cursor:"pointer", fontSize:13, lineHeight:1, minWidth:28, minHeight:28, borderRadius:4 }}
+                          style={{ background:"none", border:"none", color:fg, opacity:0.85, cursor:"pointer", fontSize:13, lineHeight:1, minWidth:28, minHeight:28, borderRadius:8 }}
                           onMouseEnter={e => e.currentTarget.style.opacity=1}
                           onMouseLeave={e => e.currentTarget.style.opacity=0.85}>
                           ✕
@@ -908,32 +908,32 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                 }
                 const task = row.task;
                 const tk = getTodayKey();
-                const dlColor = !task.deadline ? "#9ca3af" : task.deadline < tk ? "#DC2626" : task.deadline===tk ? "#2563EB" : "#111827";
+                const dlColor = !task.deadline ? "#76767b" : task.deadline < tk ? "#DC2626" : task.deadline===tk ? "#2563EB" : "#1d1d1f";
                 const dlWeight = task.deadline && task.deadline <= tk ? 700 : 400;
                 const isFading = fadingOut[task.id];
                 const isSettling = prioSettling[task.id];
                 return (
                   <div key={task.id} className={(isFading ? "fading-task " : "") + "jmp-row"}
                     {...rowSort.itemProps(task.id, !isShared && !isFading && openNoteId !== task.id)}
-                    style={{ borderBottom:"1px solid #f3f4f6", background:"#fff", opacity: isSettling ? 0.25 : 1, transition:"opacity 0.45s ease", ...rowSort.itemStyle(task.id, "#fff") }}
-                    onMouseEnter={e => { if(!isFading) e.currentTarget.firstChild.style.background="#f9fafb"; }}
+                    style={{ borderBottom:"1px solid #f2f2f7", background:"#fff", opacity: isSettling ? 0.25 : 1, transition:"opacity 0.45s cubic-bezier(0.25,0.1,0.25,1)", ...rowSort.itemStyle(task.id, "#fff") }}
+                    onMouseEnter={e => { if(!isFading) e.currentTarget.firstChild.style.background="#f5f5f7"; }}
                     onMouseLeave={e => { if(e.currentTarget.firstChild) e.currentTarget.firstChild.style.background="#fff"; }}>
                     <div style={{ display:"flex", alignItems:"center", background:"inherit" }}>
                     <div style={{ width:41, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", ...cb, alignSelf:"stretch", position:"relative" }}>
                       {!isShared && <span className="jmp-grip" title={t(lang, 'dragToReorder')} style={{ position:"absolute", left:3, top:"50%", transform:"translateY(-50%)" }}>⠿</span>}
-                      <button onClick={() => !isShared && completeDone(task.id)} style={{ width:15, height:15, borderRadius:"50%", cursor: isShared ? "default" : "pointer", border:"2px solid #d1d5db", background:"transparent", flexShrink:0 }} />
+                      <button onClick={() => !isShared && completeDone(task.id)} style={{ width:15, height:15, borderRadius:"50%", cursor: isShared ? "default" : "pointer", border:"2px solid #d1d1d6", background:"transparent", flexShrink:0 }} />
                     </div>
                     <div onClick={() => { if(!isShared) { const next = openNoteId===task.id ? null : task.id; setOpenNoteId(next); if(next) { setNoteValue(task.note||""); setTitleValue(task.title||""); } } }}
-                      style={{ flex:1, minWidth:COL.name, fontSize:13, color:"#111827", padding:"8px 10px", textDecoration: isFading ? "line-through" : "none", opacity: isFading ? 0.4 : 1, overflow: openNoteId===task.id ? "visible" : "hidden", textOverflow: openNoteId===task.id ? "clip" : "ellipsis", whiteSpace: openNoteId===task.id ? "normal" : "nowrap", cursor: isShared ? "default" : "pointer", ...cb, display:"flex", alignItems: openNoteId===task.id ? "flex-start" : "center", gap:5 }}>
+                      style={{ flex:1, minWidth:COL.name, fontSize:13, color:"#1d1d1f", padding:"8px 10px", textDecoration: isFading ? "line-through" : "none", opacity: isFading ? 0.4 : 1, overflow: openNoteId===task.id ? "visible" : "hidden", textOverflow: openNoteId===task.id ? "clip" : "ellipsis", whiteSpace: openNoteId===task.id ? "normal" : "nowrap", cursor: isShared ? "default" : "pointer", ...cb, display:"flex", alignItems: openNoteId===task.id ? "flex-start" : "center", gap:5 }}>
                       <span style={{ overflow: openNoteId===task.id ? "visible" : "hidden", textOverflow: openNoteId===task.id ? "clip" : "ellipsis", whiteSpace: openNoteId===task.id ? "normal" : "nowrap" }}>{task.title}</span>
-                      {task.note && <span title="Notitie aanwezig" style={{ flexShrink:0, fontSize:10, color:"#9ca3af" }}>📝</span>}
+                      {task.note && <span title="Notitie aanwezig" style={{ flexShrink:0, fontSize:11, color:"#76767b" }}>📝</span>}
                     </div>
                     <div style={{ width:COL.date, flexShrink:0, fontSize:12, padding:"8px 8px 8px 10px", color:dlColor, fontWeight:dlWeight, ...cb, cursor:"pointer", position:"relative", display:"flex", alignItems:"center" }}
                       onClick={e => { e.stopPropagation(); if(!isShared && !isFading) setDatePickerOpen(datePickerOpen===task.id ? null : task.id); }}>
                       <span style={{ flex:1, minWidth:0, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                         {formatDeadline(task.deadline, lang)}
                         {task.recurrence && task.deadline && task.deadline < getTodayKey() && (
-                          <span title={overdueDaysCount(task.deadline) + ' ' + t(lang, 'overdueDays')} style={{ marginLeft:4, fontSize:9, color:"#DC2626", fontWeight:700 }}>
+                          <span title={overdueDaysCount(task.deadline) + ' ' + t(lang, 'overdueDays')} style={{ marginLeft:4, fontSize:11, color:"#DC2626", fontWeight:600 }}>
                             {'· ' + overdueDaysCount(task.deadline) + 'd'}
                           </span>
                         )}
@@ -957,11 +957,11 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                       )}
                     </div>
                     <div style={{ width:COL.prio, flexShrink:0, display:"flex", justifyContent:"center", padding:"8px 6px" }}>
-                      <span onClick={() => !isShared && cyclePrio(task.id)} style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:4, cursor: isShared ? "default" : "pointer", background:PRIO_BG[task.priority], color:PRIO_COLOR[task.priority], userSelect:"none" }}>{prioLabel(task.priority)}</span>
+                      <span onClick={() => !isShared && cyclePrio(task.id)} style={{ fontSize:12, fontWeight:600, padding:"2px 8px", borderRadius:8, cursor: isShared ? "default" : "pointer", background:PRIO_BG[task.priority], color:PRIO_COLOR[task.priority], userSelect:"none" }}>{prioLabel(task.priority)}</span>
                     </div>
                     </div>
                     {openNoteId === task.id && !isShared && (
-                      <div style={{ padding:"6px 12px 10px 52px", borderTop:"1px solid #f3f4f6", background:"#fafafa" }}>
+                      <div style={{ padding:"6px 12px 10px 52px", borderTop:"1px solid #f2f2f7", background:"#fbfbfd" }}>
                         <input
                           autoFocus
                           value={titleValue}
@@ -969,7 +969,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                           onBlur={() => { const nt = titleValue.trim(); if (nt && nt !== task.title) { setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,title:nt}; updateTaskDB(u); return u; })); } else if (!nt) { setTitleValue(task.title||""); } }}
                           onKeyDown={e => { if(e.key==="Enter") e.currentTarget.blur(); if(e.key==="Escape"){ setTitleValue(task.title||""); e.currentTarget.blur(); } }}
                           placeholder={t(lang, 'taskNamePlaceholder')}
-                          style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"6px 8px", fontSize:13, fontWeight:600, outline:"none", color:"#111827", background:"#fff", fontFamily:'var(--font-sans)', boxSizing:"border-box", display:"block", marginBottom:6 }}
+                          style={{ width:"100%", border:"1px solid #e5e5ea", borderRadius:8, padding:"6px 8px", fontSize:13, fontWeight:600, outline:"none", color:"#1d1d1f", background:"#fff", fontFamily:'var(--font-sans)', boxSizing:"border-box", display:"block", marginBottom:6 }}
                         />
                         <textarea
                           value={noteValue}
@@ -977,10 +977,10 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                           onBlur={() => { setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,note:noteValue}; updateTaskDB(u); return u; })); }}
                           placeholder={t(lang, 'notePlaceholder')}
                           rows={2}
-                          style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"6px 8px", fontSize:12, outline:"none", resize:"none", color:"#374151", background:"#fff", fontFamily:'var(--font-sans)', boxSizing:"border-box", display:"block" }}
+                          style={{ width:"100%", border:"1px solid #e5e5ea", borderRadius:8, padding:"6px 8px", fontSize:12, outline:"none", resize:"none", color:"#424245", background:"#fff", fontFamily:'var(--font-sans)', boxSizing:"border-box", display:"block" }}
                         />
                         <button onClick={() => { const nt = titleValue.trim(); setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x, note:noteValue, title: nt || x.title}; updateTaskDB(u); return u; })); setOpenNoteId(null); }}
-                          style={{ marginTop:5, background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"3px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                          style={{ marginTop:5, background:"#2563EB", color:"#fff", border:"none", borderRadius:8, padding:"3px 10px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
                           {t(lang, 'save')}
                         </button>
                       </div>
@@ -989,31 +989,31 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                 );
               })}
               {!isShared && (adding ? (
-                <div style={{ display:"flex", alignItems:"center", borderBottom:"1px solid #f3f4f6" }}>
+                <div style={{ display:"flex", alignItems:"center", borderBottom:"1px solid #f2f2f7" }}>
                   <div style={{ width:41, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", ...cb, padding:"8px 0" }}>
-                    <div style={{ width:15, height:15, borderRadius:"50%", border:"2px solid #d1d5db" }} />
+                    <div style={{ width:15, height:15, borderRadius:"50%", border:"2px solid #d1d1d6" }} />
                   </div>
                   <div style={{ flex:1, minWidth:COL.name, padding:"6px 10px", ...cb }}>
                     <input value={newTitle} onChange={e => setNewTitle(e.target.value)}
                       onKeyDown={e => { if(e.key==="Enter") addTask(); if(e.key==="Escape"){ setAdding(false); setNewTitle(""); } }}
                       placeholder={t(lang, 'taskNamePlaceholder')} autoFocus
-                      style={{ width:"100%", border:"none", borderBottom:"2px solid "+activeColor, fontSize:13, outline:"none", padding:"2px 0", color:"#111827" }} />
+                      style={{ width:"100%", border:"none", borderBottom:"2px solid "+activeColor, fontSize:13, outline:"none", padding:"2px 0", color:"#1d1d1f" }} />
                   </div>
                   <div style={{ flexShrink:0, padding:"6px 10px", display:"flex", gap:8, alignItems:"center" }}>
-                    <button onClick={addTask} style={{ fontSize:11, background:activeColor, color:"#fff", border:"none", borderRadius:3, padding:"3px 8px", cursor:"pointer" }}>{t(lang, 'addBtn')}</button>
-                    <button onClick={() => { setAdding(false); setNewTitle(""); }} style={{ fontSize:11, background:"none", color:"#9ca3af", border:"none", cursor:"pointer" }}>{t(lang, 'cancel')}</button>
+                    <button onClick={addTask} style={{ fontSize:12, background:activeColor, color:"#fff", border:"none", borderRadius:8, padding:"3px 8px", cursor:"pointer" }}>{t(lang, 'addBtn')}</button>
+                    <button onClick={() => { setAdding(false); setNewTitle(""); }} style={{ fontSize:12, background:"none", color:"#76767b", border:"none", cursor:"pointer" }}>{t(lang, 'cancel')}</button>
                   </div>
                 </div>
               ) : (
-                <div style={{ display:"flex", alignItems:"stretch", borderBottom:"1px solid #f3f4f6" }}>
-                  <div onClick={() => setAdding(true)} style={{ flex:1, padding:"7px 12px 8px 52px", fontSize:12, color:"#9ca3af", cursor:"pointer" }}
-                    onMouseEnter={e => { e.currentTarget.style.color=activeColor; e.currentTarget.style.background="#f9fafb"; }}
-                    onMouseLeave={e => { e.currentTarget.style.color="#9ca3af"; e.currentTarget.style.background="transparent"; }}>
+                <div style={{ display:"flex", alignItems:"stretch", borderBottom:"1px solid #f2f2f7" }}>
+                  <div onClick={() => setAdding(true)} style={{ flex:1, padding:"7px 12px 8px 52px", fontSize:12, color:"#76767b", cursor:"pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.color=activeColor; e.currentTarget.style.background="#f5f5f7"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color="#76767b"; e.currentTarget.style.background="transparent"; }}>
                     {t(lang, 'addTask')}
                   </div>
-                  <div onClick={addSection} style={{ padding:"7px 14px 8px", fontSize:12, color:"#9ca3af", cursor:"pointer", whiteSpace:"nowrap" }}
-                    onMouseEnter={e => { e.currentTarget.style.color=activeColor; e.currentTarget.style.background="#f9fafb"; }}
-                    onMouseLeave={e => { e.currentTarget.style.color="#9ca3af"; e.currentTarget.style.background="transparent"; }}>
+                  <div onClick={addSection} style={{ padding:"7px 14px 8px", fontSize:12, color:"#76767b", cursor:"pointer", whiteSpace:"nowrap" }}
+                    onMouseEnter={e => { e.currentTarget.style.color=activeColor; e.currentTarget.style.background="#f5f5f7"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color="#76767b"; e.currentTarget.style.background="transparent"; }}>
                     {t(lang, 'addSection')}
                   </div>
                 </div>
@@ -1030,7 +1030,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
 function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColors = {}, invitees = [], userId, panelWidth }) {
   const lang = useLang();
   const showSidebar = panelWidth > 400;
-  const NEUTRAL_PERSON = { dot: "#9ca3af", bg: "#F3F4F6", border: "#9ca3af", text: "#6b7280" };
+  const NEUTRAL_PERSON = { dot: "#76767b", bg: "#f2f2f7", border: "#76767b", text: "#6e6e73" };
   const personStyle = (email) => PERSON_COLORS[personColors[email]] || NEUTRAL_PERSON;
   const [modalSharedWith, setModalSharedWith] = useState([]);
   const [editSharedWith, setEditSharedWith]   = useState([]);
@@ -1122,14 +1122,14 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
   const TimeSelect = ({ h, m, onChangeH, onChangeM }) => (
     <div style={{ display:"flex", alignItems:"center", gap:4 }}>
       <select value={h} onChange={e => onChangeH(Number(e.target.value))}
-        style={{ border:"1px solid #e5e7eb", borderRadius:4, padding:"4px 6px", fontSize:13, outline:"none", cursor:"pointer", background:"#fff" }}>
+        style={{ border:"1px solid #e5e5ea", borderRadius:8, padding:"4px 6px", fontSize:13, outline:"none", cursor:"pointer", background:"#fff" }}>
         {Array.from({ length: 24 }, (_, i) => (
           <option key={i} value={i}>{pad(i)}</option>
         ))}
       </select>
-      <span style={{ color:"#6b7280", fontWeight:700 }}>:</span>
+      <span style={{ color:"#6e6e73", fontWeight:600 }}>:</span>
       <select value={m} onChange={e => onChangeM(Number(e.target.value))}
-        style={{ border:"1px solid #e5e7eb", borderRadius:4, padding:"4px 6px", fontSize:13, outline:"none", cursor:"pointer", background:"#fff" }}>
+        style={{ border:"1px solid #e5e5ea", borderRadius:8, padding:"4px 6px", fontSize:13, outline:"none", cursor:"pointer", background:"#fff" }}>
         {[0,15,30,45].map(min => (
           <option key={min} value={min}>{pad(min)}</option>
         ))}
@@ -1148,51 +1148,51 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
     <div style={{ display:"flex", height:"100%", background:"#ffffff" }}>
 
       {/* Sidebar */}
-      <div style={{ width: showSidebar ? 160 : 0, flexShrink:0, background:"#18181b", display:"flex", flexDirection:"column", borderRight: showSidebar ? "1px solid #27272a" : "none", overflow:"hidden", transition:"width 1.5s ease" }}>
+      <div style={{ width: showSidebar ? 160 : 0, flexShrink:0, background:"#1c1c1e", display:"flex", flexDirection:"column", borderRight: showSidebar ? "1px solid #2c2c2e" : "none", overflow:"hidden", transition:"width 1.5s cubic-bezier(0.25,0.1,0.25,1)" }}>
 
         {/* Maken knop */}
         <div style={{ padding:"14px 12px 10px" }}>
-          <button onClick={() => openAdding(getTodayKey(), 9)} style={{ width:"100%", background:"#27272a", border:"none", borderRadius:5, color:"#f4f4f5", fontSize:12, fontWeight:700, padding:"8px 0", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}
-            onMouseEnter={e => e.currentTarget.style.background="#3f3f46"}
-            onMouseLeave={e => e.currentTarget.style.background="#27272a"}>
+          <button onClick={() => openAdding(getTodayKey(), 9)} style={{ width:"100%", background:"#2c2c2e", border:"none", borderRadius:8, color:"#f2f2f7", fontSize:12, fontWeight:600, padding:"8px 0", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}
+            onMouseEnter={e => e.currentTarget.style.background="#3a3a3c"}
+            onMouseLeave={e => e.currentTarget.style.background="#2c2c2e"}>
             {t(lang, 'make')}
           </button>
         </div>
 
         {/* Mijn agenda's */}
-        <div style={{ borderTop:"1px solid #27272a" }}>
+        <div style={{ borderTop:"1px solid #2c2c2e" }}>
           <div onClick={() => setMyOpen(o => !o)} style={{ padding:"10px 12px 6px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
-            <span style={{ fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2 }}>{t(lang, 'myCalendars')}</span>
-            <span style={{ fontSize:10, color:"#52525b" }}>{myOpen ? "▲" : "▼"}</span>
+            <span style={{ fontSize:12, fontWeight:600, color:"#636366", letterSpacing:0.4 }}>{t(lang, 'myCalendars')}</span>
+            <span style={{ fontSize:11, color:"#636366" }}>{myOpen ? "▲" : "▼"}</span>
           </div>
           {myOpen && myAgendas.map(a => (
             <div key={a.id} onClick={() => toggleAgenda(a.id, myAgendas, setMyAgendas)}
               style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 12px", cursor:"pointer" }}
-              onMouseEnter={e => e.currentTarget.style.background="#27272a"}
+              onMouseEnter={e => e.currentTarget.style.background="#2c2c2e"}
               onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-              <div style={{ width:13, height:13, borderRadius:3, border:"2px solid "+a.color, background: a.on ? a.color : "transparent", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                {a.on && <span style={{ color:"#fff", fontSize:9, lineHeight:1, fontWeight:700 }}>✓</span>}
+              <div style={{ width:13, height:13, borderRadius:8, border:"2px solid "+a.color, background: a.on ? a.color : "transparent", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                {a.on && <span style={{ color:"#fff", fontSize:11, lineHeight:1, fontWeight:600 }}>✓</span>}
               </div>
-              <span style={{ fontSize:12, color: a.on ? "#f4f4f5" : "#52525b", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{a.label}</span>
+              <span style={{ fontSize:12, color: a.on ? "#f2f2f7" : "#636366", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{a.label}</span>
             </div>
           ))}
         </div>
 
         {/* Andere agenda's */}
-        <div style={{ borderTop:"1px solid #27272a", marginTop:4 }}>
+        <div style={{ borderTop:"1px solid #2c2c2e", marginTop:4 }}>
           <div onClick={() => setOtherOpen(o => !o)} style={{ padding:"10px 12px 6px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
-            <span style={{ fontSize:11, fontWeight:700, color:"#52525b", letterSpacing:1.2 }}>{t(lang, 'otherCalendars')}</span>
-            <span style={{ fontSize:10, color:"#52525b" }}>{otherOpen ? "▲" : "▼"}</span>
+            <span style={{ fontSize:12, fontWeight:600, color:"#636366", letterSpacing:0.4 }}>{t(lang, 'otherCalendars')}</span>
+            <span style={{ fontSize:11, color:"#636366" }}>{otherOpen ? "▲" : "▼"}</span>
           </div>
           {otherOpen && otherAgendas.map(a => (
             <div key={a.id} onClick={() => toggleAgenda(a.id, otherAgendas, setOtherAgendas)}
               style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 12px", cursor:"pointer" }}
-              onMouseEnter={e => e.currentTarget.style.background="#27272a"}
+              onMouseEnter={e => e.currentTarget.style.background="#2c2c2e"}
               onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-              <div style={{ width:13, height:13, borderRadius:3, border:"2px solid "+a.color, background: a.on ? a.color : "transparent", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                {a.on && <span style={{ color:"#fff", fontSize:9, lineHeight:1, fontWeight:700 }}>✓</span>}
+              <div style={{ width:13, height:13, borderRadius:8, border:"2px solid "+a.color, background: a.on ? a.color : "transparent", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                {a.on && <span style={{ color:"#fff", fontSize:11, lineHeight:1, fontWeight:600 }}>✓</span>}
               </div>
-              <span style={{ fontSize:12, color: a.on ? "#f4f4f5" : "#52525b", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{a.label}</span>
+              <span style={{ fontSize:12, color: a.on ? "#f2f2f7" : "#636366", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{a.label}</span>
             </div>
           ))}
         </div>
@@ -1200,24 +1200,24 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
 
       {/* Main calendar area */}
       <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0 }}>
-      <div style={{ display:"flex", alignItems:"center", gap:6, padding:"14px 16px 10px", borderBottom:"1px solid #e5e7eb", position:"relative" }} onClick={() => { setMonthPickerOpen(false); setYearPickerOpen(false); }}>
+      <div style={{ display:"flex", alignItems:"center", gap:6, padding:"14px 16px 10px", borderBottom:"1px solid #e5e5ea", position:"relative" }} onClick={() => { setMonthPickerOpen(false); setYearPickerOpen(false); }}>
 
         {/* Month picker */}
         <div style={{ position:"relative" }}>
           <span onClick={e => { e.stopPropagation(); setMonthPickerOpen(o => !o); setYearPickerOpen(false); }}
-            style={{ fontFamily:'var(--font-sans)', fontSize:18, color:"#111827", cursor:"pointer", borderBottom: monthPickerOpen ? "2px solid #2563EB" : "2px solid transparent", paddingBottom:1 }}>
+            style={{ fontFamily:'var(--font-sans)', fontSize:18, color:"#1d1d1f", cursor:"pointer", borderBottom: monthPickerOpen ? "2px solid #2563EB" : "2px solid transparent", paddingBottom:1 }}>
             {MONTHS_BY_LANG[lang][currentMonth]}
           </span>
           {monthPickerOpen && (
-            <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", left:0, zIndex:50, background:"#fff", border:"1px solid #e5e7eb", borderRadius:8, boxShadow:"0 8px 24px rgba(0,0,0,0.12)", width:140, maxHeight:260, overflowY:"auto", padding:"4px 0" }}>
+            <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", left:0, zIndex:50, background:"#fff", border:"1px solid #e5e5ea", borderRadius:12, boxShadow:"0 8px 30px rgba(0,0,0,0.10)", width:140, maxHeight:260, overflowY:"auto", padding:"4px 0" }}>
               {MONTHS_BY_LANG[lang].map((m, i) => (
                 <div key={i} onClick={() => goToMonth(i)} style={{
                   padding:"7px 14px", fontSize:13, cursor:"pointer",
                   fontWeight: i===currentMonth ? 700 : 400,
                   background: i===currentMonth ? "#DBEAFE" : "transparent",
-                  color: i===currentMonth ? "#2563EB" : "#111827"
+                  color: i===currentMonth ? "#2563EB" : "#1d1d1f"
                 }}
-                  onMouseEnter={e => { if(i!==currentMonth) e.currentTarget.style.background="#f9fafb"; }}
+                  onMouseEnter={e => { if(i!==currentMonth) e.currentTarget.style.background="#f5f5f7"; }}
                   onMouseLeave={e => { if(i!==currentMonth) e.currentTarget.style.background="transparent"; }}>
                   {m}
                 </div>
@@ -1229,20 +1229,20 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
         {/* Year picker */}
         <div style={{ position:"relative" }}>
           <span onClick={e => { e.stopPropagation(); setYearPickerOpen(o => !o); setMonthPickerOpen(false); }}
-            style={{ fontFamily:'var(--font-sans)', fontSize:18, color:"#111827", cursor:"pointer", borderBottom: yearPickerOpen ? "2px solid #2563EB" : "2px solid transparent", paddingBottom:1 }}>
+            style={{ fontFamily:'var(--font-sans)', fontSize:18, color:"#1d1d1f", cursor:"pointer", borderBottom: yearPickerOpen ? "2px solid #2563EB" : "2px solid transparent", paddingBottom:1 }}>
             {currentYear}
           </span>
           {yearPickerOpen && (
-            <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", left:0, zIndex:50, background:"#fff", border:"1px solid #e5e7eb", borderRadius:8, boxShadow:"0 8px 24px rgba(0,0,0,0.12)", width:90, maxHeight:260, overflowY:"auto", padding:"4px 0" }}
+            <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", left:0, zIndex:50, background:"#fff", border:"1px solid #e5e5ea", borderRadius:12, boxShadow:"0 8px 30px rgba(0,0,0,0.10)", width:90, maxHeight:260, overflowY:"auto", padding:"4px 0" }}
               ref={el => { if(el) { const active = el.querySelector("[data-active='true']"); if(active) active.scrollIntoView({ block:"center" }); } }}>
               {yearRange.map(y => (
                 <div key={y} data-active={y===currentYear ? "true" : "false"} onClick={() => goToYear(y)} style={{
                   padding:"7px 14px", fontSize:13, cursor:"pointer",
                   fontWeight: y===currentYear ? 700 : 400,
                   background: y===currentYear ? "#DBEAFE" : "transparent",
-                  color: y===currentYear ? "#2563EB" : "#111827"
+                  color: y===currentYear ? "#2563EB" : "#1d1d1f"
                 }}
-                  onMouseEnter={e => { if(y!==currentYear) e.currentTarget.style.background="#f9fafb"; }}
+                  onMouseEnter={e => { if(y!==currentYear) e.currentTarget.style.background="#f5f5f7"; }}
                   onMouseLeave={e => { if(y!==currentYear) e.currentTarget.style.background="transparent"; }}>
                   {y}
                 </div>
@@ -1252,19 +1252,19 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
         </div>
 
         <div style={{ marginLeft:"auto", display:"flex", gap:4 }}>
-          <button onClick={prevWeek} style={{ background:"none", border:"1px solid #e5e7eb", borderRadius:3, width:28, height:28, cursor:"pointer", color:"#374151", fontSize:14 }}>‹</button>
-          <button onClick={() => setWeekBase(new Date(today))} style={{ background:"none", border:"1px solid #e5e7eb", borderRadius:3, padding:"0 8px", height:28, cursor:"pointer", color:"#374151", fontSize:11, fontWeight:700 }}>{t(lang, 'now')}</button>
-          <button onClick={nextWeek} style={{ background:"none", border:"1px solid #e5e7eb", borderRadius:3, width:28, height:28, cursor:"pointer", color:"#374151", fontSize:14 }}>›</button>
+          <button onClick={prevWeek} style={{ background:"none", border:"1px solid #e5e5ea", borderRadius:8, width:28, height:28, cursor:"pointer", color:"#424245", fontSize:14 }}>‹</button>
+          <button onClick={() => setWeekBase(new Date(today))} style={{ background:"none", border:"1px solid #e5e5ea", borderRadius:8, padding:"0 8px", height:28, cursor:"pointer", color:"#424245", fontSize:12, fontWeight:600 }}>{t(lang, 'now')}</button>
+          <button onClick={nextWeek} style={{ background:"none", border:"1px solid #e5e5ea", borderRadius:8, width:28, height:28, cursor:"pointer", color:"#424245", fontSize:14 }}>›</button>
         </div>
       </div>
-      <div style={{ display:"flex", borderBottom:"1px solid #e5e7eb" }}>
+      <div style={{ display:"flex", borderBottom:"1px solid #e5e5ea" }}>
         <div style={{ width:44, flexShrink:0 }} />
         {weekDates.map((d, i) => {
           const isToday = dateKey(d) === getTodayKey();
           return (
             <div key={i} style={{ flex:1, textAlign:"center", padding:"6px 0" }}>
-              <div style={{ fontSize:10, color:"#9ca3af", fontWeight:700, letterSpacing:1 }}>{DAYS_BY_LANG[lang][i]}</div>
-              <div style={{ fontSize:16, fontWeight:700, width:28, height:28, lineHeight:"28px", borderRadius:"50%", margin:"2px auto 0", background: isToday ? "#2563EB" : "transparent", color: isToday ? "#fff" : "#111827" }}>{d.getDate()}</div>
+              <div style={{ fontSize:11, color:"#76767b", fontWeight:600, letterSpacing:0.4 }}>{DAYS_BY_LANG[lang][i]}</div>
+              <div style={{ fontSize:16, fontWeight:600, width:28, height:28, lineHeight:"28px", borderRadius:"50%", margin:"2px auto 0", background: isToday ? "#2563EB" : "transparent", color: isToday ? "#fff" : "#1d1d1f" }}>{d.getDate()}</div>
             </div>
           );
         })}
@@ -1278,8 +1278,8 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
             <div style={{ display:"flex", minHeight: HOURS.length * HOUR_H + extraH }}>
               <div style={{ width:44, flexShrink:0 }}>
                 {HOURS.map(h => (
-                  <div key={h} style={{ height: h === HOURS[0] ? HOUR_H + extraH : HOUR_H, borderBottom:"1px solid #f3f4f6", paddingRight:6, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
-                    <span style={{ fontSize:10, color:"#9ca3af", paddingTop:4 }}>{pad(h)}:00</span>
+                  <div key={h} style={{ height: h === HOURS[0] ? HOUR_H + extraH : HOUR_H, borderBottom:"1px solid #f2f2f7", paddingRight:6, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
+                    <span style={{ fontSize:11, color:"#76767b", paddingTop:4 }}>{pad(h)}:00</span>
                   </div>
                 ))}
               </div>
@@ -1288,24 +1288,24 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
                 const dayTasks = (tasks||[]).filter(t => t.deadline === dk);
                 const dayEvents = events.filter(e => e.date===dk);
                 return (
-                  <div key={di} style={{ flex:1, minWidth:0, overflow:"hidden", position:"relative", borderLeft:"1px solid #f3f4f6" }}>
+                  <div key={di} style={{ flex:1, minWidth:0, overflow:"hidden", position:"relative", borderLeft:"1px solid #f2f2f7" }}>
                     {HOURS.map(h => (
                       <div key={h} onClick={() => openAdding(dk, h)}
-                        style={{ height: h === HOURS[0] ? HOUR_H + extraH : HOUR_H, borderBottom:"1px solid #f3f4f6", cursor:"pointer" }}
-                        onMouseEnter={e => e.currentTarget.style.background="#f9fafb"}
+                        style={{ height: h === HOURS[0] ? HOUR_H + extraH : HOUR_H, borderBottom:"1px solid #f2f2f7", cursor:"pointer" }}
+                        onMouseEnter={e => e.currentTarget.style.background="#f5f5f7"}
                         onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                         {h === HOURS[0] && extraH > 0 && (
                           <div style={{ display:"flex", flexDirection:"column", gap:2, padding:"2px 2px 0", overflow:"hidden", width:"100%" }} onClick={e => e.stopPropagation()}>
                             {dayTasks.map(task => (
                               <div key={task.id} title={task.title} style={{
                                 height: CHIP_H - 2,
-                                background: PRIO_BG[task.priority] || "#f3f4f6",
-                                borderLeft: "2px solid " + (PRIO_COLOR[task.priority] || "#9ca3af"),
+                                background: PRIO_BG[task.priority] || "#f2f2f7",
+                                borderLeft: "2px solid " + (PRIO_COLOR[task.priority] || "#76767b"),
                                 borderRadius:2,
                                 padding:"0 4px",
-                                fontSize:10,
+                                fontSize:11,
                                 fontWeight:600,
-                                color: PRIO_COLOR[task.priority] || "#6b7280",
+                                color: PRIO_COLOR[task.priority] || "#6e6e73",
                                 overflow:"hidden",
                                 textOverflow:"ellipsis",
                                 whiteSpace:"nowrap",
@@ -1324,8 +1324,8 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
                     {dayEvents.filter(isAllDay).map((ev, i) => (
                       <div key={"ad-"+ev.id} onClick={e => { e.stopPropagation(); openEvent(ev); }}
                         title={ev.title}
-                        style={{ position:"absolute", top: extraH, left: 2 + i*8, width:"42%", height: HOURS.length * HOUR_H - 2, background: EVENT_BG[ev.color]||"#DBEAFE", border:"1px solid "+(EVENT_BORDER[ev.color]||"#2563EB"), borderLeft:"3px solid "+(EVENT_BORDER[ev.color]||"#2563EB"), borderRadius:3, padding:"3px 5px", overflow:"hidden", zIndex:1, cursor:"pointer" }}>
-                        <div style={{ fontSize:11, fontWeight:700, color: EVENT_BORDER[ev.color]||"#2563EB", overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
+                        style={{ position:"absolute", top: extraH, left: 2 + i*8, width:"42%", height: HOURS.length * HOUR_H - 2, background: EVENT_BG[ev.color]||"#DBEAFE", border:"1px solid "+(EVENT_BORDER[ev.color]||"#2563EB"), borderLeft:"3px solid "+(EVENT_BORDER[ev.color]||"#2563EB"), borderRadius:8, padding:"3px 5px", overflow:"hidden", zIndex:1, cursor:"pointer" }}>
+                        <div style={{ fontSize:12, fontWeight:600, color: EVENT_BORDER[ev.color]||"#2563EB", overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
                       </div>
                     ))}
                     {dayEvents.filter(e => !isAllDay(e)).map(ev => {
@@ -1335,9 +1335,9 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
                       const height = Math.max(bottom - top - 2, 16);
                       return (
                         <div key={ev.id} onClick={e => { e.stopPropagation(); openEvent(ev); }}
-                          style={{ position:"absolute", top, left:2, right:2, height, background: EVENT_BG[ev.color]||"#DBEAFE", borderLeft:"3px solid "+(EVENT_BORDER[ev.color]||"#2563EB"), borderRadius:3, padding:"3px 5px", overflow:"hidden", zIndex:2, cursor:"pointer" }}>
-                          <div style={{ fontSize:11, fontWeight:700, color: EVENT_BORDER[ev.color]||"#2563EB", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
-                          <div style={{ fontSize:10, color:"#6b7280" }}>{pad(ev.startH)}:{pad(ev.startM)}</div>
+                          style={{ position:"absolute", top, left:2, right:2, height, background: EVENT_BG[ev.color]||"#DBEAFE", borderLeft:"3px solid "+(EVENT_BORDER[ev.color]||"#2563EB"), borderRadius:8, padding:"3px 5px", overflow:"hidden", zIndex:2, cursor:"pointer" }}>
+                          <div style={{ fontSize:12, fontWeight:600, color: EVENT_BORDER[ev.color]||"#2563EB", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
+                          <div style={{ fontSize:11, color:"#6e6e73" }}>{pad(ev.startH)}:{pad(ev.startM)}</div>
                         </div>
                       );
                     })}
@@ -1347,9 +1347,9 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
                       return (
                         <div key={"shad-"+ev.id} title={ev.title}
                           onClick={e => { e.stopPropagation(); window.alert(`${ev.title}\n${(ev.ownerEmail||"").split("@")[0]} · hele dag`); }}
-                          style={{ position:"absolute", top: extraH, right: 2, width:"40%", height: HOURS.length * HOUR_H - 2, background: ps.bg, border:"1px dashed "+ps.border, borderLeft:"3px solid "+ps.border, borderRadius:3, padding:"3px 5px", overflow:"hidden", zIndex:1, cursor:"pointer" }}>
-                          <div style={{ fontSize:9, fontWeight:800, color: ps.text, textTransform:"uppercase" }}>{(ev.ownerEmail||"").split("@")[0]}</div>
-                          <div style={{ fontSize:11, fontWeight:700, color: ps.text, overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
+                          style={{ position:"absolute", top: extraH, right: 2, width:"40%", height: HOURS.length * HOUR_H - 2, background: ps.bg, border:"1px dashed "+ps.border, borderLeft:"3px solid "+ps.border, borderRadius:8, padding:"3px 5px", overflow:"hidden", zIndex:1, cursor:"pointer" }}>
+                          <div style={{ fontSize:11, fontWeight:600, color: ps.text, textTransform:"uppercase" }}>{(ev.ownerEmail||"").split("@")[0]}</div>
+                          <div style={{ fontSize:12, fontWeight:600, color: ps.text, overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
                         </div>
                       );
                     })}
@@ -1363,9 +1363,9 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
                       return (
                         <div key={"sh-"+ev.id} title={ev.title}
                           onClick={e => { e.stopPropagation(); window.alert(`${ev.title}\n${(ev.ownerEmail||"").split("@")[0]} · ${pad(ev.startH)}:${pad(ev.startM)}–${pad(ev.endH)}:${pad(ev.endM)}`); }}
-                          style={{ position:"absolute", top, left:5, right:5, height, background: ps.bg, border:"1px dashed "+ps.border, borderRadius:3, padding:"2px 5px", overflow:"hidden", zIndex:1, cursor:"pointer" }}>
-                          <div style={{ fontSize:8, fontWeight:800, color: ps.text, textTransform:"uppercase", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{(ev.ownerEmail||"").split("@")[0]}</div>
-                          <div style={{ fontSize:10, fontWeight:700, color: ps.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
+                          style={{ position:"absolute", top, left:5, right:5, height, background: ps.bg, border:"1px dashed "+ps.border, borderRadius:8, padding:"2px 5px", overflow:"hidden", zIndex:1, cursor:"pointer" }}>
+                          <div style={{ fontSize:8, fontWeight:600, color: ps.text, textTransform:"uppercase", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{(ev.ownerEmail||"").split("@")[0]}</div>
+                          <div style={{ fontSize:11, fontWeight:600, color: ps.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{ev.title}</div>
                         </div>
                       );
                     })}
@@ -1379,18 +1379,18 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
       {selectedEvent && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", zIndex:60, display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setSelectedEvent(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:8, padding:20, width:300, boxShadow:"0 20px 40px rgba(0,0,0,0.15)", maxHeight:"90vh", overflowY:"auto" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:12, padding:20, width:300, boxShadow:"0 12px 40px rgba(0,0,0,0.12)", maxHeight:"90vh", overflowY:"auto" }}>
 
             {/* Header: title + edit button */}
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
               <div style={{ width:10, height:10, borderRadius:"50%", background: EVENT_BORDER[editMode ? editColor : selectedEvent.color]||"#2563EB", flexShrink:0 }} />
               {editMode
                 ? <input value={editTitle} onChange={e => setEditTitle(e.target.value)} autoFocus
-                    style={{ flex:1, fontWeight:700, fontSize:15, border:"none", borderBottom:"2px solid #2563EB", outline:"none", padding:"0 2px", color:"#111827" }} />
-                : <div style={{ flex:1, fontWeight:700, fontSize:15, color:"#111827" }}>{selectedEvent.title}</div>
+                    style={{ flex:1, fontWeight:600, fontSize:15, border:"none", borderBottom:"2px solid #2563EB", outline:"none", padding:"0 2px", color:"#1d1d1f" }} />
+                : <div style={{ flex:1, fontWeight:600, fontSize:15, color:"#1d1d1f" }}>{selectedEvent.title}</div>
               }
               <button onClick={() => setEditMode(m => !m)}
-                style={{ flexShrink:0, background: editMode ? "#DBEAFE" : "#f3f4f6", border:"none", borderRadius:4, padding:"3px 8px", fontSize:11, fontWeight:700, cursor:"pointer", color: editMode ? "#2563EB" : "#6b7280" }}>
+                style={{ flexShrink:0, background: editMode ? "#DBEAFE" : "#f2f2f7", border:"none", borderRadius:8, padding:"3px 8px", fontSize:12, fontWeight:600, cursor:"pointer", color: editMode ? "#2563EB" : "#6e6e73" }}>
                 {editMode ? t(lang, 'cancelEdit') : t(lang, 'editBtn')}
               </button>
             </div>
@@ -1399,30 +1399,30 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
             {editMode ? (
               <div style={{ display:"flex", flexDirection:"column", gap:6, margin:"10px 0 14px" }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:12, color:"#6b7280", width:36 }}>{t(lang, 'from')}</span>
+                  <span style={{ fontSize:12, color:"#6e6e73", width:36 }}>{t(lang, 'from')}</span>
                   <TimeSelect h={editStartH} m={editStartM} onChangeH={setEditStartH} onChangeM={setEditStartM} />
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:12, color:"#6b7280", width:36 }}>{t(lang, 'to')}</span>
+                  <span style={{ fontSize:12, color:"#6e6e73", width:36 }}>{t(lang, 'to')}</span>
                   <TimeSelect h={editEndH} m={editEndM} onChangeH={setEditEndH} onChangeM={setEditEndM} />
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:4 }}>
-                  <span style={{ fontSize:12, color:"#6b7280", width:36 }}>{t(lang, 'color')}</span>
+                  <span style={{ fontSize:12, color:"#6e6e73", width:36 }}>{t(lang, 'color')}</span>
                   {[["blue","#2563EB"],["red","#DC2626"],["yellow","#E6B400"]].map(([key, hex]) => (
-                    <div key={key} onClick={() => setEditColor(key)} style={{ width:20, height:20, borderRadius:"50%", background:hex, cursor:"pointer", border: editColor===key ? "3px solid #111827" : "3px solid transparent", boxSizing:"border-box" }} />
+                    <div key={key} onClick={() => setEditColor(key)} style={{ width:20, height:20, borderRadius:"50%", background:hex, cursor:"pointer", border: editColor===key ? "3px solid #1d1d1f" : "3px solid transparent", boxSizing:"border-box" }} />
                   ))}
                 </div>
                 {invitees.length > 0 && (
                   <div style={{ marginTop:4 }}>
-                    <div style={{ fontSize:11, color:"#6b7280", marginBottom:4 }}>Zichtbaar voor</div>
+                    <div style={{ fontSize:12, color:"#6e6e73", marginBottom:4 }}>Zichtbaar voor</div>
                     <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                       <div onClick={() => setEditSharedWith([])}
-                        style={{ fontSize:11, fontWeight:600, padding:"4px 10px", borderRadius:12, cursor:"pointer", border:"1px solid "+(editSharedWith.length===0?"#374151":"#e5e7eb"), background: editSharedWith.length===0?"#374151":"#fff", color: editSharedWith.length===0?"#fff":"#374151" }}>Alleen ik</div>
+                        style={{ fontSize:12, fontWeight:600, padding:"4px 10px", borderRadius:16, cursor:"pointer", border:"1px solid "+(editSharedWith.length===0?"#424245":"#e5e5ea"), background: editSharedWith.length===0?"#424245":"#fff", color: editSharedWith.length===0?"#fff":"#424245" }}>Alleen ik</div>
                       {invitees.map(em => {
                         const on = editSharedWith.includes(em);
                         return (
                           <div key={em} onClick={() => setEditSharedWith(sw => toggleIn(sw, em))}
-                            style={{ fontSize:11, fontWeight:600, padding:"4px 10px", borderRadius:12, cursor:"pointer", border:"1px solid "+(on?"#2563EB":"#e5e7eb"), background: on?"#2563EB":"#fff", color: on?"#fff":"#374151" }}>{on?"✓ ":""}{em.split("@")[0]}</div>
+                            style={{ fontSize:12, fontWeight:600, padding:"4px 10px", borderRadius:16, cursor:"pointer", border:"1px solid "+(on?"#2563EB":"#e5e5ea"), background: on?"#2563EB":"#fff", color: on?"#fff":"#424245" }}>{on?"✓ ":""}{em.split("@")[0]}</div>
                         );
                       })}
                     </div>
@@ -1434,74 +1434,74 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
                   setEvents(evs => evs.map(x => x.id===selectedEvent.id ? updated : x));
                   setSelectedEvent(updated);
                   setEditMode(false);
-                }} style={{ marginTop:4, background:"#2563EB", color:"#fff", border:"none", borderRadius:4, padding:"7px", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                }} style={{ marginTop:4, background:"#2563EB", color:"#fff", border:"none", borderRadius:8, padding:"7px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
                   {t(lang, 'saveChanges')}
                 </button>
               </div>
             ) : (
-              <div style={{ fontSize:12, color:"#6b7280", marginBottom:14 }}>
+              <div style={{ fontSize:12, color:"#6e6e73", marginBottom:14 }}>
                 {selectedEvent.date} &nbsp;·&nbsp; {pad(selectedEvent.startH)}:{pad(selectedEvent.startM)} – {pad(selectedEvent.endH)}:{pad(selectedEvent.endM)}
               </div>
             )}
 
             {/* Note */}
-            <div style={{ fontSize:12, fontWeight:700, color:"#374151", marginBottom:6 }}>{t(lang, 'note')}</div>
+            <div style={{ fontSize:12, fontWeight:600, color:"#424245", marginBottom:6 }}>{t(lang, 'note')}</div>
             <div style={{ marginBottom:12 }}>
               <textarea value={editNote} onChange={e => setEditNote(e.target.value)}
                 placeholder={t(lang, 'notePlaceholderAdd')}
                 rows={3}
-                style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"8px 10px", fontSize:12, outline:"none", boxSizing:"border-box", resize:"none", color:"#374151", fontFamily:'var(--font-sans)', display:"block" }} />
+                style={{ width:"100%", border:"1px solid #e5e5ea", borderRadius:8, padding:"8px 10px", fontSize:12, outline:"none", boxSizing:"border-box", resize:"none", color:"#424245", fontFamily:'var(--font-sans)', display:"block" }} />
               <button onClick={() => { const updated = {...selectedEvent, note: editNote}; updateEventDB(updated); setEvents(evs => evs.map(x => x.id===selectedEvent.id ? updated : x)); setSelectedEvent(null); }}
-                style={{ marginTop:6, background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"4px 12px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                style={{ marginTop:6, background:"#2563EB", color:"#fff", border:"none", borderRadius:8, padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
                 {t(lang, 'save')}
               </button>
             </div>
 
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={() => { deleteEventDB(selectedEvent.id); setEvents(evs => evs.filter(x => x.id!==selectedEvent.id)); setSelectedEvent(null); }}
-                style={{ flex:1, background:"#FEE2E2", color:"#DC2626", border:"none", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:13, fontWeight:700 }}>{t(lang, 'delete')}</button>
+                style={{ flex:1, background:"#FEE2E2", color:"#DC2626", border:"none", borderRadius:8, padding:"8px 12px", cursor:"pointer", fontSize:13, fontWeight:600 }}>{t(lang, 'delete')}</button>
               <button onClick={() => setSelectedEvent(null)}
-                style={{ background:"#f3f4f6", color:"#374151", border:"none", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:13 }}>{t(lang, 'close')}</button>
+                style={{ background:"#f2f2f7", color:"#424245", border:"none", borderRadius:8, padding:"8px 12px", cursor:"pointer", fontSize:13 }}>{t(lang, 'close')}</button>
             </div>
           </div>
         </div>
       )}
       {adding && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", zIndex:50, display:"flex", alignItems:"center", justifyContent:"center" }}>
-          <div style={{ background:"#fff", borderRadius:8, padding:20, width:300, boxShadow:"0 20px 40px rgba(0,0,0,0.15)" }}>
-            <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:"#111827" }}>{t(lang, 'addEvent')}</div>
+          <div style={{ background:"#fff", borderRadius:12, padding:20, width:300, boxShadow:"0 12px 40px rgba(0,0,0,0.12)" }}>
+            <div style={{ fontWeight:600, fontSize:14, marginBottom:14, color:"#1d1d1f" }}>{t(lang, 'addEvent')}</div>
             <input value={newTitle} onChange={e => setNewTitle(e.target.value)} onKeyDown={e => e.key==="Enter" && addEvent()}
               placeholder={t(lang, 'titlePlaceholder')} autoFocus
-              style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"8px 10px", fontSize:13, outline:"none", boxSizing:"border-box", marginBottom:14 }} />
+              style={{ width:"100%", border:"1px solid #e5e5ea", borderRadius:8, padding:"8px 10px", fontSize:13, outline:"none", boxSizing:"border-box", marginBottom:14 }} />
             <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <span style={{ fontSize:12, color:"#6b7280", width:36 }}>{t(lang, 'from')}</span>
+                <span style={{ fontSize:12, color:"#6e6e73", width:36 }}>{t(lang, 'from')}</span>
                 <TimeSelect h={modalStartH} m={modalStartM} onChangeH={setModalStartH} onChangeM={setModalStartM} />
               </div>
               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <span style={{ fontSize:12, color:"#6b7280", width:36 }}>{t(lang, 'to')}</span>
+                <span style={{ fontSize:12, color:"#6e6e73", width:36 }}>{t(lang, 'to')}</span>
                 <TimeSelect h={modalEndH} m={modalEndM} onChangeH={setModalEndH} onChangeM={setModalEndM} />
               </div>
             </div>
             {/* Color picker */}
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-              <span style={{ fontSize:12, color:"#6b7280", width:36 }}>{t(lang, 'color')}</span>
+              <span style={{ fontSize:12, color:"#6e6e73", width:36 }}>{t(lang, 'color')}</span>
               {[["blue","#2563EB"],["red","#DC2626"],["yellow","#E6B400"]].map(([key, hex]) => (
-                <div key={key} onClick={() => setModalColor(key)} style={{ width:22, height:22, borderRadius:"50%", background:hex, cursor:"pointer", border: modalColor===key ? "3px solid #111827" : "3px solid transparent", boxSizing:"border-box" }} />
+                <div key={key} onClick={() => setModalColor(key)} style={{ width:22, height:22, borderRadius:"50%", background:hex, cursor:"pointer", border: modalColor===key ? "3px solid #1d1d1f" : "3px solid transparent", boxSizing:"border-box" }} />
               ))}
             </div>
             {/* Zichtbaar voor */}
             {invitees.length > 0 && (
               <div style={{ marginBottom:12 }}>
-                <div style={{ fontSize:11, color:"#6b7280", marginBottom:4 }}>Zichtbaar voor</div>
+                <div style={{ fontSize:12, color:"#6e6e73", marginBottom:4 }}>Zichtbaar voor</div>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                   <div onClick={() => setModalSharedWith([])}
-                    style={{ fontSize:11, fontWeight:600, padding:"4px 10px", borderRadius:12, cursor:"pointer", border:"1px solid "+(modalSharedWith.length===0?"#374151":"#e5e7eb"), background: modalSharedWith.length===0?"#374151":"#fff", color: modalSharedWith.length===0?"#fff":"#374151" }}>Alleen ik</div>
+                    style={{ fontSize:12, fontWeight:600, padding:"4px 10px", borderRadius:16, cursor:"pointer", border:"1px solid "+(modalSharedWith.length===0?"#424245":"#e5e5ea"), background: modalSharedWith.length===0?"#424245":"#fff", color: modalSharedWith.length===0?"#fff":"#424245" }}>Alleen ik</div>
                   {invitees.map(em => {
                     const on = modalSharedWith.includes(em);
                     return (
                       <div key={em} onClick={() => setModalSharedWith(sw => toggleIn(sw, em))}
-                        style={{ fontSize:11, fontWeight:600, padding:"4px 10px", borderRadius:12, cursor:"pointer", border:"1px solid "+(on?"#2563EB":"#e5e7eb"), background: on?"#2563EB":"#fff", color: on?"#fff":"#374151" }}>{on?"✓ ":""}{em.split("@")[0]}</div>
+                        style={{ fontSize:12, fontWeight:600, padding:"4px 10px", borderRadius:16, cursor:"pointer", border:"1px solid "+(on?"#2563EB":"#e5e5ea"), background: on?"#2563EB":"#fff", color: on?"#fff":"#424245" }}>{on?"✓ ":""}{em.split("@")[0]}</div>
                     );
                   })}
                 </div>
@@ -1512,11 +1512,11 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
               <textarea value={modalNote} onChange={e => setModalNote(e.target.value)}
                 placeholder={t(lang, 'notePlaceholderOptional')}
                 rows={3}
-                style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"8px 10px", fontSize:12, outline:"none", boxSizing:"border-box", resize:"none", color:"#374151", fontFamily:'var(--font-sans)', display:"block" }} />
+                style={{ width:"100%", border:"1px solid #e5e5ea", borderRadius:8, padding:"8px 10px", fontSize:12, outline:"none", boxSizing:"border-box", resize:"none", color:"#424245", fontFamily:'var(--font-sans)', display:"block" }} />
             </div>
             <div style={{ display:"flex", gap:8 }}>
-              <button onClick={addEvent} style={{ flex:1, background:"#2563EB", color:"#fff", border:"none", borderRadius:4, padding:"8px", cursor:"pointer", fontSize:13, fontWeight:700 }}>{t(lang, 'add')}</button>
-              <button onClick={() => setAdding(null)} style={{ background:"#f3f4f6", color:"#374151", border:"none", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:13 }}>{t(lang, 'cancel2')}</button>
+              <button onClick={addEvent} style={{ flex:1, background:"#2563EB", color:"#fff", border:"none", borderRadius:8, padding:"8px", cursor:"pointer", fontSize:13, fontWeight:600 }}>{t(lang, 'add')}</button>
+              <button onClick={() => setAdding(null)} style={{ background:"#f2f2f7", color:"#424245", border:"none", borderRadius:8, padding:"8px 12px", cursor:"pointer", fontSize:13 }}>{t(lang, 'cancel2')}</button>
             </div>
           </div>
         </div>
@@ -1686,21 +1686,21 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
   };
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100%", background:"#fafafa" }}>
-      <div style={{ padding:"18px 16px 12px", borderBottom:"1px solid #e5e7eb" }}>
-        <div style={{ fontFamily:'var(--font-sans)', fontSize:18, color:"#111827" }}>{t(lang, 'assistant')}</div>
-        <div style={{ fontSize:11, color:"#9ca3af", marginTop:2 }}>{tasks.length} {t(lang, 'aiTasks')} - {events.length} {t(lang, 'aiEvents')}</div>
+    <div style={{ display:"flex", flexDirection:"column", height:"100%", background:"#fbfbfd" }}>
+      <div style={{ padding:"18px 16px 12px", borderBottom:"1px solid #e5e5ea" }}>
+        <div style={{ fontFamily:'var(--font-sans)', fontSize:18, color:"#1d1d1f" }}>{t(lang, 'assistant')}</div>
+        <div style={{ fontSize:12, color:"#76767b", marginTop:2 }}>{tasks.length} {t(lang, 'aiTasks')} - {events.length} {t(lang, 'aiEvents')}</div>
       </div>
       <div style={{ flex:1, overflowY:"auto", padding:"12px 14px", display:"flex", flexDirection:"column", gap:10 }}>
         {messages.map((m, i) => (
           <div key={i} style={{ display:"flex", justifyContent: m.role==="user" ? "flex-end" : "center" }}>
             <div style={{ width: m.role==="user" ? "auto" : "100%", maxWidth: m.role==="user" ? "85%" : "100%", display:"flex", flexDirection:"column", gap:4, alignItems: m.role==="user" ? "flex-end" : "flex-start" }}>
               {m.attachments?.map((att, j) => att.type === "image"
-                ? <img key={j} src={att.preview} alt={att.name} style={{ maxWidth:180, maxHeight:180, borderRadius:8, objectFit:"cover", border:"1px solid #e5e7eb" }} />
-                : <div key={j} style={{ background:"#f3f4f6", borderRadius:8, padding:"6px 10px", fontSize:11, color:"#6b7280" }}>📄 {att.name}</div>
+                ? <img key={j} src={att.preview} alt={att.name} style={{ maxWidth:180, maxHeight:180, borderRadius:12, objectFit:"cover", border:"1px solid #e5e5ea" }} />
+                : <div key={j} style={{ background:"#f2f2f7", borderRadius:12, padding:"6px 10px", fontSize:12, color:"#6e6e73" }}>📄 {att.name}</div>
               )}
               {m.content && (
-                <div style={{ padding:"10px 13px", borderRadius: m.role==="user" ? "12px 12px 2px 12px" : "12px", background: m.role==="user" ? "#2563EB" : "#ffffff", color: m.role==="user" ? "#fff" : "#111827", fontSize:13, lineHeight:1.5, whiteSpace:"pre-wrap", boxShadow:"0 1px 3px rgba(0,0,0,0.08)", border: m.role==="assistant" ? "1px solid #e5e7eb" : "none", width: m.role==="assistant" ? "100%" : "auto", boxSizing:"border-box" }}>
+                <div style={{ padding:"10px 13px", borderRadius: m.role==="user" ? "12px 12px 2px 12px" : "12px", background: m.role==="user" ? "#2563EB" : "#ffffff", color: m.role==="user" ? "#fff" : "#1d1d1f", fontSize:13, lineHeight:1.5, whiteSpace:"pre-wrap", boxShadow:"0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06)", border: m.role==="assistant" ? "1px solid #e5e5ea" : "none", width: m.role==="assistant" ? "100%" : "auto", boxSizing:"border-box" }}>
                   {m.content}
                 </div>
               )}
@@ -1708,38 +1708,38 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
           </div>
         ))}
         {loading && (
-          <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 14px", background:"#fff", borderRadius:"12px 12px 12px 2px", width:"fit-content", border:"1px solid #e5e7eb", boxShadow:"0 1px 3px rgba(0,0,0,0.08)" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 14px", background:"#fff", borderRadius:"12px 12px 12px 2px", width:"fit-content", border:"1px solid #e5e5ea", boxShadow:"0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06)" }}>
             <div style={{ display:"flex", gap:4 }}>
               {[0,1,2].map(i => <div key={i} style={{ width:7, height:7, borderRadius:"50%", background:"#2563EB", animation:"bounce 1.2s infinite", animationDelay:(i*0.2)+"s" }} />)}
             </div>
-            {loadingStatus && <span style={{ fontSize:12, color:"#6b7280", fontFamily:'var(--font-sans)' }}>{loadingStatus}</span>}
+            {loadingStatus && <span style={{ fontSize:12, color:"#6e6e73", fontFamily:'var(--font-sans)' }}>{loadingStatus}</span>}
           </div>
         )}
         <div ref={bottomRef} />
       </div>
       {attachments.length > 0 && (
-        <div style={{ padding:"6px 14px", display:"flex", gap:6, flexWrap:"wrap", borderTop:"1px solid #e5e7eb" }}>
+        <div style={{ padding:"6px 14px", display:"flex", gap:6, flexWrap:"wrap", borderTop:"1px solid #e5e5ea" }}>
           {attachments.map((att, i) => (
             <div key={i} style={{ position:"relative", display:"inline-flex" }}>
               {att.type === "image"
-                ? <img src={att.preview} alt={att.name} style={{ width:48, height:48, objectFit:"cover", borderRadius:6, border:"1px solid #e5e7eb" }} />
-                : <div style={{ background:"#f3f4f6", borderRadius:6, padding:"6px 8px", fontSize:11, color:"#374151", maxWidth:100, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>📄 {att.name}</div>
+                ? <img src={att.preview} alt={att.name} style={{ width:48, height:48, objectFit:"cover", borderRadius:10, border:"1px solid #e5e5ea" }} />
+                : <div style={{ background:"#f2f2f7", borderRadius:10, padding:"6px 8px", fontSize:12, color:"#424245", maxWidth:100, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>📄 {att.name}</div>
               }
               <button onClick={() => setAttachments(a => a.filter((_, j) => j !== i))}
-                style={{ position:"absolute", top:-4, right:-4, width:16, height:16, borderRadius:"50%", background:"#374151", border:"none", color:"#fff", fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", padding:0 }}>✕</button>
+                style={{ position:"absolute", top:-4, right:-4, width:16, height:16, borderRadius:"50%", background:"#424245", border:"none", color:"#fff", fontSize:11, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", padding:0 }}>✕</button>
             </div>
           ))}
         </div>
       )}
-      <div style={{ padding:"10px 14px", borderTop:"1px solid #e5e7eb", display:"flex", gap:8, alignItems:"center" }}>
+      <div style={{ padding:"10px 14px", borderTop:"1px solid #e5e5ea", display:"flex", gap:8, alignItems:"center" }}>
         <input ref={fileInputRef} type="file" accept="image/*,.txt,.md,.csv" multiple style={{ display:"none" }} onChange={e => { handleFiles(e.target.files); e.target.value = ""; }} />
         <button onClick={() => fileInputRef.current?.click()}
           title="Foto of bestand toevoegen"
-          style={{ width:32, height:32, borderRadius:"50%", background:"#f3f4f6", border:"none", cursor:"pointer", color:"#6b7280", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>📎</button>
+          style={{ width:32, height:32, borderRadius:"50%", background:"#f2f2f7", border:"none", cursor:"pointer", color:"#6e6e73", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>📎</button>
         <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key==="Enter" && !e.shiftKey && send()}
           placeholder={t(lang, 'askPlaceholder')}
-          style={{ flex:1, border:"1px solid #e5e7eb", borderRadius:20, padding:"8px 14px", fontSize:13, outline:"none", background:"#fff" }} />
-        <button onClick={send} disabled={loading || (!input.trim() && attachments.length === 0)} style={{ width:36, height:36, borderRadius:"50%", background: (input.trim() || attachments.length > 0) ? "#2563EB" : "#e5e7eb", border:"none", cursor: (input.trim() || attachments.length > 0) ? "pointer" : "default", color:"#fff", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>&#8593;</button>
+          style={{ flex:1, border:"1px solid #e5e5ea", borderRadius:20, padding:"8px 14px", fontSize:13, outline:"none", background:"#fff" }} />
+        <button onClick={send} disabled={loading || (!input.trim() && attachments.length === 0)} style={{ width:36, height:36, borderRadius:"50%", background: (input.trim() || attachments.length > 0) ? "#2563EB" : "#e5e5ea", border:"none", cursor: (input.trim() || attachments.length > 0) ? "pointer" : "default", color:"#fff", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>&#8593;</button>
       </div>
     </div>
   );
@@ -1787,17 +1787,17 @@ function AgentsPanel({ session }) {
   };
   const removeAgent = async () => { if (editing?.id) { await deleteAgentDB(editing.id); await reload(); } setEditing(undefined); };
 
-  const headerStyle = { padding:"12px 14px", borderBottom:"2px solid #27272a", background:"#18181b", flexShrink:0, display:"flex", alignItems:"center", gap:10 };
-  const label = { fontSize:10, color:"#9ca3af", fontWeight:700, letterSpacing:0.8, textTransform:"uppercase", margin:"12px 0 6px" };
-  const field = { width:"100%", border:"1px solid #e5e7eb", borderRadius:6, padding:"8px 10px", fontSize:13, outline:"none", color:"#111827", background:"#fff", fontFamily:'var(--font-sans)', boxSizing:"border-box" };
+  const headerStyle = { padding:"12px 14px", borderBottom:"2px solid #2c2c2e", background:"#1c1c1e", flexShrink:0, display:"flex", alignItems:"center", gap:10 };
+  const label = { fontSize:11, color:"#76767b", fontWeight:600, letterSpacing:0.4, textTransform:"uppercase", margin:"12px 0 6px" };
+  const field = { width:"100%", border:"1px solid #e5e5ea", borderRadius:10, padding:"8px 10px", fontSize:13, outline:"none", color:"#1d1d1f", background:"#fff", fontFamily:'var(--font-sans)', boxSizing:"border-box" };
 
   // ── BEWERKEN / AANMAKEN ──
   if (editing !== undefined) {
     return (
       <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:'var(--font-sans)' }}>
         <div style={headerStyle}>
-          <button onClick={() => setEditing(undefined)} style={{ background:"none", border:"none", color:"#9ca3af", cursor:"pointer", fontSize:16 }}>←</button>
-          <div style={{ flex:1, fontSize:13, fontWeight:700, color:"#f9fafb" }}>{editing ? "Agent bewerken" : "Nieuwe agent"}</div>
+          <button onClick={() => setEditing(undefined)} style={{ background:"none", border:"none", color:"#76767b", cursor:"pointer", fontSize:16 }}>←</button>
+          <div style={{ flex:1, fontSize:13, fontWeight:600, color:"#f5f5f7" }}>{editing ? "Agent bewerken" : "Nieuwe agent"}</div>
         </div>
         <div style={{ flex:1, overflowY:"auto", padding:"4px 14px 14px" }}>
           <div style={label}>Naam</div>
@@ -1806,14 +1806,14 @@ function AgentsPanel({ session }) {
           <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
             {AGENT_EMOJIS.map(e => (
               <div key={e} onClick={() => setForm(f => ({ ...f, emoji:e }))}
-                style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, borderRadius:6, cursor:"pointer", border: form.emoji===e ? "2px solid #2563EB" : "2px solid #f3f4f6", background:"#fafafa" }}>{e}</div>
+                style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, borderRadius:10, cursor:"pointer", border: form.emoji===e ? "2px solid #2563EB" : "2px solid #f2f2f7", background:"#fbfbfd" }}>{e}</div>
             ))}
           </div>
           <div style={label}>Model</div>
           <div style={{ display:"flex", gap:6 }}>
             {AGENT_MODELS.map(([val, lbl]) => (
               <div key={val} onClick={() => setForm(f => ({ ...f, model:val }))}
-                style={{ flex:1, textAlign:"center", padding:"7px 0", borderRadius:6, cursor:"pointer", fontSize:12, fontWeight:700, color: form.model===val ? "#fff" : "#6b7280", background: form.model===val ? (MODEL_BADGE_COLOR[val]||"#374151") : "#f3f4f6" }}>{lbl}</div>
+                style={{ flex:1, textAlign:"center", padding:"7px 0", borderRadius:10, cursor:"pointer", fontSize:12, fontWeight:600, color: form.model===val ? "#fff" : "#6e6e73", background: form.model===val ? (MODEL_BADGE_COLOR[val]||"#424245") : "#f2f2f7" }}>{lbl}</div>
             ))}
           </div>
           <div style={label}>Rol (kort)</div>
@@ -1821,11 +1821,11 @@ function AgentsPanel({ session }) {
           <div style={label}>System prompt</div>
           <textarea style={{ ...field, minHeight:90, resize:"vertical" }} value={form.system_prompt} onChange={e => setForm(f => ({ ...f, system_prompt:e.target.value }))} placeholder="Je bent ... Antwoord kort en in het Nederlands." />
           <button onClick={saveAgent} disabled={!form.name.trim()}
-            style={{ marginTop:16, width:"100%", padding:"9px 0", background: form.name.trim() ? "#2563EB" : "#e5e7eb", color: form.name.trim() ? "#fff" : "#9ca3af", border:"none", borderRadius:6, fontSize:13, fontWeight:700, cursor: form.name.trim() ? "pointer" : "default" }}>
+            style={{ marginTop:16, width:"100%", padding:"9px 0", background: form.name.trim() ? "#2563EB" : "#e5e5ea", color: form.name.trim() ? "#fff" : "#76767b", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor: form.name.trim() ? "pointer" : "default" }}>
             {editing ? "Opslaan" : "Aanmaken"}
           </button>
           {editing && (
-            <button onClick={removeAgent} style={{ marginTop:8, width:"100%", padding:"8px 0", background:"#FEE2E2", color:"#DC2626", border:"none", borderRadius:6, fontSize:12, fontWeight:600, cursor:"pointer" }}>Verwijderen</button>
+            <button onClick={removeAgent} style={{ marginTop:8, width:"100%", padding:"8px 0", background:"#FEE2E2", color:"#DC2626", border:"none", borderRadius:10, fontSize:12, fontWeight:600, cursor:"pointer" }}>Verwijderen</button>
           )}
         </div>
       </div>
@@ -1838,36 +1838,36 @@ function AgentsPanel({ session }) {
       <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:'var(--font-sans)' }}>
         <div style={headerStyle}>
           <button onClick={() => { setSelected(null); setOutput(null); setInput(""); }}
-            style={{ background:"none", border:"none", color:"#9ca3af", cursor:"pointer", fontSize:16, padding:"2px 4px", lineHeight:1 }}>←</button>
+            style={{ background:"none", border:"none", color:"#76767b", cursor:"pointer", fontSize:16, padding:"2px 4px", lineHeight:1 }}>←</button>
           <span style={{ fontSize:18, lineHeight:1 }}>{selected.emoji}</span>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:"#f9fafb", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{selected.name}</div>
-            <div style={{ fontSize:11, color:"#6b7280", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{selected.role}</div>
+            <div style={{ fontSize:13, fontWeight:600, color:"#f5f5f7", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{selected.name}</div>
+            <div style={{ fontSize:12, color:"#6e6e73", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{selected.role}</div>
           </div>
-          <span style={{ fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:4, background: MODEL_BADGE_COLOR[selected.model] || "#374151", color:"#fff", flexShrink:0 }}>
+          <span style={{ fontSize:11, fontWeight:600, padding:"2px 7px", borderRadius:8, background: MODEL_BADGE_COLOR[selected.model] || "#424245", color:"#fff", flexShrink:0 }}>
             {selected.model}
           </span>
         </div>
         <div style={{ flex:1, overflowY:"auto", padding:"12px 14px" }}>
           {output && (
             <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:10, color:"#9ca3af", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:8 }}>Response</div>
-              <div style={{ padding:"10px 12px", background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:6, fontSize:13, color:"#166534", lineHeight:1.6, whiteSpace:"pre-wrap", wordBreak:"break-word" }}>{output}</div>
+              <div style={{ fontSize:11, color:"#76767b", fontWeight:600, letterSpacing:0.4, textTransform:"uppercase", marginBottom:8 }}>Response</div>
+              <div style={{ padding:"10px 12px", background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:10, fontSize:13, color:"#166534", lineHeight:1.6, whiteSpace:"pre-wrap", wordBreak:"break-word" }}>{output}</div>
             </div>
           )}
           {running && (
-            <div style={{ display:"flex", alignItems:"center", gap:8, color:"#9ca3af", fontSize:12 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, color:"#76767b", fontSize:12 }}>
               <span style={{ animation:"bounce 1.2s infinite" }}>●</span> Agent is bezig...
             </div>
           )}
         </div>
-        <div style={{ padding:"12px 14px", borderTop:"1px solid #e5e7eb", background:"#fafafa", flexShrink:0 }}>
+        <div style={{ padding:"12px 14px", borderTop:"1px solid #e5e5ea", background:"#fbfbfd", flexShrink:0 }}>
           <textarea value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) trigger(); }}
             placeholder={`Stuur een bericht naar ${selected.name}...`} rows={3}
-            style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:6, padding:"8px 10px", fontSize:12, outline:"none", resize:"none", color:"#111827", background:"#fff", fontFamily:'var(--font-sans)', boxSizing:"border-box", display:"block" }} />
+            style={{ width:"100%", border:"1px solid #e5e5ea", borderRadius:10, padding:"8px 10px", fontSize:12, outline:"none", resize:"none", color:"#1d1d1f", background:"#fff", fontFamily:'var(--font-sans)', boxSizing:"border-box", display:"block" }} />
           <button onClick={trigger} disabled={running || !input.trim()}
-            style={{ marginTop:8, width:"100%", padding:"8px 0", background: running || !input.trim() ? "#e5e7eb" : "#2563EB", color: running || !input.trim() ? "#9ca3af" : "#fff", border:"none", borderRadius:6, fontSize:13, fontWeight:700, cursor: running || !input.trim() ? "default" : "pointer" }}>
+            style={{ marginTop:8, width:"100%", padding:"8px 0", background: running || !input.trim() ? "#e5e5ea" : "#2563EB", color: running || !input.trim() ? "#76767b" : "#fff", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor: running || !input.trim() ? "default" : "pointer" }}>
             {running ? "Bezig..." : "Verstuur"}
           </button>
         </div>
@@ -1878,30 +1878,30 @@ function AgentsPanel({ session }) {
   // ── LIJST ──
   return (
     <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:'var(--font-sans)' }}>
-      <div style={{ padding:"8px 14px", borderBottom:"2px solid #e5e7eb", background:"#f9fafb", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, textTransform:"uppercase" }}>Agents</div>
+      <div style={{ padding:"8px 14px", borderBottom:"2px solid #e5e5ea", background:"#f5f5f7", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ fontSize:12, fontWeight:600, color:"#6e6e73", letterSpacing:0.4, textTransform:"uppercase" }}>Agents</div>
       </div>
       <div style={{ flex:1, overflowY:"auto" }}>
         {agents.length === 0 && (
-          <div style={{ padding:"30px 20px", textAlign:"center", color:"#9ca3af", fontSize:13 }}>Nog geen agents. Voeg ze toe via je API-key: geef je JMP-key aan een AI (ChatGPT, Gemini) en laat die je agents aanmaken.</div>
+          <div style={{ padding:"30px 20px", textAlign:"center", color:"#76767b", fontSize:13 }}>Nog geen agents. Voeg ze toe via je API-key: geef je JMP-key aan een AI (ChatGPT, Gemini) en laat die je agents aanmaken.</div>
         )}
         {agents.map(agent => (
           <div key={agent.id}
-            style={{ display:"flex", alignItems:"center", gap:9, padding:"9px 14px", borderBottom:"1px solid #f3f4f6", background:"#fff" }}
-            onMouseEnter={e => e.currentTarget.style.background="#f9fafb"}
+            style={{ display:"flex", alignItems:"center", gap:9, padding:"9px 14px", borderBottom:"1px solid #f2f2f7", background:"#fff" }}
+            onMouseEnter={e => e.currentTarget.style.background="#f5f5f7"}
             onMouseLeave={e => e.currentTarget.style.background="#fff"}>
             <div onClick={() => setSelected(agent)} style={{ flex:1, minWidth:0, display:"flex", alignItems:"center", gap:9, cursor:"pointer" }}>
               <span style={{ fontSize:15, flexShrink:0, lineHeight:1 }}>{agent.emoji}</span>
               <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:13, fontWeight:600, color:"#111827", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{agent.name}</div>
-                <div style={{ fontSize:11, color:"#6b7280", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{agent.role}</div>
+                <div style={{ fontSize:13, fontWeight:600, color:"#1d1d1f", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{agent.name}</div>
+                <div style={{ fontSize:12, color:"#6e6e73", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{agent.role}</div>
               </div>
-              <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:3, background: MODEL_BADGE_COLOR[agent.model] || "#374151", color:"#fff", flexShrink:0 }}>
+              <span style={{ fontSize:11, fontWeight:600, padding:"2px 6px", borderRadius:8, background: MODEL_BADGE_COLOR[agent.model] || "#424245", color:"#fff", flexShrink:0 }}>
                 {(agent.model||"sonnet").toUpperCase()}
               </span>
             </div>
             <button onClick={() => openEdit(agent)} title="Bewerken"
-              style={{ background:"none", border:"none", color:"#9ca3af", cursor:"pointer", fontSize:13, padding:"2px 4px", flexShrink:0 }}>✎</button>
+              style={{ background:"none", border:"none", color:"#76767b", cursor:"pointer", fontSize:13, padding:"2px 4px", flexShrink:0 }}>✎</button>
           </div>
         ))}
       </div>
@@ -1913,9 +1913,9 @@ function Splitter({ onMouseDown }) {
   return (
     <div
       onMouseDown={onMouseDown}
-      style={{ width:6, flexShrink:0, background:"#e5e7eb", cursor:"col-resize", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10, userSelect:"none" }}
+      style={{ width:6, flexShrink:0, background:"#e5e5ea", cursor:"col-resize", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10, userSelect:"none" }}
       onMouseEnter={e => e.currentTarget.style.background="#2563EB"}
-      onMouseLeave={e => e.currentTarget.style.background="#e5e7eb"}
+      onMouseLeave={e => e.currentTarget.style.background="#e5e5ea"}
     >
       <div style={{ width:2, height:30, background:"rgba(255,255,255,0.6)", borderRadius:2 }} />
     </div>
@@ -1966,12 +1966,12 @@ function LoginPage() {
   ];
 
   return (
-    <div style={{ minHeight:"100vh", background:"#111827", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:'var(--font-sans)' }}>
+    <div style={{ minHeight:"100vh", background:"#1d1d1f", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:'var(--font-sans)' }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');`}</style>
 
       {/* Logo */}
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:40 }}>
-        <span style={{ fontSize:22, fontWeight:700, color:"#f9fafb", letterSpacing:0.5 }}>justmyplan</span>
+        <span style={{ fontSize:22, fontWeight:600, color:"#f5f5f7", letterSpacing:0.4 }}>justmyplan</span>
         <div style={{ display:"flex", gap:5 }}>
           <div style={{ width:8, height:8, borderRadius:"50%", background:"#DC2626" }} />
           <div style={{ width:8, height:8, borderRadius:"50%", background:"#E6B400" }} />
@@ -1980,8 +1980,8 @@ function LoginPage() {
       </div>
 
       {/* Card */}
-      <div style={{ background:"#18181b", borderRadius:16, padding:"36px 40px", width:"100%", maxWidth:400, boxShadow:"0 8px 32px rgba(0,0,0,0.4)" }}>
-        <h2 style={{ color:"#f9fafb", fontSize:20, fontWeight:700, marginBottom:24, textAlign:"center" }}>
+      <div style={{ background:"#1c1c1e", borderRadius:20, padding:"36px 40px", width:"100%", maxWidth:400, boxShadow:"0 8px 32px rgba(0,0,0,0.4)" }}>
+        <h2 style={{ color:"#f5f5f7", fontSize:20, fontWeight:600, marginBottom:24, textAlign:"center" }}>
           {mode === "login" ? "Inloggen" : mode === "signup" ? "Account aanmaken" : "Wachtwoord vergeten"}
         </h2>
 
@@ -1990,29 +1990,29 @@ function LoginPage() {
           <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
             {providers.map(p => (
               <button key={p.id} onClick={() => handleOAuth(p.id)}
-                style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, padding:"11px 0", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, fontWeight:500, cursor:"pointer", transition:"background 0.15s" }}
-                onMouseEnter={e => e.currentTarget.style.background="#3f3f46"}
-                onMouseLeave={e => e.currentTarget.style.background="#27272a"}>
-                <span style={{ fontWeight:700, fontSize:15 }}>{p.icon}</span> Doorgaan met {p.label}
+                style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, padding:"11px 0", borderRadius:12, border:"1px solid #3a3a3c", background:"#2c2c2e", color:"#f5f5f7", fontSize:14, fontWeight:500, cursor:"pointer", transition:"background 0.15s" }}
+                onMouseEnter={e => e.currentTarget.style.background="#3a3a3c"}
+                onMouseLeave={e => e.currentTarget.style.background="#2c2c2e"}>
+                <span style={{ fontWeight:600, fontSize:15 }}>{p.icon}</span> Doorgaan met {p.label}
               </button>
             ))}
           </div>
 
           {/* Divider */}
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:24 }}>
-            <div style={{ flex:1, height:1, background:"#3f3f46" }} />
-            <span style={{ color:"#71717a", fontSize:12 }}>of</span>
-            <div style={{ flex:1, height:1, background:"#3f3f46" }} />
+            <div style={{ flex:1, height:1, background:"#3a3a3c" }} />
+            <span style={{ color:"#8e8e93", fontSize:12 }}>of</span>
+            <div style={{ flex:1, height:1, background:"#3a3a3c" }} />
           </div>
         </>}
 
         {/* Email form */}
         <form onSubmit={handleEmail} style={{ display:"flex", flexDirection:"column", gap:12 }}>
           <input type="email" placeholder="E-mailadres" value={email} onChange={e => setEmail(e.target.value)} required
-            style={{ padding:"10px 14px", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, outline:"none" }} />
+            style={{ padding:"10px 14px", borderRadius:12, border:"1px solid #3a3a3c", background:"#2c2c2e", color:"#f5f5f7", fontSize:14, outline:"none" }} />
           {mode !== "forgot" && (
             <input type="password" placeholder="Wachtwoord (min. 6 tekens)" value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
-              style={{ padding:"10px 14px", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, outline:"none" }} />
+              style={{ padding:"10px 14px", borderRadius:12, border:"1px solid #3a3a3c", background:"#2c2c2e", color:"#f5f5f7", fontSize:14, outline:"none" }} />
           )}
           {mode === "login" && (
             <div style={{ textAlign:"right", marginTop:-4 }}>
@@ -2025,14 +2025,14 @@ function LoginPage() {
           {success && <div style={{ color:"#86efac", fontSize:13 }}>{success}</div>}
           {!success && (
             <button type="submit" disabled={loading}
-              style={{ padding:"11px 0", borderRadius:8, border:"none", background:"#2563EB", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity: loading ? 0.7 : 1, transition:"opacity 0.15s" }}>
+              style={{ padding:"11px 0", borderRadius:12, border:"none", background:"#2563EB", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity: loading ? 0.7 : 1, transition:"opacity 0.15s" }}>
               {loading ? "Laden..." : mode === "login" ? "Inloggen" : mode === "signup" ? "Account aanmaken" : "Resetlink sturen"}
             </button>
           )}
         </form>
 
         {/* Toggle mode */}
-        <div style={{ textAlign:"center", marginTop:20, fontSize:13, color:"#71717a" }}>
+        <div style={{ textAlign:"center", marginTop:20, fontSize:13, color:"#8e8e93" }}>
           {mode === "forgot" ? (
             <span onClick={() => switchMode("login")} style={{ color:"#60a5fa", cursor:"pointer", fontWeight:500 }}>Terug naar inloggen</span>
           ) : mode === "login" ? <>
@@ -2067,29 +2067,29 @@ function ResetPasswordPage({ onDone }) {
   };
 
   return (
-    <div style={{ minHeight:"100vh", background:"#111827", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:'var(--font-sans)' }}>
+    <div style={{ minHeight:"100vh", background:"#1d1d1f", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:'var(--font-sans)' }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');`}</style>
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:40 }}>
-        <span style={{ fontSize:22, fontWeight:700, color:"#f9fafb" }}>justmyplan</span>
+        <span style={{ fontSize:22, fontWeight:600, color:"#f5f5f7" }}>justmyplan</span>
         <div style={{ display:"flex", gap:5 }}>
           <div style={{ width:8, height:8, borderRadius:"50%", background:"#DC2626" }} />
           <div style={{ width:8, height:8, borderRadius:"50%", background:"#E6B400" }} />
           <div style={{ width:8, height:8, borderRadius:"50%", background:"#2563EB" }} />
         </div>
       </div>
-      <div style={{ background:"#18181b", borderRadius:16, padding:"36px 40px", width:"100%", maxWidth:400, boxShadow:"0 8px 32px rgba(0,0,0,0.4)" }}>
-        <h2 style={{ color:"#f9fafb", fontSize:20, fontWeight:700, marginBottom:24, textAlign:"center" }}>Nieuw wachtwoord instellen</h2>
+      <div style={{ background:"#1c1c1e", borderRadius:20, padding:"36px 40px", width:"100%", maxWidth:400, boxShadow:"0 8px 32px rgba(0,0,0,0.4)" }}>
+        <h2 style={{ color:"#f5f5f7", fontSize:20, fontWeight:600, marginBottom:24, textAlign:"center" }}>Nieuw wachtwoord instellen</h2>
         {success ? (
           <div style={{ color:"#86efac", fontSize:14, textAlign:"center" }}>Wachtwoord gewijzigd! Je bent nu ingelogd.</div>
         ) : (
           <form onSubmit={handleReset} style={{ display:"flex", flexDirection:"column", gap:12 }}>
             <input type="password" placeholder="Nieuw wachtwoord" value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
-              style={{ padding:"10px 14px", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, outline:"none" }} />
+              style={{ padding:"10px 14px", borderRadius:12, border:"1px solid #3a3a3c", background:"#2c2c2e", color:"#f5f5f7", fontSize:14, outline:"none" }} />
             <input type="password" placeholder="Herhaal wachtwoord" value={password2} onChange={e => setPassword2(e.target.value)} required
-              style={{ padding:"10px 14px", borderRadius:8, border:"1px solid #3f3f46", background:"#27272a", color:"#f9fafb", fontSize:14, outline:"none" }} />
+              style={{ padding:"10px 14px", borderRadius:12, border:"1px solid #3a3a3c", background:"#2c2c2e", color:"#f5f5f7", fontSize:14, outline:"none" }} />
             {error && <div style={{ color:"#FCA5A5", fontSize:13 }}>{error}</div>}
             <button type="submit" disabled={loading}
-              style={{ padding:"11px 0", borderRadius:8, border:"none", background:"#2563EB", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity: loading ? 0.7 : 1 }}>
+              style={{ padding:"11px 0", borderRadius:12, border:"none", background:"#2563EB", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity: loading ? 0.7 : 1 }}>
               {loading ? "Opslaan..." : "Wachtwoord opslaan"}
             </button>
           </form>
@@ -2304,7 +2304,7 @@ export default function App() {
         const known = new Set(out.map(l => l.id));
         t.forEach(task => {
           const id = task.list || "mine";
-          if (!known.has(id)) { known.add(id); out.push({ id, label: LEGACY_LIST_LABELS[id] || id, color: LEGACY_LIST_COLORS[id] || "#9ca3af" }); }
+          if (!known.has(id)) { known.add(id); out.push({ id, label: LEGACY_LIST_LABELS[id] || id, color: LEGACY_LIST_COLORS[id] || "#76767b" }); }
         });
         return out;
       };
@@ -2329,7 +2329,7 @@ export default function App() {
         return { share, sl, sTasks, sEvents };
       }));
       setSharedLists(shared.flatMap(({ share, sl }) => sl.map(l => ({
-        id: prefixSharedId(share.owner_id, l.listId), label: l.label || "Gedeeld", color: l.color || "#9ca3af",
+        id: prefixSharedId(share.owner_id, l.listId), label: l.label || "Gedeeld", color: l.color || "#76767b",
         isShared: true, ownerId: share.owner_id, ownerEmail: share.owner_email, permission: share.permission,
       }))));
       setSharedTasks(shared.flatMap(({ share, sTasks }) => sTasks.map(task => ({
@@ -2518,15 +2518,15 @@ export default function App() {
   const isCollapsedAgent = widths[3] <= min + 10;
 
   const CollapsedLabel = ({ label }) => (
-    <div style={{ width:"100%", height:"100%", background:"#ffffff", display:"flex", alignItems:"center", justifyContent:"center", borderRight:"1px solid #e5e7eb" }}>
-      <span style={{ fontFamily:'var(--font-sans)', fontSize:13, color:"#9ca3af", letterSpacing:2, writingMode:"vertical-rl", textOrientation:"mixed", transform:"rotate(180deg)", userSelect:"none" }}>{label}</span>
+    <div style={{ width:"100%", height:"100%", background:"#ffffff", display:"flex", alignItems:"center", justifyContent:"center", borderRight:"1px solid #e5e5ea" }}>
+      <span style={{ fontFamily:'var(--font-sans)', fontSize:13, color:"#76767b", letterSpacing:0.4, writingMode:"vertical-rl", textOrientation:"mixed", transform:"rotate(180deg)", userSelect:"none" }}>{label}</span>
     </div>
   );
 
   if (authLoading) return (
-    <div style={{ minHeight:"100vh", background:"#111827", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:'var(--font-sans)' }}>
+    <div style={{ minHeight:"100vh", background:"#1d1d1f", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:'var(--font-sans)' }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');`}</style>
-      <span style={{ color:"#9ca3af", fontSize:14 }}>Laden...</span>
+      <span style={{ color:"#76767b", fontSize:14 }}>Laden...</span>
     </div>
   );
 
@@ -2540,39 +2540,39 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:var(--font-sans); }
-        ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:#d1d5db; border-radius:2px; }
+        ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:#d1d1d6; border-radius:2px; }
         @keyframes bounce { 0%,80%,100% { transform:scale(0.6); opacity:0.4 } 40% { transform:scale(1); opacity:1 } }
       `}</style>
-      <div style={{ height:44, background:"#111827", display:"flex", alignItems:"center", padding:"0 20px", gap:16, flexShrink:0 }}>
-        <span style={{ fontFamily:'var(--font-sans)', fontSize:16, fontWeight:700, color:"#f9fafb", letterSpacing:0.5 }}>justmyplan</span>
+      <div style={{ height:44, background:"#1d1d1f", display:"flex", alignItems:"center", padding:"0 20px", gap:16, flexShrink:0 }}>
+        <span style={{ fontFamily:'var(--font-sans)', fontSize:16, fontWeight:600, color:"#f5f5f7", letterSpacing:0.4 }}>justmyplan</span>
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#DC2626" }} />
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#E6B400" }} />
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#2563EB" }} />
         <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:12 }}>
-          <span style={{ fontSize:12, color:"#9ca3af" }}>{today.getDate()} {(MONTHS_BY_LANG[lang] || MONTHS_NL)[today.getMonth()]} {today.getFullYear()}</span>
+          <span style={{ fontSize:12, color:"#76767b" }}>{today.getDate()} {(MONTHS_BY_LANG[lang] || MONTHS_NL)[today.getMonth()]} {today.getFullYear()}</span>
           <button onClick={() => setShowSettings(true)}
             title="Instellingen"
-            style={{ background:"none", border:"none", cursor:"pointer", color:"#9ca3af", fontSize:18, padding:"4px 6px", display:"flex", alignItems:"center", borderRadius:6, transition:"color 0.15s" }}
-            onMouseEnter={e => e.currentTarget.style.color="#f9fafb"}
-            onMouseLeave={e => e.currentTarget.style.color="#9ca3af"}>
+            style={{ background:"none", border:"none", cursor:"pointer", color:"#76767b", fontSize:18, padding:"4px 6px", display:"flex", alignItems:"center", borderRadius:10, transition:"color 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.color="#f5f5f7"}
+            onMouseLeave={e => e.currentTarget.style.color="#76767b"}>
             ⚙
           </button>
         </div>
       </div>
       <div ref={containerRef} style={{ display:"flex", height:"calc(100vh - 44px)", overflow:"hidden" }}>
-        {visiblePanels.tasks && <div style={{ width: widths[0] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.22s ease-out" }}>
+        {visiblePanels.tasks && <div style={{ width: widths[0] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.22s cubic-bezier(0.25,0.1,0.25,1)" }}>
           {isCollapsedLeft ? <CollapsedLabel label={t(lang, 'tasks')} /> : <TaskPanel tasks={tasks} setTasks={setTasks} trash={trash} setTrash={setTrash} lists={lists} setLists={setLists} sharedLists={sharedLists.filter(l => isSharedVisible(l.id))} sharedTasks={sharedTasks.filter(tk => isSharedVisible(tk.list))} personColors={personColors} userId={session.user.id} panelWidth={widths[0]??320} />}
         </div>}
         {visiblePanels.tasks && (visiblePanels.calendar || visiblePanels.assistant || visiblePanels.agents) && <Splitter onMouseDown={startLeft} />}
-        {visiblePanels.calendar && <div style={{ width: widths[1] ?? 200, flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.22s ease-out" }}>
+        {visiblePanels.calendar && <div style={{ width: widths[1] ?? 200, flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.22s cubic-bezier(0.25,0.1,0.25,1)" }}>
           {isCollapsedMid ? <CollapsedLabel label={t(lang, 'calendar')} /> : <CalendarPanel events={events} setEvents={setEvents} tasks={tasks} sharedEvents={sharedEvents.filter(e => isSharedVisible("cal:" + e.ownerId))} personColors={personColors} invitees={outgoingShares.filter(s => s.status==="accepted").map(s => s.invited_email)} userId={session.user.id} panelWidth={widths[1]??200} />}
         </div>}
         {visiblePanels.calendar && (visiblePanels.assistant || visiblePanels.agents) && <Splitter onMouseDown={startMid} />}
-        {visiblePanels.assistant && <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.22s ease-out" }}>
+        {visiblePanels.assistant && <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.22s cubic-bezier(0.25,0.1,0.25,1)" }}>
           {isCollapsedRight ? <CollapsedLabel label={t(lang, 'assistant')} /> : <AIPanel tasks={tasks} events={events} setTasks={setTasks} setEvents={setEvents} userId={session.user.id} />}
         </div>}
         {visiblePanels.assistant && visiblePanels.agents && <Splitter onMouseDown={startAgent} />}
-        {visiblePanels.agents && <div style={{ width: widths[3] ?? 44, flexShrink:0, overflow:"hidden", transition:"width 0.22s ease-out" }}>
+        {visiblePanels.agents && <div style={{ width: widths[3] ?? 44, flexShrink:0, overflow:"hidden", transition:"width 0.22s cubic-bezier(0.25,0.1,0.25,1)" }}>
           {isCollapsedAgent ? <CollapsedLabel label="Agents" /> : <AgentsPanel session={session} />}
         </div>}
       </div>
@@ -2580,54 +2580,54 @@ export default function App() {
       {/* ── Instellingen modal ── */}
       {showSettings && (
         <div onClick={() => setShowSettings(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }}>
-          <div onClick={e => e.stopPropagation()} style={{ background:"#18181b", borderRadius:16, width:400, maxHeight:"88vh", display:"flex", flexDirection:"column", boxShadow:"0 20px 60px rgba(0,0,0,0.5)" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#1c1c1e", borderRadius:20, width:400, maxHeight:"88vh", display:"flex", flexDirection:"column", boxShadow:"0 20px 60px rgba(0,0,0,0.5)" }}>
           <div style={{ padding:"28px 28px 0", flexShrink:0 }}>
 
             {/* Header */}
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24 }}>
-              <span style={{ color:"#f9fafb", fontSize:17, fontWeight:700 }}>{t(lang, 'settings')}</span>
-              <button onClick={() => setShowSettings(false)} style={{ background:"none", border:"none", color:"#9ca3af", fontSize:20, cursor:"pointer" }}>✕</button>
+              <span style={{ color:"#f5f5f7", fontSize:17, fontWeight:600 }}>{t(lang, 'settings')}</span>
+              <button onClick={() => setShowSettings(false)} style={{ background:"none", border:"none", color:"#76767b", fontSize:20, cursor:"pointer" }}>✕</button>
             </div>
           </div>
           <div style={{ overflowY:"auto", padding:"0 28px 28px", flex:1 }}>
 
             {/* Account sectie */}
             <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>{t(lang, 'accountSection')}</div>
-              <div style={{ fontSize:13, color:"#9ca3af", marginBottom:12 }}>{session.user.email}</div>
+              <div style={{ fontSize:12, color:"#6e6e73", fontWeight:600, letterSpacing:0.4, textTransform:"uppercase", marginBottom:10 }}>{t(lang, 'accountSection')}</div>
+              <div style={{ fontSize:13, color:"#76767b", marginBottom:12 }}>{session.user.email}</div>
               <button onClick={() => { supabase.auth.signOut(); setShowSettings(false); }}
-                style={{ width:"100%", padding:"9px 0", borderRadius:8, border:"1px solid #3f3f46", background:"none", color:"#f87171", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                style={{ width:"100%", padding:"9px 0", borderRadius:12, border:"1px solid #3a3a3c", background:"none", color:"#f87171", fontSize:13, fontWeight:600, cursor:"pointer" }}>
                 {t(lang, 'logout')}
               </button>
             </div>
 
-            <div style={{ height:1, background:"#27272a", marginBottom:20 }} />
+            <div style={{ height:1, background:"#2c2c2e", marginBottom:20 }} />
 
             {/* Taal sectie */}
             <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>{t(lang, 'langSection')}</div>
+              <div style={{ fontSize:12, color:"#6e6e73", fontWeight:600, letterSpacing:0.4, textTransform:"uppercase", marginBottom:10 }}>{t(lang, 'langSection')}</div>
               <select value={lang} onChange={e => { setLang(e.target.value); localStorage.setItem('jmp_lang', e.target.value); }}
-                style={{ width:"100%", padding:"9px 10px", borderRadius:8, border:"1px solid #3f3f46", background:"#111827", color:"#f9fafb", fontSize:13, cursor:"pointer", outline:"none" }}>
+                style={{ width:"100%", padding:"9px 10px", borderRadius:12, border:"1px solid #3a3a3c", background:"#1d1d1f", color:"#f5f5f7", fontSize:13, cursor:"pointer", outline:"none" }}>
                 {LANGUAGES.map(l => (
                   <option key={l.code} value={l.code}>{l.label}</option>
                 ))}
               </select>
             </div>
 
-            <div style={{ height:1, background:"#27272a", marginBottom:20 }} />
+            <div style={{ height:1, background:"#2c2c2e", marginBottom:20 }} />
 
             {/* API sectie */}
             <div>
-              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>{t(lang, 'apiSection')}</div>
-              <div style={{ fontSize:12, color:"#6b7280", marginBottom:12, lineHeight:1.5 }}>
+              <div style={{ fontSize:12, color:"#6e6e73", fontWeight:600, letterSpacing:0.4, textTransform:"uppercase", marginBottom:10 }}>{t(lang, 'apiSection')}</div>
+              <div style={{ fontSize:12, color:"#6e6e73", marginBottom:12, lineHeight:1.5 }}>
                 {t(lang, 'apiDesc')}
               </div>
 
               {/* API Key */}
-              <div style={{ fontSize:11, color:"#6b7280", marginBottom:4 }}>{t(lang, 'apiKeyLabel')}</div>
+              <div style={{ fontSize:12, color:"#6e6e73", marginBottom:4 }}>{t(lang, 'apiKeyLabel')}</div>
               {apiKey ? (
                 <>
-                  <div style={{ background:"#111827", borderRadius:6, padding:"8px 10px", fontSize:11, color:"#60a5fa", fontFamily:"monospace", marginBottom:8, wordBreak:"break-all" }}>
+                  <div style={{ background:"#1d1d1f", borderRadius:10, padding:"8px 10px", fontSize:12, color:"#60a5fa", fontFamily:"monospace", marginBottom:8, wordBreak:"break-all" }}>
                     {apiKey}
                   </div>
                   <div style={{ display:"flex", gap:8 }}>
@@ -2637,38 +2637,38 @@ export default function App() {
                         setKeyCopied(true);
                         setTimeout(() => setKeyCopied(false), 1600);
                       }}
-                      style={{ flex:1, padding:"8px 0", borderRadius:6,
-                        border: keyCopied ? "1px solid #16a34a" : "1px solid #3f3f46",
+                      style={{ flex:1, padding:"8px 0", borderRadius:10,
+                        border: keyCopied ? "1px solid #16a34a" : "1px solid #3a3a3c",
                         background: keyCopied ? "#16a34a" : "none",
-                        color:"#f9fafb", fontSize:12, cursor:"pointer",
+                        color:"#f5f5f7", fontSize:12, cursor:"pointer",
                         transition:"background 150ms ease, border-color 150ms ease" }}>
                       {keyCopied ? '✓ ' + t(lang, 'copied') : t(lang, 'copy')}
                     </button>
                     <button onClick={generateApiKey}
-                      style={{ flex:1, padding:"8px 0", borderRadius:6, border:"none", background:"#27272a", color:"#9ca3af", fontSize:12, cursor:"pointer" }}>
+                      style={{ flex:1, padding:"8px 0", borderRadius:10, border:"none", background:"#2c2c2e", color:"#76767b", fontSize:12, cursor:"pointer" }}>
                       {t(lang, 'renew')}
                     </button>
                   </div>
                 </>
               ) : (
                 <button onClick={generateApiKey}
-                  style={{ width:"100%", padding:"9px 0", borderRadius:8, border:"none", background:"#2563EB", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                  style={{ width:"100%", padding:"9px 0", borderRadius:12, border:"none", background:"#2563EB", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
                   {t(lang, 'generate')}
                 </button>
               )}
 
               {apiKey && (
-                <div style={{ fontSize:11, color:"#6b7280", marginTop:12, lineHeight:1.5 }}>
-                  {t(lang, 'apiUsage')} <code style={{ color:"#9ca3af" }}>Authorization: Bearer &lt;jouw-key&gt;</code>
+                <div style={{ fontSize:12, color:"#6e6e73", marginTop:12, lineHeight:1.5 }}>
+                  {t(lang, 'apiUsage')} <code style={{ color:"#76767b" }}>Authorization: Bearer &lt;jouw-key&gt;</code>
                 </div>
               )}
             </div>
 
-            <div style={{ height:1, background:"#27272a", margin:"20px 0" }} />
+            <div style={{ height:1, background:"#2c2c2e", margin:"20px 0" }} />
 
             {/* Panelen sectie */}
             <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:14 }}>Panelen</div>
+              <div style={{ fontSize:12, color:"#6e6e73", fontWeight:600, letterSpacing:0.4, textTransform:"uppercase", marginBottom:14 }}>Panelen</div>
               {[
                 { key:"tasks",     label:"Taken",           emoji:"✅" },
                 { key:"calendar",  label:"Agenda",          emoji:"📅" },
@@ -2676,19 +2676,19 @@ export default function App() {
                 { key:"agents",    label:"Agent Management",emoji:"⚡" },
               ].map(({ key, label, emoji }) => (
                 <div key={key} onClick={() => togglePanel(key)}
-                  style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", cursor:"pointer", borderBottom:"1px solid #27272a" }}>
-                  <div style={{ width:20, height:20, borderRadius:4, border:`2px solid ${visiblePanels[key] ? "#2563EB" : "#3f3f46"}`, background: visiblePanels[key] ? "#2563EB" : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"all 0.15s" }}>
+                  style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", cursor:"pointer", borderBottom:"1px solid #2c2c2e" }}>
+                  <div style={{ width:20, height:20, borderRadius:8, border:`2px solid ${visiblePanels[key] ? "#2563EB" : "#3a3a3c"}`, background: visiblePanels[key] ? "#2563EB" : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"all 200ms cubic-bezier(0.25,0.1,0.25,1)" }}>
                     {visiblePanels[key] && <span style={{ color:"#fff", fontSize:12, lineHeight:1 }}>✓</span>}
                   </div>
                   <span style={{ fontSize:14 }}>{emoji}</span>
-                  <span style={{ fontSize:13, color: visiblePanels[key] ? "#f9fafb" : "#6b7280", flex:1 }}>{label}</span>
+                  <span style={{ fontSize:13, color: visiblePanels[key] ? "#f5f5f7" : "#6e6e73", flex:1 }}>{label}</span>
                 </div>
               ))}
             </div>
 
             {/* Connecties */}
-            <div style={{ borderTop:"1px solid #27272a", paddingTop:20, marginTop:20 }}>
-              <div style={{ fontSize:11, color:"#6b7280", fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>Connecties</div>
+            <div style={{ borderTop:"1px solid #2c2c2e", paddingTop:20, marginTop:20 }}>
+              <div style={{ fontSize:12, color:"#6e6e73", fontWeight:600, letterSpacing:0.4, textTransform:"uppercase", marginBottom:12 }}>Connecties</div>
 
               {/* Uitnodigen: e-mail + knop opent een pop-up met rechten + lijsten */}
               <div style={{ display:"flex", gap:8, marginBottom:16 }}>
@@ -2697,10 +2697,10 @@ export default function App() {
                   onChange={e => setInviteEmail(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter" && inviteEmail.trim()) setInviteModalOpen(true); }}
                   placeholder="e-mailadres..."
-                  style={{ flex:1, background:"#111827", border:"1px solid #3f3f46", borderRadius:6, color:"#f9fafb", fontSize:12, padding:"7px 10px", outline:"none" }}
+                  style={{ flex:1, background:"#1d1d1f", border:"1px solid #3a3a3c", borderRadius:10, color:"#f5f5f7", fontSize:12, padding:"7px 10px", outline:"none" }}
                 />
                 <button onClick={() => inviteEmail.trim() && setInviteModalOpen(true)} disabled={!inviteEmail.trim()}
-                  style={{ background:"#2563EB", border:"none", borderRadius:6, color:"#fff", fontSize:12, fontWeight:600, padding:"0 14px", cursor: inviteEmail.trim() ? "pointer" : "default", opacity: inviteEmail.trim() ? 1 : 0.5 }}>
+                  style={{ background:"#2563EB", border:"none", borderRadius:10, color:"#fff", fontSize:12, fontWeight:600, padding:"0 14px", cursor: inviteEmail.trim() ? "pointer" : "default", opacity: inviteEmail.trim() ? 1 : 0.5 }}>
                   Uitnodigen
                 </button>
               </div>
@@ -2708,60 +2708,60 @@ export default function App() {
               {/* Verzoeken aan jou (accepteren = tweezijdige connectie) */}
               {incomingShares.length > 0 && (
                 <div style={{ marginBottom:14 }}>
-                  <div style={{ fontSize:11, color:"#9ca3af", fontWeight:700, marginBottom:6 }}>Verzoeken aan jou</div>
+                  <div style={{ fontSize:12, color:"#76767b", fontWeight:600, marginBottom:6 }}>Verzoeken aan jou</div>
                   {incomingShares.map(s => (
-                    <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, background:"#111827", borderRadius:6, padding:"7px 10px", marginBottom:4 }}>
-                      <span style={{ flex:1, fontSize:11, color:"#f9fafb", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.owner_email}</span>
-                      <button onClick={() => acceptInvitation(s)} style={{ background:"#166534", border:"none", borderRadius:4, color:"#4ade80", fontSize:11, fontWeight:700, padding:"3px 10px", cursor:"pointer" }}>Accepteren</button>
-                      <button onClick={() => declineInvitation(s.id)} style={{ background:"none", border:"none", color:"#6b7280", cursor:"pointer", fontSize:13, padding:"0 2px" }}>✕</button>
+                    <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, background:"#1d1d1f", borderRadius:10, padding:"7px 10px", marginBottom:4 }}>
+                      <span style={{ flex:1, fontSize:12, color:"#f5f5f7", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.owner_email}</span>
+                      <button onClick={() => acceptInvitation(s)} style={{ background:"#166534", border:"none", borderRadius:8, color:"#4ade80", fontSize:12, fontWeight:600, padding:"3px 10px", cursor:"pointer" }}>Accepteren</button>
+                      <button onClick={() => declineInvitation(s.id)} style={{ background:"none", border:"none", color:"#6e6e73", cursor:"pointer", fontSize:13, padding:"0 2px" }}>✕</button>
                     </div>
                   ))}
                 </div>
               )}
 
               {/* Je connecties */}
-              <div style={{ fontSize:11, color:"#9ca3af", fontWeight:700, marginBottom:6 }}>Je connecties</div>
+              <div style={{ fontSize:12, color:"#76767b", fontWeight:600, marginBottom:6 }}>Je connecties</div>
               {peopleEmails.length === 0 ? (
-                <div style={{ fontSize:12, color:"#3f3f46" }}>Nog geen connecties. Nodig iemand uit via e-mail.</div>
+                <div style={{ fontSize:12, color:"#3a3a3c" }}>Nog geen connecties. Nodig iemand uit via e-mail.</div>
               ) : peopleEmails.map(email => {
                 const out = outgoingShares.find(s => s.invited_email === email);
                 const myColor = personColors[email];
-                const dot = myColor ? PERSON_COLORS[myColor].dot : "#3f3f46";
+                const dot = myColor ? PERSON_COLORS[myColor].dot : "#3a3a3c";
                 const subtitle = out ? (out.status === "accepted" ? "tik om in te stellen" : "verzoek verstuurd") : "gedeeld met jou";
                 return (
                   <div key={email} onClick={() => setPersonModalEmail(email)}
-                    style={{ display:"flex", alignItems:"center", gap:8, background:"#111827", borderRadius:6, padding:"8px 10px", marginBottom:4, cursor:"pointer" }}>
-                    <div style={{ width:11, height:11, borderRadius:"50%", background:dot, border: myColor ? "none" : "1px solid #3f3f46", flexShrink:0 }} />
+                    style={{ display:"flex", alignItems:"center", gap:8, background:"#1d1d1f", borderRadius:10, padding:"8px 10px", marginBottom:4, cursor:"pointer" }}>
+                    <div style={{ width:11, height:11, borderRadius:"50%", background:dot, border: myColor ? "none" : "1px solid #3a3a3c", flexShrink:0 }} />
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:11, color:"#f9fafb", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{email}</div>
-                      <div style={{ fontSize:9, color:"#52525b" }}>{subtitle}</div>
+                      <div style={{ fontSize:12, color:"#f5f5f7", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{email}</div>
+                      <div style={{ fontSize:11, color:"#636366" }}>{subtitle}</div>
                     </div>
-                    <span style={{ color:"#52525b", fontSize:14 }}>›</span>
+                    <span style={{ color:"#636366", fontSize:14 }}>›</span>
                   </div>
                 );
               })}
             </div>
 
             {/* App Store */}
-            <div style={{ borderTop:"1px solid #27272a", paddingTop:16, marginTop:20, display:"flex", justifyContent:"center" }}>
+            <div style={{ borderTop:"1px solid #2c2c2e", paddingTop:16, marginTop:20, display:"flex", justifyContent:"center" }}>
               <a href="https://apps.apple.com/app/justmyplan/id6761423591" target="_blank" rel="noopener noreferrer"
-                style={{ display:"flex", alignItems:"center", gap:7, background:"#111827", border:"1px solid #3f3f46", borderRadius:8, padding:"7px 14px", textDecoration:"none" }}>
-                <svg width="16" height="16" viewBox="0 0 814 1000" fill="#f9fafb" xmlns="http://www.w3.org/2000/svg">
+                style={{ display:"flex", alignItems:"center", gap:7, background:"#1d1d1f", border:"1px solid #3a3a3c", borderRadius:12, padding:"7px 14px", textDecoration:"none" }}>
+                <svg width="16" height="16" viewBox="0 0 814 1000" fill="#f5f5f7" xmlns="http://www.w3.org/2000/svg">
                   <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-43.4-150.3-107.1C27.1 742 0 624.5 0 510.5c0-212.5 138.4-324.7 274.4-324.7 73.4 0 134.4 48.4 179.4 48.4 43.2 0 111.4-51.5 193.4-51.5 31.2 0 108.2 2.6 168.7 75.7zm-234-181.5c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z"/>
                 </svg>
                 <div>
-                  <div style={{ fontSize:9, color:"#6b7280", lineHeight:1.2 }}>Download in de</div>
-                  <div style={{ fontSize:12, color:"#f9fafb", fontWeight:600, lineHeight:1.2 }}>App Store</div>
+                  <div style={{ fontSize:11, color:"#6e6e73", lineHeight:1.2 }}>Download in de</div>
+                  <div style={{ fontSize:12, color:"#f5f5f7", fontWeight:600, lineHeight:1.2 }}>App Store</div>
                 </div>
               </a>
             </div>
 
             {/* Support + Privacy */}
             <div style={{ paddingTop:14, display:"flex", justifyContent:"center", gap:20 }}>
-              <a href="https://rjnieboer.com/support/justmyplan" target="_blank" rel="noopener noreferrer" style={{ fontSize:11, color:"#52525b", textDecoration:"none" }}>
+              <a href="https://rjnieboer.com/support/justmyplan" target="_blank" rel="noopener noreferrer" style={{ fontSize:12, color:"#636366", textDecoration:"none" }}>
                 Support
               </a>
-              <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ fontSize:11, color:"#52525b", textDecoration:"none" }}>
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ fontSize:12, color:"#636366", textDecoration:"none" }}>
                 Privacy Policy
               </a>
             </div>
@@ -2775,51 +2775,51 @@ export default function App() {
       {personModalEmail && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:80, display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setPersonModalEmail(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background:"#18181b", borderRadius:14, width:340, maxHeight:"85vh", overflowY:"auto", padding:22 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#1c1c1e", borderRadius:14, width:340, maxHeight:"85vh", overflowY:"auto", padding:22 }}>
             <div style={{ display:"flex", alignItems:"center", marginBottom:16 }}>
-              <div style={{ flex:1, color:"#f9fafb", fontSize:14, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{personModalEmail}</div>
-              <button onClick={() => setPersonModalEmail(null)} style={{ background:"none", border:"none", color:"#9ca3af", fontSize:18, cursor:"pointer" }}>✕</button>
+              <div style={{ flex:1, color:"#f5f5f7", fontSize:14, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{personModalEmail}</div>
+              <button onClick={() => setPersonModalEmail(null)} style={{ background:"none", border:"none", color:"#76767b", fontSize:18, cursor:"pointer" }}>✕</button>
             </div>
 
-            <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, marginBottom:8 }}>KLEUR</div>
+            <div style={{ fontSize:11, color:"#6e6e73", fontWeight:600, letterSpacing:0.4, marginBottom:8 }}>KLEUR</div>
             <div style={{ display:"flex", gap:10, marginBottom:18 }}>
               {PERSON_COLOR_KEYS.map(key => (
                 <div key={key} onClick={() => setPersonColor(personModalEmail, pmColor===key ? null : key)}
-                  style={{ width:28, height:28, borderRadius:"50%", background: PERSON_COLORS[key].dot, cursor:"pointer", border: pmColor===key ? "3px solid #f9fafb" : "3px solid transparent", boxSizing:"border-box" }} />
+                  style={{ width:28, height:28, borderRadius:"50%", background: PERSON_COLORS[key].dot, cursor:"pointer", border: pmColor===key ? "3px solid #f5f5f7" : "3px solid transparent", boxSizing:"border-box" }} />
               ))}
             </div>
 
             {/* Wat JIJ deelt met deze connectie */}
             {pmOut && (
               <>
-                <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, marginBottom:8 }}>
+                <div style={{ fontSize:11, color:"#6e6e73", fontWeight:600, letterSpacing:0.4, marginBottom:8 }}>
                   WAT JIJ DEELT MET {(personModalEmail||"").split("@")[0].toUpperCase()}
                 </div>
                 {ownListsForShare.map(l => {
                   const on = pmSharedIds.includes(l.id);
                   return (
                     <div key={l.id} onClick={() => toggleShareList(pmOut, l.id)}
-                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderBottom:"1px solid #27272a", cursor:"pointer" }}>
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderBottom:"1px solid #2c2c2e", cursor:"pointer" }}>
                       <div style={{ width:9, height:9, borderRadius:"50%", background:l.color }} />
-                      <div style={{ flex:1, color:"#f9fafb", fontSize:13 }}>{l.label}</div>
-                      <div style={{ width:22, height:22, borderRadius:5, border:"2px solid "+(on?"#2563EB":"#3f3f46"), background:on?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13 }}>{on?"✓":""}</div>
+                      <div style={{ flex:1, color:"#f5f5f7", fontSize:13 }}>{l.label}</div>
+                      <div style={{ width:22, height:22, borderRadius:8, border:"2px solid "+(on?"#2563EB":"#3a3a3c"), background:on?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13 }}>{on?"✓":""}</div>
                     </div>
                   );
                 })}
-                <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, margin:"18px 0 8px" }}>RECHTEN</div>
+                <div style={{ fontSize:11, color:"#6e6e73", fontWeight:600, letterSpacing:0.4, margin:"18px 0 8px" }}>RECHTEN</div>
                 <div style={{ display:"flex", gap:8 }}>
                   {[["view","👁 Bekijken"],["edit","✏️ Bewerken"]].map(([p,labelTxt]) => (
                     <button key={p} onClick={() => updateSharePermission(pmOut.id, p)}
-                      style={{ flex:1, border:"1px solid "+(pmOut.permission===p?"#2563EB":"#3f3f46"), background: pmOut.permission===p?"#1e3a8a":"transparent", color: pmOut.permission===p?"#fff":"#9ca3af", borderRadius:7, padding:"8px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>{labelTxt}</button>
+                      style={{ flex:1, border:"1px solid "+(pmOut.permission===p?"#2563EB":"#3a3a3c"), background: pmOut.permission===p?"#1e3a8a":"transparent", color: pmOut.permission===p?"#fff":"#76767b", borderRadius:10, padding:"8px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>{labelTxt}</button>
                   ))}
                 </div>
 
-                <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, margin:"18px 0 8px" }}>AGENDA</div>
+                <div style={{ fontSize:11, color:"#6e6e73", fontWeight:600, letterSpacing:0.4, margin:"18px 0 8px" }}>AGENDA</div>
                 <div onClick={() => setShareCalendar(pmOut.id, !pmOut.share_calendar)}
-                  style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderTop:"1px solid #27272a", cursor:"pointer" }}>
+                  style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderTop:"1px solid #2c2c2e", cursor:"pointer" }}>
                   <span style={{ fontSize:12 }}>📅</span>
-                  <div style={{ flex:1, color:"#f9fafb", fontSize:13 }}>Mijn agenda delen</div>
-                  <div style={{ width:22, height:22, borderRadius:5, border:"2px solid "+(pmOut.share_calendar?"#2563EB":"#3f3f46"), background:pmOut.share_calendar?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13 }}>{pmOut.share_calendar?"✓":""}</div>
+                  <div style={{ flex:1, color:"#f5f5f7", fontSize:13 }}>Mijn agenda delen</div>
+                  <div style={{ width:22, height:22, borderRadius:8, border:"2px solid "+(pmOut.share_calendar?"#2563EB":"#3a3a3c"), background:pmOut.share_calendar?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13 }}>{pmOut.share_calendar?"✓":""}</div>
                 </div>
               </>
             )}
@@ -2827,17 +2827,17 @@ export default function App() {
             {/* Wat DEZE PERSOON met jou deelt (zichtbaarheid) */}
             {(pmIncomingLists.length > 0 || pmHasIncomingCal) && (
               <>
-                <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, margin: pmOut ? "20px 0 8px" : "0 0 8px" }}>
+                <div style={{ fontSize:11, color:"#6e6e73", fontWeight:600, letterSpacing:0.4, margin: pmOut ? "20px 0 8px" : "0 0 8px" }}>
                   WAT {(personModalEmail||"").split("@")[0].toUpperCase()} MET JOU DEELT
                 </div>
                 {pmIncomingLists.map(l => {
                   const on = isSharedVisible(l.id);
                   return (
                     <div key={l.id} onClick={() => toggleSharedVisible(l.id)}
-                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderBottom:"1px solid #27272a", cursor:"pointer" }}>
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderBottom:"1px solid #2c2c2e", cursor:"pointer" }}>
                       <div style={{ width:9, height:9, borderRadius:"50%", background:l.color }} />
-                      <div style={{ flex:1, color:"#f9fafb", fontSize:13, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{l.label}</div>
-                      <span style={{ fontSize:16, color: on ? "#2563EB" : "#3f3f46" }}>{on ? "👁" : "🚫"}</span>
+                      <div style={{ flex:1, color:"#f5f5f7", fontSize:13, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{l.label}</div>
+                      <span style={{ fontSize:16, color: on ? "#2563EB" : "#3a3a3c" }}>{on ? "👁" : "🚫"}</span>
                     </div>
                   );
                 })}
@@ -2845,24 +2845,24 @@ export default function App() {
                   const on = isSharedVisible("cal:" + pmIncomingOwnerId);
                   return (
                     <div onClick={() => toggleSharedVisible("cal:" + pmIncomingOwnerId)}
-                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderBottom:"1px solid #27272a", cursor:"pointer" }}>
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderBottom:"1px solid #2c2c2e", cursor:"pointer" }}>
                       <span style={{ fontSize:12 }}>📅</span>
-                      <div style={{ flex:1, color:"#f9fafb", fontSize:13 }}>Agenda (afspraken)</div>
-                      <span style={{ fontSize:16, color: on ? "#2563EB" : "#3f3f46" }}>{on ? "👁" : "🚫"}</span>
+                      <div style={{ flex:1, color:"#f5f5f7", fontSize:13 }}>Agenda (afspraken)</div>
+                      <span style={{ fontSize:16, color: on ? "#2563EB" : "#3a3a3c" }}>{on ? "👁" : "🚫"}</span>
                     </div>
                   );
                 })()}
-                <div style={{ fontSize:11, color:"#6b7280", marginTop:10, lineHeight:1.5 }}>Klik op het oog om iets voor jezelf te tonen of verbergen. Dit verandert niets voor de ander.</div>
+                <div style={{ fontSize:12, color:"#6e6e73", marginTop:10, lineHeight:1.5 }}>Klik op het oog om iets voor jezelf te tonen of verbergen. Dit verandert niets voor de ander.</div>
               </>
             )}
 
             {!pmOut && pmIncomingLists.length === 0 && !pmHasIncomingCal && (
-              <div style={{ fontSize:12, color:"#9ca3af", lineHeight:1.6 }}>Nog niks gedeeld tussen jullie. Geef een kleur, of nodig 'm uit om een connectie te maken.</div>
+              <div style={{ fontSize:12, color:"#76767b", lineHeight:1.6 }}>Nog niks gedeeld tussen jullie. Geef een kleur, of nodig 'm uit om een connectie te maken.</div>
             )}
 
             {pmOut && (
               <button onClick={() => { removeShare(pmOut.id); setPersonModalEmail(null); }}
-                style={{ width:"100%", border:"1px solid #7f1d1d", background:"transparent", color:"#f87171", borderRadius:7, padding:"9px 0", fontSize:12, fontWeight:600, cursor:"pointer", marginTop:22 }}>Stop met delen</button>
+                style={{ width:"100%", border:"1px solid #7f1d1d", background:"transparent", color:"#f87171", borderRadius:10, padding:"9px 0", fontSize:12, fontWeight:600, cursor:"pointer", marginTop:22 }}>Stop met delen</button>
             )}
           </div>
         </div>
@@ -2872,42 +2872,42 @@ export default function App() {
       {inviteModalOpen && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:85, display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setInviteModalOpen(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background:"#18181b", borderRadius:14, width:340, maxHeight:"85vh", overflowY:"auto", padding:22 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#1c1c1e", borderRadius:14, width:340, maxHeight:"85vh", overflowY:"auto", padding:22 }}>
             <div style={{ display:"flex", alignItems:"center", marginBottom:16 }}>
-              <div style={{ flex:1, color:"#f9fafb", fontSize:14, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>Uitnodigen: {inviteEmail.trim()}</div>
-              <button onClick={() => setInviteModalOpen(false)} style={{ background:"none", border:"none", color:"#9ca3af", fontSize:18, cursor:"pointer" }}>✕</button>
+              <div style={{ flex:1, color:"#f5f5f7", fontSize:14, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>Uitnodigen: {inviteEmail.trim()}</div>
+              <button onClick={() => setInviteModalOpen(false)} style={{ background:"none", border:"none", color:"#76767b", fontSize:18, cursor:"pointer" }}>✕</button>
             </div>
 
-            <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, marginBottom:8 }}>RECHTEN</div>
+            <div style={{ fontSize:11, color:"#6e6e73", fontWeight:600, letterSpacing:0.4, marginBottom:8 }}>RECHTEN</div>
             <div style={{ display:"flex", gap:8, marginBottom:16 }}>
               {[["view","👁 Bekijken"],["edit","✏️ Bewerken"]].map(([p,labelTxt]) => (
                 <button key={p} onClick={() => setInvitePermission(p)}
-                  style={{ flex:1, border:"1px solid "+(invitePermission===p?"#2563EB":"#3f3f46"), background: invitePermission===p?"#1e3a8a":"transparent", color: invitePermission===p?"#fff":"#9ca3af", borderRadius:7, padding:"8px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>{labelTxt}</button>
+                  style={{ flex:1, border:"1px solid "+(invitePermission===p?"#2563EB":"#3a3a3c"), background: invitePermission===p?"#1e3a8a":"transparent", color: invitePermission===p?"#fff":"#76767b", borderRadius:10, padding:"8px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>{labelTxt}</button>
               ))}
             </div>
 
-            <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, marginBottom:8 }}>WELKE LIJSTEN DEEL JE</div>
+            <div style={{ fontSize:11, color:"#6e6e73", fontWeight:600, letterSpacing:0.4, marginBottom:8 }}>WELKE LIJSTEN DEEL JE</div>
             {ownListsForShare.length === 0 ? (
-              <div style={{ fontSize:12, color:"#3f3f46", marginBottom:12 }}>Je hebt nog geen eigen lijsten.</div>
+              <div style={{ fontSize:12, color:"#3a3a3c", marginBottom:12 }}>Je hebt nog geen eigen lijsten.</div>
             ) : (
               <div style={{ marginBottom:12 }}>
                 {ownListsForShare.map(l => {
                   const on = inviteLists.includes(l.id);
                   return (
                     <div key={l.id} onClick={() => setInviteLists(prev => prev.includes(l.id) ? prev.filter(x => x !== l.id) : [...prev, l.id])}
-                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderBottom:"1px solid #27272a", cursor:"pointer" }}>
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderBottom:"1px solid #2c2c2e", cursor:"pointer" }}>
                       <div style={{ width:9, height:9, borderRadius:"50%", background:l.color }} />
-                      <div style={{ flex:1, color:"#f9fafb", fontSize:13 }}>{l.label}</div>
-                      <div style={{ width:22, height:22, borderRadius:5, border:"2px solid "+(on?"#2563EB":"#3f3f46"), background:on?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13 }}>{on?"✓":""}</div>
+                      <div style={{ flex:1, color:"#f5f5f7", fontSize:13 }}>{l.label}</div>
+                      <div style={{ width:22, height:22, borderRadius:8, border:"2px solid "+(on?"#2563EB":"#3a3a3c"), background:on?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13 }}>{on?"✓":""}</div>
                     </div>
                   );
                 })}
               </div>
             )}
-            <div style={{ fontSize:11, color:"#6b7280", marginTop:8, marginBottom:14, lineHeight:1.5 }}>Afspraken deel je per stuk in de agenda. Later nog aan te passen bij de persoon.</div>
+            <div style={{ fontSize:12, color:"#6e6e73", marginTop:8, marginBottom:14, lineHeight:1.5 }}>Afspraken deel je per stuk in de agenda. Later nog aan te passen bij de persoon.</div>
 
             <button onClick={async () => { await invitePerson(); setInviteModalOpen(false); }}
-              style={{ width:"100%", background:"#2563EB", border:"none", borderRadius:7, color:"#fff", fontSize:13, fontWeight:700, padding:"10px 0", cursor:"pointer" }}>
+              style={{ width:"100%", background:"#2563EB", border:"none", borderRadius:10, color:"#fff", fontSize:13, fontWeight:600, padding:"10px 0", cursor:"pointer" }}>
               Verzenden
             </button>
           </div>
