@@ -10,6 +10,7 @@ const thumbs = new Map(); // scroller -> { el, geo }
 let scheduled = false;
 
 function isScroller(el) {
+  if (el === document.scrollingElement) return el.scrollHeight - window.innerHeight > 1;
   if (el.clientHeight < 40 || el.scrollHeight - el.clientHeight <= 1) return false;
   const oy = getComputedStyle(el).overflowY;
   return oy === "auto" || oy === "scroll";
@@ -51,23 +52,25 @@ function createThumb(scroller) {
 }
 
 function place(scroller, t) {
-  const rect = scroller.getBoundingClientRect();
+  const isPage = scroller === document.scrollingElement;
+  const rect = isPage ? { top: 0, left: 0, width: window.innerWidth } : scroller.getBoundingClientRect();
   const header = scroller.querySelector(":scope [data-sticky-header]");
   const top = header ? header.offsetHeight : 0;
   const hBar = scroller.offsetHeight - scroller.clientHeight;
-  const track = scroller.clientHeight - top - EDGE * 2;
-  const max = scroller.scrollHeight - scroller.clientHeight;
+  const viewH = isPage ? window.innerHeight : scroller.clientHeight;
+  const track = viewH - top - EDGE * 2;
+  const max = scroller.scrollHeight - viewH;
   if (track < MIN_HEIGHT || max <= 1 || rect.width === 0) {
     t.el.style.display = "none";
     return;
   }
-  const height = Math.max(MIN_HEIGHT, (track * scroller.clientHeight) / scroller.scrollHeight / 2);
+  const height = Math.max(MIN_HEIGHT, (track * viewH) / scroller.scrollHeight / 2);
   const y = rect.top + top + EDGE + (track - height) * (scroller.scrollTop / max);
-  const x = rect.left + scroller.clientWidth - 8 - EDGE;
+  const x = rect.left + (isPage ? window.innerWidth : scroller.clientWidth) - 8 - EDGE;
 
   // Niet tonen als het scrollgebied op die plek bedekt is (bijv. door een modal)
   const probe = document.elementFromPoint(x - 4, y + height / 2);
-  const covered = probe && probe !== t.el && !scroller.contains(probe);
+  const covered = !isPage && probe && probe !== t.el && !scroller.contains(probe);
   t.el.style.display = covered ? "none" : "block";
   t.el.style.top = `${y}px`;
   t.el.style.left = `${x}px`;
@@ -82,6 +85,7 @@ let scanTimer = null;
 function scan() {
   lastScan = performance.now();
   const found = new Set();
+  if (isScroller(document.scrollingElement)) found.add(document.scrollingElement);
   for (const el of document.body.querySelectorAll("*")) {
     if (!el.classList.contains("jmp-thumb") && isScroller(el)) found.add(el);
   }
