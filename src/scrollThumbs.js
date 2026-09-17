@@ -78,7 +78,7 @@ function place(scroller, t) {
   t.el.style.top = `${y}px`;
   t.el.style.left = `${x}px`;
   t.el.style.height = `${height}px`;
-  t.el.classList.toggle("on-dark", isDark(scroller));
+  t.el.classList.toggle("on-dark", isDark(probe && probe !== t.el ? probe : scroller));
   t.geo = { max, track, height, hBar };
 }
 
