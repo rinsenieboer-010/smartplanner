@@ -54,7 +54,10 @@ function createThumb(scroller) {
 function place(scroller, t) {
   const isPage = scroller === document.scrollingElement;
   const rect = isPage ? { top: 0, left: 0, width: window.innerWidth } : scroller.getBoundingClientRect();
-  const header = scroller.querySelector(":scope [data-sticky-header]");
+  const header = isPage ? null : [...scroller.querySelectorAll("[data-sticky-header]")].find((h) => {
+    for (let n = h.parentElement; n && n !== scroller; n = n.parentElement) if (thumbs.has(n)) return false;
+    return true;
+  });
   const top = header ? header.offsetHeight : 0;
   const hBar = scroller.offsetHeight - scroller.clientHeight;
   const viewH = isPage ? window.innerHeight : scroller.clientHeight;
