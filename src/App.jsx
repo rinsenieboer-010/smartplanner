@@ -801,10 +801,10 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
             <input value={editListValue} onChange={e => setEditListValue(e.target.value)} autoFocus
               onKeyDown={e => { if(e.key==="Enter") confirmRename(); if(e.key==="Escape") setEditingListName(false); }}
               onBlur={confirmRename}
-              style={{ fontFamily:"'DM Sans', sans-serif", fontSize:17, fontWeight:700, color:"#111827", border:"none", borderBottom:"2px solid #2563EB", outline:"none", background:"transparent", padding:"0 2px", minWidth:40, maxWidth:200 }} />
+              style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:700, color:"#111827", border:"none", borderBottom:"2px solid #2563EB", outline:"none", background:"transparent", padding:"0 2px", minWidth:40, maxWidth:200 }} />
           ) : (
             <div onClick={() => { if(!isTrash && !isShared) { setShowColorPicker(false); startRename(); } }}
-              style={{ fontFamily:"'DM Sans', sans-serif", fontSize:17, fontWeight:700, color:"#111827", cursor: !isTrash && !isShared ? "text" : "default" }}>
+              style={{ fontFamily:'var(--font-sans)', fontSize:17, fontWeight:700, color:"#111827", cursor: !isTrash && !isShared ? "text" : "default" }}>
               {activeLabel}
             </div>
           )}
@@ -882,7 +882,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                           onFocus={e => e.currentTarget.select()}
                           onBlur={() => commitSection(sec.id)}
                           onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") { setSectionValue(sec.title); setEditingSectionId(null); } }}
-                          style={{ flex:1, minWidth:0, border:"none", borderBottom:"2px solid "+fg, background:"transparent", outline:"none", fontFamily:"'DM Sans', sans-serif", fontSize:12, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", color:fg, padding:"1px 0" }} />
+                          style={{ flex:1, minWidth:0, border:"none", borderBottom:"2px solid "+fg, background:"transparent", outline:"none", fontFamily:'var(--font-sans)', fontSize:12, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", color:fg, padding:"1px 0" }} />
                       ) : (
                         <span onDoubleClick={() => { setEditingSectionId(sec.id); setSectionValue(sec.title); }} title={t(lang, 'renameSection')}
                           style={{ flex:1, minWidth:0, fontSize:12, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", color:fg, userSelect:"none", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
@@ -969,7 +969,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                           onBlur={() => { const nt = titleValue.trim(); if (nt && nt !== task.title) { setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,title:nt}; updateTaskDB(u); return u; })); } else if (!nt) { setTitleValue(task.title||""); } }}
                           onKeyDown={e => { if(e.key==="Enter") e.currentTarget.blur(); if(e.key==="Escape"){ setTitleValue(task.title||""); e.currentTarget.blur(); } }}
                           placeholder={t(lang, 'taskNamePlaceholder')}
-                          style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"6px 8px", fontSize:13, fontWeight:600, outline:"none", color:"#111827", background:"#fff", fontFamily:"'DM Sans', sans-serif", boxSizing:"border-box", display:"block", marginBottom:6 }}
+                          style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"6px 8px", fontSize:13, fontWeight:600, outline:"none", color:"#111827", background:"#fff", fontFamily:'var(--font-sans)', boxSizing:"border-box", display:"block", marginBottom:6 }}
                         />
                         <textarea
                           value={noteValue}
@@ -977,7 +977,7 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                           onBlur={() => { setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x,note:noteValue}; updateTaskDB(u); return u; })); }}
                           placeholder={t(lang, 'notePlaceholder')}
                           rows={2}
-                          style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"6px 8px", fontSize:12, outline:"none", resize:"none", color:"#374151", background:"#fff", fontFamily:"'DM Sans', sans-serif", boxSizing:"border-box", display:"block" }}
+                          style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"6px 8px", fontSize:12, outline:"none", resize:"none", color:"#374151", background:"#fff", fontFamily:'var(--font-sans)', boxSizing:"border-box", display:"block" }}
                         />
                         <button onClick={() => { const nt = titleValue.trim(); setTasks(t => t.map(x => { if (x.id!==task.id) return x; const u={...x, note:noteValue, title: nt || x.title}; updateTaskDB(u); return u; })); setOpenNoteId(null); }}
                           style={{ marginTop:5, background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"3px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
@@ -1205,7 +1205,7 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
         {/* Month picker */}
         <div style={{ position:"relative" }}>
           <span onClick={e => { e.stopPropagation(); setMonthPickerOpen(o => !o); setYearPickerOpen(false); }}
-            style={{ fontFamily:"'DM Sans', sans-serif", fontSize:18, color:"#111827", cursor:"pointer", borderBottom: monthPickerOpen ? "2px solid #2563EB" : "2px solid transparent", paddingBottom:1 }}>
+            style={{ fontFamily:'var(--font-sans)', fontSize:18, color:"#111827", cursor:"pointer", borderBottom: monthPickerOpen ? "2px solid #2563EB" : "2px solid transparent", paddingBottom:1 }}>
             {MONTHS_BY_LANG[lang][currentMonth]}
           </span>
           {monthPickerOpen && (
@@ -1229,7 +1229,7 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
         {/* Year picker */}
         <div style={{ position:"relative" }}>
           <span onClick={e => { e.stopPropagation(); setYearPickerOpen(o => !o); setMonthPickerOpen(false); }}
-            style={{ fontFamily:"'DM Sans', sans-serif", fontSize:18, color:"#111827", cursor:"pointer", borderBottom: yearPickerOpen ? "2px solid #2563EB" : "2px solid transparent", paddingBottom:1 }}>
+            style={{ fontFamily:'var(--font-sans)', fontSize:18, color:"#111827", cursor:"pointer", borderBottom: yearPickerOpen ? "2px solid #2563EB" : "2px solid transparent", paddingBottom:1 }}>
             {currentYear}
           </span>
           {yearPickerOpen && (
@@ -1450,7 +1450,7 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
               <textarea value={editNote} onChange={e => setEditNote(e.target.value)}
                 placeholder={t(lang, 'notePlaceholderAdd')}
                 rows={3}
-                style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"8px 10px", fontSize:12, outline:"none", boxSizing:"border-box", resize:"none", color:"#374151", fontFamily:"'DM Sans', sans-serif", display:"block" }} />
+                style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"8px 10px", fontSize:12, outline:"none", boxSizing:"border-box", resize:"none", color:"#374151", fontFamily:'var(--font-sans)', display:"block" }} />
               <button onClick={() => { const updated = {...selectedEvent, note: editNote}; updateEventDB(updated); setEvents(evs => evs.map(x => x.id===selectedEvent.id ? updated : x)); setSelectedEvent(null); }}
                 style={{ marginTop:6, background:"#2563EB", color:"#fff", border:"none", borderRadius:3, padding:"4px 12px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
                 {t(lang, 'save')}
@@ -1512,7 +1512,7 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
               <textarea value={modalNote} onChange={e => setModalNote(e.target.value)}
                 placeholder={t(lang, 'notePlaceholderOptional')}
                 rows={3}
-                style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"8px 10px", fontSize:12, outline:"none", boxSizing:"border-box", resize:"none", color:"#374151", fontFamily:"'DM Sans', sans-serif", display:"block" }} />
+                style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:4, padding:"8px 10px", fontSize:12, outline:"none", boxSizing:"border-box", resize:"none", color:"#374151", fontFamily:'var(--font-sans)', display:"block" }} />
             </div>
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={addEvent} style={{ flex:1, background:"#2563EB", color:"#fff", border:"none", borderRadius:4, padding:"8px", cursor:"pointer", fontSize:13, fontWeight:700 }}>{t(lang, 'add')}</button>
@@ -1688,7 +1688,7 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%", background:"#fafafa" }}>
       <div style={{ padding:"18px 16px 12px", borderBottom:"1px solid #e5e7eb" }}>
-        <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:18, color:"#111827" }}>{t(lang, 'assistant')}</div>
+        <div style={{ fontFamily:'var(--font-sans)', fontSize:18, color:"#111827" }}>{t(lang, 'assistant')}</div>
         <div style={{ fontSize:11, color:"#9ca3af", marginTop:2 }}>{tasks.length} {t(lang, 'aiTasks')} - {events.length} {t(lang, 'aiEvents')}</div>
       </div>
       <div style={{ flex:1, overflowY:"auto", padding:"12px 14px", display:"flex", flexDirection:"column", gap:10 }}>
@@ -1712,7 +1712,7 @@ function AIPanel({ tasks, events, setTasks, setEvents, userId }) {
             <div style={{ display:"flex", gap:4 }}>
               {[0,1,2].map(i => <div key={i} style={{ width:7, height:7, borderRadius:"50%", background:"#2563EB", animation:"bounce 1.2s infinite", animationDelay:(i*0.2)+"s" }} />)}
             </div>
-            {loadingStatus && <span style={{ fontSize:12, color:"#6b7280", fontFamily:"'DM Sans', sans-serif" }}>{loadingStatus}</span>}
+            {loadingStatus && <span style={{ fontSize:12, color:"#6b7280", fontFamily:'var(--font-sans)' }}>{loadingStatus}</span>}
           </div>
         )}
         <div ref={bottomRef} />
@@ -1789,12 +1789,12 @@ function AgentsPanel({ session }) {
 
   const headerStyle = { padding:"12px 14px", borderBottom:"2px solid #27272a", background:"#18181b", flexShrink:0, display:"flex", alignItems:"center", gap:10 };
   const label = { fontSize:10, color:"#9ca3af", fontWeight:700, letterSpacing:0.8, textTransform:"uppercase", margin:"12px 0 6px" };
-  const field = { width:"100%", border:"1px solid #e5e7eb", borderRadius:6, padding:"8px 10px", fontSize:13, outline:"none", color:"#111827", background:"#fff", fontFamily:"'DM Sans', sans-serif", boxSizing:"border-box" };
+  const field = { width:"100%", border:"1px solid #e5e7eb", borderRadius:6, padding:"8px 10px", fontSize:13, outline:"none", color:"#111827", background:"#fff", fontFamily:'var(--font-sans)', boxSizing:"border-box" };
 
   // ── BEWERKEN / AANMAKEN ──
   if (editing !== undefined) {
     return (
-      <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:"'DM Sans', sans-serif" }}>
+      <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:'var(--font-sans)' }}>
         <div style={headerStyle}>
           <button onClick={() => setEditing(undefined)} style={{ background:"none", border:"none", color:"#9ca3af", cursor:"pointer", fontSize:16 }}>←</button>
           <div style={{ flex:1, fontSize:13, fontWeight:700, color:"#f9fafb" }}>{editing ? "Agent bewerken" : "Nieuwe agent"}</div>
@@ -1835,7 +1835,7 @@ function AgentsPanel({ session }) {
   // ── CHAT ──
   if (selected) {
     return (
-      <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:"'DM Sans', sans-serif" }}>
+      <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:'var(--font-sans)' }}>
         <div style={headerStyle}>
           <button onClick={() => { setSelected(null); setOutput(null); setInput(""); }}
             style={{ background:"none", border:"none", color:"#9ca3af", cursor:"pointer", fontSize:16, padding:"2px 4px", lineHeight:1 }}>←</button>
@@ -1865,7 +1865,7 @@ function AgentsPanel({ session }) {
           <textarea value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) trigger(); }}
             placeholder={`Stuur een bericht naar ${selected.name}...`} rows={3}
-            style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:6, padding:"8px 10px", fontSize:12, outline:"none", resize:"none", color:"#111827", background:"#fff", fontFamily:"'DM Sans', sans-serif", boxSizing:"border-box", display:"block" }} />
+            style={{ width:"100%", border:"1px solid #e5e7eb", borderRadius:6, padding:"8px 10px", fontSize:12, outline:"none", resize:"none", color:"#111827", background:"#fff", fontFamily:'var(--font-sans)', boxSizing:"border-box", display:"block" }} />
           <button onClick={trigger} disabled={running || !input.trim()}
             style={{ marginTop:8, width:"100%", padding:"8px 0", background: running || !input.trim() ? "#e5e7eb" : "#2563EB", color: running || !input.trim() ? "#9ca3af" : "#fff", border:"none", borderRadius:6, fontSize:13, fontWeight:700, cursor: running || !input.trim() ? "default" : "pointer" }}>
             {running ? "Bezig..." : "Verstuur"}
@@ -1877,7 +1877,7 @@ function AgentsPanel({ session }) {
 
   // ── LIJST ──
   return (
-    <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:"'DM Sans', sans-serif" }}>
+    <div style={{ height:"100%", display:"flex", flexDirection:"column", background:"#fff", fontFamily:'var(--font-sans)' }}>
       <div style={{ padding:"8px 14px", borderBottom:"2px solid #e5e7eb", background:"#f9fafb", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:0.8, textTransform:"uppercase" }}>Agents</div>
       </div>
@@ -1966,8 +1966,8 @@ function LoginPage() {
   ];
 
   return (
-    <div style={{ minHeight:"100vh", background:"#111827", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans', sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');`}</style>
+    <div style={{ minHeight:"100vh", background:"#111827", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:'var(--font-sans)' }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');`}</style>
 
       {/* Logo */}
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:40 }}>
@@ -2067,8 +2067,8 @@ function ResetPasswordPage({ onDone }) {
   };
 
   return (
-    <div style={{ minHeight:"100vh", background:"#111827", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans', sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');`}</style>
+    <div style={{ minHeight:"100vh", background:"#111827", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:'var(--font-sans)' }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');`}</style>
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:40 }}>
         <span style={{ fontSize:22, fontWeight:700, color:"#f9fafb" }}>justmyplan</span>
         <div style={{ display:"flex", gap:5 }}>
@@ -2519,13 +2519,13 @@ export default function App() {
 
   const CollapsedLabel = ({ label }) => (
     <div style={{ width:"100%", height:"100%", background:"#ffffff", display:"flex", alignItems:"center", justifyContent:"center", borderRight:"1px solid #e5e7eb" }}>
-      <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, color:"#9ca3af", letterSpacing:2, writingMode:"vertical-rl", textOrientation:"mixed", transform:"rotate(180deg)", userSelect:"none" }}>{label}</span>
+      <span style={{ fontFamily:'var(--font-sans)', fontSize:13, color:"#9ca3af", letterSpacing:2, writingMode:"vertical-rl", textOrientation:"mixed", transform:"rotate(180deg)", userSelect:"none" }}>{label}</span>
     </div>
   );
 
   if (authLoading) return (
-    <div style={{ minHeight:"100vh", background:"#111827", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans', sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');`}</style>
+    <div style={{ minHeight:"100vh", background:"#111827", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:'var(--font-sans)' }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');`}</style>
       <span style={{ color:"#9ca3af", fontSize:14 }}>Laden...</span>
     </div>
   );
@@ -2537,14 +2537,14 @@ export default function App() {
     <LangContext.Provider value={lang}>
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'DM Sans', sans-serif; }
+        body { font-family:var(--font-sans); }
         ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:#d1d5db; border-radius:2px; }
         @keyframes bounce { 0%,80%,100% { transform:scale(0.6); opacity:0.4 } 40% { transform:scale(1); opacity:1 } }
       `}</style>
       <div style={{ height:44, background:"#111827", display:"flex", alignItems:"center", padding:"0 20px", gap:16, flexShrink:0 }}>
-        <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:16, fontWeight:700, color:"#f9fafb", letterSpacing:0.5 }}>justmyplan</span>
+        <span style={{ fontFamily:'var(--font-sans)', fontSize:16, fontWeight:700, color:"#f9fafb", letterSpacing:0.5 }}>justmyplan</span>
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#DC2626" }} />
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#E6B400" }} />
         <div style={{ width:8, height:8, borderRadius:"50%", background:"#2563EB" }} />
