@@ -601,7 +601,7 @@ const tr = {
     tasks: 'Aufgaben',
     calendar: 'Kalender',
     assistant: 'Assistent',
-    myLists: 'Meine listen',
+    myLists: 'Meine Listen',
     shared: 'GETEILT',
     newList: '+ Neue Liste',
     listNamePlaceholder: 'Listenname...',
