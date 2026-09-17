@@ -840,7 +840,8 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                     <div key={task.id} style={{ display:"flex", alignItems:"center", borderBottom:"1px solid #f2f2f7", background:"#fff" }}
                       onMouseEnter={e => e.currentTarget.style.background="#f5f5f7"}
                       onMouseLeave={e => e.currentTarget.style.background="#fff"}>
-                      <div style={{ width:41, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", ...cb, alignSelf:"stretch" }}>
+                      <div style={{ width:41, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", alignSelf:"stretch", position:"relative" }}>
+                        <span aria-hidden="true" style={{ position:"absolute", right:0, top:3, bottom:3, width:1, background:"#e5e5ea", pointerEvents:"none" }} />
                         <div style={{ width:15, height:15, borderRadius:"50%", background:"#2563EB", border:"2px solid #2563EB", flexShrink:0 }} />
                       </div>
                       <div style={{ width:COL.name, flexShrink:0, fontSize:13, color:"#6e6e73", padding:"8px 10px", textDecoration:"line-through", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", ...cb }}>{task.title}</div>
@@ -919,7 +920,8 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                     onMouseEnter={e => { if(!isFading) e.currentTarget.firstChild.style.background="#f5f5f7"; }}
                     onMouseLeave={e => { if(e.currentTarget.firstChild) e.currentTarget.firstChild.style.background="#fff"; }}>
                     <div style={{ display:"flex", alignItems:"center", background:"inherit" }}>
-                    <div style={{ width:41, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", ...cb, alignSelf:"stretch", position:"relative" }}>
+                    <div style={{ width:41, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", alignSelf:"stretch", position:"relative" }}>
+                      <span aria-hidden="true" style={{ position:"absolute", right:0, top:3, bottom:3, width:1, background:"#e5e5ea", pointerEvents:"none" }} />
                       {!isShared && <span className="jmp-grip" title={t(lang, 'dragToReorder')} style={{ position:"absolute", left:3, top:"50%", transform:"translateY(-50%)" }}>⠿</span>}
                       <button onClick={() => !isShared && completeDone(task.id)} style={{ width:15, height:15, borderRadius:"50%", cursor: isShared ? "default" : "pointer", border:"2px solid #d1d1d6", background:"transparent", flexShrink:0 }} />
                     </div>
@@ -1288,12 +1290,13 @@ function CalendarPanel({ events, setEvents, tasks, sharedEvents = [], personColo
                 const dayTasks = (tasks||[]).filter(t => t.deadline === dk);
                 const dayEvents = events.filter(e => e.date===dk);
                 return (
-                  <div key={di} style={{ flex:1, minWidth:0, overflow:"hidden", position:"relative", borderLeft:"1px solid #f2f2f7" }}>
+                  <div key={di} style={{ flex:1, minWidth:0, overflow:"hidden", position:"relative" }}>
                     {HOURS.map(h => (
                       <div key={h} onClick={() => openAdding(dk, h)}
-                        style={{ height: h === HOURS[0] ? HOUR_H + extraH : HOUR_H, borderBottom:"1px solid #f2f2f7", cursor:"pointer" }}
+                        style={{ height: h === HOURS[0] ? HOUR_H + extraH : HOUR_H, borderBottom:"1px solid #f2f2f7", cursor:"pointer", position:"relative" }}
                         onMouseEnter={e => e.currentTarget.style.background="#f5f5f7"}
                         onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                        <span aria-hidden="true" style={{ position:"absolute", left:0, top:3, bottom:3, width:1, background:"#f2f2f7", pointerEvents:"none" }} />
                         {h === HOURS[0] && extraH > 0 && (
                           <div style={{ display:"flex", flexDirection:"column", gap:2, padding:"2px 2px 0", overflow:"hidden", width:"100%" }} onClick={e => e.stopPropagation()}>
                             {dayTasks.map(task => (
