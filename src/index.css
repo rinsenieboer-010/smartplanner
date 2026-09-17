@@ -154,8 +154,8 @@ input:focus, textarea:focus, select:focus {
 }
 .jmp-thumb {
   position: fixed;
-  width: 11px;
-  border-radius: 5.5px;
+  width: 10px;
+  border-radius: 5px;
   background: rgba(0, 0, 0, 0.22);
   z-index: 2147483000;
   touch-action: none;
