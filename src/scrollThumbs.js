@@ -117,9 +117,10 @@ function scheduleScan() {
 export function initScrollThumbs() {
   if (typeof window === "undefined" || !CSS.supports("selector(::-webkit-scrollbar)")) return;
   window.addEventListener("scroll", schedule, { capture: true, passive: true });
-  window.addEventListener("resize", scheduleScan);
+  window.addEventListener("resize", () => { schedule(); scheduleScan(); });
   new MutationObserver((records) => {
     if (records.every((r) => r.target.classList?.contains("jmp-thumb"))) return;
+    schedule();
     scheduleScan();
   }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
   scheduleScan();
