@@ -2403,6 +2403,7 @@ export default function App() {
     if (!containerRef.current) return;
 
     let isDown = true;
+    containerRef.current.dataset.resizing = "1";
 
     const applyDrag = (ev, snap) => {
       const rect   = containerRef.current.getBoundingClientRect();
@@ -2476,6 +2477,7 @@ export default function App() {
       isDown = false;
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
+      delete containerRef.current?.dataset.resizing;
       applyDrag(ev, true);
     };
 

@@ -126,3 +126,17 @@ button:not(:disabled):active {
 input:focus, textarea:focus, select:focus {
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
 }
+
+/* Panelen direct laten meebewegen tijdens slepen; alleen de snap bij loslaten animeert */
+[data-resizing] > div {
+  transition: none !important;
+}
+[data-resizing] {
+  cursor: col-resize;
+}
+
+/* Subtiele, lichte scrollbalken zoals op macOS */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+}
