@@ -2117,6 +2117,8 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem('jmp_panels')) || { tasks:true, calendar:true, assistant:true, agents:true }; }
     catch { return { tasks:true, calendar:true, assistant:true, agents:true }; }
   });
+  const visibleRef = useRef(visiblePanels);
+  visibleRef.current = visiblePanels;
   const [apiKey, setApiKey]               = useState(null);
   const [keyCopied, setKeyCopied]         = useState(false);
   const [showSettings, setShowSettings]   = useState(false);
@@ -2379,7 +2381,13 @@ export default function App() {
         totalRef.current = containerRef.current.offsetWidth;
         setWidths(prev => {
           const agentW = prev[3] ?? 44;
-          const mid = totalRef.current - 320 - 320 - agentW - 18;
+          const vis = visibleRef.current;
+          // Alleen zichtbare panelen en hun splitters tellen mee, anders blijft er
+          // ruimte over of loopt het laatste paneel buiten beeld.
+          const fixed = (vis.tasks ? 320 : 0) + (vis.assistant ? 320 : 0) + (vis.agents ? agentW : 0);
+          const count = ["tasks","calendar","assistant","agents"].filter(k => vis[k]).length;
+          const splitters = Math.max(0, count - 1) * 6;
+          const mid = totalRef.current - fixed - splitters;
           return [320, Math.max(200, mid), 320, agentW];
         });
       }
@@ -2523,10 +2531,25 @@ export default function App() {
 
   const total = totalRef.current;
   const min   = Math.max(40, Math.round(total * 0.05));
-  const isCollapsedLeft  = widths[0] <= min + 10;
-  const isCollapsedMid   = widths[1] !== null && widths[1] <= min + 10;
-  const isCollapsedRight = widths[2] <= min + 10;
-  const isCollapsedAgent = widths[3] <= min + 10;
+
+  // Het laatste zichtbare paneel vult altijd de restruimte, zodat er nooit een
+  // lege strook overblijft als de vaste breedtes niet exact optellen tot de
+  // vensterbreedte (bv. wanneer een paneel verborgen is).
+  const PANEL_ORDER = ["tasks", "calendar", "assistant", "agents"];
+  const rawWidths   = [widths[0] ?? 320, widths[1] ?? 200, widths[2] ?? 320, widths[3] ?? 44];
+  const visibleIdx  = PANEL_ORDER.map((k, i) => visiblePanels[k] ? i : -1).filter(i => i >= 0);
+  const eff = [...rawWidths];
+  if (total > 0 && visibleIdx.length > 0) {
+    const lastIdx    = visibleIdx[visibleIdx.length - 1];
+    const splitters  = (visibleIdx.length - 1) * 6;
+    const othersSum  = visibleIdx.slice(0, -1).reduce((sum, i) => sum + rawWidths[i], 0);
+    eff[lastIdx]     = Math.max(40, total - othersSum - splitters);
+  }
+
+  const isCollapsedLeft  = eff[0] <= min + 10;
+  const isCollapsedMid   = eff[1] !== null && eff[1] <= min + 10;
+  const isCollapsedRight = eff[2] <= min + 10;
+  const isCollapsedAgent = eff[3] <= min + 10;
 
   const CollapsedLabel = ({ label }) => (
     <div style={{ width:"100%", height:"100%", background:"#ffffff", display:"flex", alignItems:"center", justifyContent:"center", borderRight:"1px solid #e5e5ea" }}>
@@ -2571,19 +2594,19 @@ export default function App() {
         </div>
       </div>
       <div ref={containerRef} style={{ display:"flex", height:"calc(100vh - 44px)", overflow:"hidden" }}>
-        {visiblePanels.tasks && <div style={{ width: widths[0] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.22s cubic-bezier(0.25,0.1,0.25,1)" }}>
-          {isCollapsedLeft ? <CollapsedLabel label={t(lang, 'tasks')} /> : <TaskPanel tasks={tasks} setTasks={setTasks} trash={trash} setTrash={setTrash} lists={lists} setLists={setLists} sharedLists={sharedLists.filter(l => isSharedVisible(l.id))} sharedTasks={sharedTasks.filter(tk => isSharedVisible(tk.list))} personColors={personColors} userId={session.user.id} panelWidth={widths[0]??320} />}
+        {visiblePanels.tasks && <div style={{ width: eff[0], flexShrink:0, overflow:"hidden", transition:"width 0.22s cubic-bezier(0.25,0.1,0.25,1)" }}>
+          {isCollapsedLeft ? <CollapsedLabel label={t(lang, 'tasks')} /> : <TaskPanel tasks={tasks} setTasks={setTasks} trash={trash} setTrash={setTrash} lists={lists} setLists={setLists} sharedLists={sharedLists.filter(l => isSharedVisible(l.id))} sharedTasks={sharedTasks.filter(tk => isSharedVisible(tk.list))} personColors={personColors} userId={session.user.id} panelWidth={eff[0]} />}
         </div>}
         {visiblePanels.tasks && (visiblePanels.calendar || visiblePanels.assistant || visiblePanels.agents) && <Splitter onMouseDown={startLeft} />}
-        {visiblePanels.calendar && <div style={{ width: widths[1] ?? 200, flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.22s cubic-bezier(0.25,0.1,0.25,1)" }}>
-          {isCollapsedMid ? <CollapsedLabel label={t(lang, 'calendar')} /> : <CalendarPanel events={events} setEvents={setEvents} tasks={tasks} sharedEvents={sharedEvents.filter(e => isSharedVisible("cal:" + e.ownerId))} personColors={personColors} invitees={outgoingShares.filter(s => s.status==="accepted").map(s => s.invited_email)} userId={session.user.id} panelWidth={widths[1]??200} />}
+        {visiblePanels.calendar && <div style={{ width: eff[1], flexShrink:0, overflow:"hidden", position:"relative", transition:"width 0.22s cubic-bezier(0.25,0.1,0.25,1)" }}>
+          {isCollapsedMid ? <CollapsedLabel label={t(lang, 'calendar')} /> : <CalendarPanel events={events} setEvents={setEvents} tasks={tasks} sharedEvents={sharedEvents.filter(e => isSharedVisible("cal:" + e.ownerId))} personColors={personColors} invitees={outgoingShares.filter(s => s.status==="accepted").map(s => s.invited_email)} userId={session.user.id} panelWidth={eff[1]} />}
         </div>}
         {visiblePanels.calendar && (visiblePanels.assistant || visiblePanels.agents) && <Splitter onMouseDown={startMid} />}
-        {visiblePanels.assistant && <div style={{ width: widths[2] ?? 320, flexShrink:0, overflow:"hidden", transition:"width 0.22s cubic-bezier(0.25,0.1,0.25,1)" }}>
+        {visiblePanels.assistant && <div style={{ width: eff[2], flexShrink:0, overflow:"hidden", transition:"width 0.22s cubic-bezier(0.25,0.1,0.25,1)" }}>
           {isCollapsedRight ? <CollapsedLabel label={t(lang, 'assistant')} /> : <AIPanel tasks={tasks} events={events} setTasks={setTasks} setEvents={setEvents} userId={session.user.id} />}
         </div>}
         {visiblePanels.assistant && visiblePanels.agents && <Splitter onMouseDown={startAgent} />}
-        {visiblePanels.agents && <div style={{ width: widths[3] ?? 44, flexShrink:0, overflow:"hidden", transition:"width 0.22s cubic-bezier(0.25,0.1,0.25,1)" }}>
+        {visiblePanels.agents && <div style={{ width: eff[3], flexShrink:0, overflow:"hidden", transition:"width 0.22s cubic-bezier(0.25,0.1,0.25,1)" }}>
           {isCollapsedAgent ? <CollapsedLabel label="Agents" /> : <AgentsPanel session={session} />}
         </div>}
       </div>
