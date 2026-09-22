@@ -436,18 +436,24 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
   };
   // Binnen elke groep op prioriteit: hoog → midden → laag → geen prioriteit
   const PRIO_RANK = { hoog: 0, midden: 1, laag: 2, "": 3 };
-  const sorted = [...visibleTasks].sort((a, b) => {
+  // De automatische sorteerregels apart, zodat het herplaatsen van een taak na
+  // een wijziging precies dezelfde volgorde aanhoudt als de lijst zelf.
+  // Prioriteit gaat er los in: de lijst vult frozenPrio in om een taak even op
+  // zijn plek te houden terwijl je doorklikt, het herplaatsen wil juist de
+  // echte, nieuwe prioriteit.
+  const compareTasks = (a, b, pa, pb) => {
     const ga = sortGroup(a), gb = sortGroup(b);
     if (ga !== gb) return ga - gb;
     if (a.deadline && b.deadline && a.deadline !== b.deadline) {
       return a.deadline < b.deadline ? -1 : 1;
     }
-    // zelfde datum (of beide zonder datum) → op prioriteit.
-    // frozenPrio houdt de oude positie vast terwijl je nog doorklikt.
-    const pa = frozenPrio[a.id] !== undefined ? frozenPrio[a.id] : a.priority;
-    const pb = frozenPrio[b.id] !== undefined ? frozenPrio[b.id] : b.priority;
     return (PRIO_RANK[pa] ?? 3) - (PRIO_RANK[pb] ?? 3);
-  });
+  };
+  const sorted = [...visibleTasks].sort((a, b) => compareTasks(
+    a, b,
+    frozenPrio[a.id] !== undefined ? frozenPrio[a.id] : a.priority,
+    frozenPrio[b.id] !== undefined ? frozenPrio[b.id] : b.priority,
+  ));
 
   // Handmatige volgorde: zodra je in een lijst sleept of een sectie toevoegt,
   // wint jouw volgorde van datum en prioriteit. Taken die nog geen plek hebben
@@ -485,6 +491,60 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
       updateTaskOrderDB(changed);
     }
     if (JSON.stringify(secs) !== JSON.stringify(sections)) saveSections(secs);
+  };
+
+  // Handmatige volgorde is een voorkeur, geen wet. Verandert er iets dat de
+  // automatische sortering bepaalt (prioriteit, datum, of een herhalende taak
+  // die je afvinkt), dan hoort die taak weer te bewegen. Hij krijgt dan een
+  // plek tussen de buren waar hij volgens die sortering thuishoort, terwijl de
+  // rest van je gesleepte volgorde blijft staan.
+  //
+  // Bestaan er secties, dan blijft de taak binnen zijn eigen sectie. Die kopjes
+  // zijn een bewuste indeling en daar hoort een prioriteitswijziging een taak
+  // niet uit te trekken. sort_order is double precision, dus er is altijd ruimte
+  // tussen twee buren zonder de rest te hoeven omnummeren.
+  const manualPosFor = (task, allTasks) => {
+    if (!isManual || task?.sortOrder == null) return null;
+
+    const others = allTasks
+      .filter(x => (x.list || "mine") === activeList && x.id !== task.id && x.sortOrder != null)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+    if (others.length === 0) return null;
+
+    // Grenzen van de sectie waarin de taak nu staat (geen secties → hele lijst)
+    let lo = -Infinity, hi = Infinity;
+    for (const s of sections) {
+      const so = s.sortOrder ?? 0;
+      if (so <= task.sortOrder && so > lo) lo = so;
+      if (so >  task.sortOrder && so < hi) hi = so;
+    }
+    const pool = others.filter(x => x.sortOrder > lo && x.sortOrder < hi);
+    if (pool.length === 0) return null;
+
+    // Eerste buur waar deze taak vóór hoort volgens de automatische sortering
+    const idx = pool.findIndex(x => compareTasks(task, x, task.priority, x.priority) < 0);
+    const prev = idx === -1 ? pool[pool.length - 1] : (idx === 0 ? null : pool[idx - 1]);
+    const next = idx === -1 ? null : pool[idx];
+
+    let pos;
+    if (prev && next)      pos = (prev.sortOrder + next.sortOrder) / 2;
+    else if (next)         pos = Number.isFinite(lo) ? (lo + next.sortOrder) / 2 : next.sortOrder - 1;
+    else if (prev)         pos = Number.isFinite(hi) ? (prev.sortOrder + hi) / 2 : prev.sortOrder + 1;
+    else                   return null;
+
+    return pos === task.sortOrder ? null : pos;
+  };
+
+  // Geeft een taak zijn nieuwe plek nadat prioriteit, datum of herhaling is
+  // gewijzigd. Leest de verse state, omdat dit ook vanuit een timer loopt.
+  const releaseManualPos = (id) => {
+    setTasks(ts => {
+      const task = ts.find(x => x.id === id);
+      const pos = task ? manualPosFor(task, ts) : null;
+      if (pos == null) return ts;
+      updateTaskOrderDB([{ id, sortOrder: pos }]);
+      return ts.map(x => x.id === id ? { ...x, sortOrder: pos } : x);
+    });
   };
 
   const moveRowTo = (dragId, to) => {
@@ -560,6 +620,9 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
           };
           updateTaskDB(updated);
           setTasks(t => t.map(x => x.id === id ? updated : x));
+          // De deadline is opgeschoven, dus deze taak hoort nu op een andere
+          // plek te staan: hij zakt onder de taken die eerder spelen.
+          releaseManualPos(id);
         } else {
           const completedAt = new Date().toISOString();
           trashTaskDB(id); // zacht verwijderen: blijft in Supabase met deleted_at
@@ -603,14 +666,6 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
   };
   const cyclePrio = (id) => {
     const next = { "":"hoog", hoog:"midden", midden:"laag", laag:"" };
-    // Handmatige volgorde: prioriteit wijzigen verplaatst de taak niet
-    const current = tasks.find(x => x.id === id);
-    if (isManual && current?.sortOrder != null) {
-      const updated = { ...current, priority: next[current.priority] };
-      updateTaskDB(updated);
-      setTasks(t => t.map(x => x.id === id ? updated : x));
-      return;
-    }
     setTasks(t => t.map(x => {
       if (x.id !== id) return x;
       const updated = { ...x, priority: next[x.priority] };
@@ -632,6 +687,10 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
         setFrozenPrio(f => { const n = { ...f }; delete n[id]; return n; });
         setPrioSettling(s => { const n = { ...s }; delete n[id]; return n; });
         delete prioTimers.current[id];
+        // In een handmatig geordende lijst bepaalt sort_order de plek, dus daar
+        // schuift het vrijgeven van de prioriteit niets op. Die taak krijgt hier
+        // zijn nieuwe plek, op hetzelfde moment als de rest.
+        releaseManualPos(id);
       }, 450);
     }, 2500);
   };
@@ -948,12 +1007,16 @@ function TaskPanel({ tasks, setTasks, trash, setTrash, lists, setLists, sharedLi
                         <DatePicker
                           value={task.deadline}
                           recurrence={task.recurrence}
-                          onSave={(deadline, recurrence) => setTasks(t => t.map(x => {
-                            if (x.id!==task.id) return x;
-                            const u={...x,deadline,recurrence};
-                            updateTaskDB(u);
-                            return u;
-                          }))}
+                          onSave={(deadline, recurrence) => {
+                            setTasks(t => t.map(x => {
+                              if (x.id!==task.id) return x;
+                              const u={...x,deadline,recurrence};
+                              updateTaskDB(u);
+                              return u;
+                            }));
+                            // Datum of herhaling gewijzigd → weer laten sorteren
+                            releaseManualPos(task.id);
+                          }}
                           onClose={() => setDatePickerOpen(null)}
                         />
                       )}
