@@ -185,14 +185,14 @@ function dbToList(r) {
 
 export async function loadShareLists(shareId) {
   const { data } = await supabase.from("share_lists").select("*").eq("share_id", shareId);
-  return (data || []).map(r => ({ listId: r.list_id, label: r.label, color: r.color }));
+  return (data || []).map(r => ({ listId: r.list_id, label: r.label, color: r.color, permission: r.permission || null }));
 }
 
 export async function setShareLists(shareId, lists) {
   await supabase.from("share_lists").delete().eq("share_id", shareId);
   if (lists.length === 0) return;
   await supabase.from("share_lists").insert(
-    lists.map(l => ({ share_id: shareId, list_id: l.id, label: l.label, color: l.color }))
+    lists.map(l => ({ share_id: shareId, list_id: l.id, label: l.label, color: l.color, permission: l.permission || "view" }))
   );
 }
 

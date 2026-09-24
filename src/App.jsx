@@ -1824,9 +1824,10 @@ export default function App() {
   const [sharedTasks, setSharedTasks]     = useState([]);   // taken in die gedeelde lijsten
   const [sharedEvents, setSharedEvents]   = useState([]);   // afspraken die anderen met mij delen
   const [personColors, setPersonColors]   = useState({});   // email -> kleur-key
-  const [shareListsMap, setShareListsMap] = useState({});   // mijn shareId -> [listId,...]
+  const [shareListsMap, setShareListsMap] = useState({});   // mijn shareId -> [{ listId, permission }]
   const [sharedWithMe, setSharedWithMe]   = useState([]);   // geaccepteerde shares waarin ik uitgenodigd ben
   const [personModalEmail, setPersonModalEmail] = useState(null);
+  const [personModalDraft, setPersonModalDraft] = useState({ color:null, lists:{} });
   const containerRef = useRef(null);
   const totalRef     = useRef(0);
 
@@ -1892,11 +1893,6 @@ export default function App() {
     await reloadAll();
   };
 
-  const updateSharePermission = async (id, permission) => {
-    await supabase.from("shares").update({ permission }).eq("id", id);
-    await reloadAll();
-  };
-
   const acceptInvitation = async (id) => {
     await supabase.from("shares").update({ status: "accepted" }).eq("id", id);
     setIncomingShares(s => s.filter(x => x.id !== id));
@@ -1909,27 +1905,36 @@ export default function App() {
     await reloadAll();
   };
 
-  // Per persoon: kleur toewijzen en welke lijsten ze mogen zien
+  // Per persoon: kleur en rechten per lijst
   const ownListsForShare = lists.filter(l => !l.isShared);
-  const setPersonColor = async (email, color) => {
-    if (color) await setPersonColorDB(session.user.id, email, color);
-    else await removePersonColorDB(session.user.id, email);
-    await reloadAll();
-  };
-  const toggleShareList = async (share, listId) => {
-    const current = shareListsMap[share.id] || [];
-    const nextIds = current.includes(listId) ? current.filter(x => x !== listId) : [...current, listId];
-    const objs = ownListsForShare.filter(l => nextIds.includes(l.id)).map(l => ({ id: l.id, label: l.label, color: l.color }));
-    await setShareLists(share.id, objs);
-    await reloadAll();
-  };
   const peopleEmails = Array.from(new Set([
     ...outgoingShares.map(s => s.invited_email),
     ...sharedWithMe.map(s => s.owner_email),
   ]));
   const pmOut       = personModalEmail ? outgoingShares.find(s => s.invited_email === personModalEmail) : null;
-  const pmSharedIds = pmOut ? (shareListsMap[pmOut.id] || []) : [];
-  const pmColor     = personModalEmail ? personColors[personModalEmail] : null;
+  const openPersonModal = (email) => {
+    const share = outgoingShares.find(s => s.invited_email === email);
+    const rows = share ? (shareListsMap[share.id] || []) : [];
+    const listDraft = {};
+    rows.forEach(row => { listDraft[row.listId] = row.permission || share?.permission || "view"; });
+    setPersonModalDraft({ color:personColors[email] || null, lists:listDraft });
+    setPersonModalEmail(email);
+  };
+  const savePersonSettings = async () => {
+    if (!personModalEmail) return;
+    if (personModalDraft.color) await setPersonColorDB(session.user.id, personModalEmail, personModalDraft.color);
+    else await removePersonColorDB(session.user.id, personModalEmail);
+    if (pmOut) {
+      const selected = ownListsForShare
+        .filter(l => personModalDraft.lists[l.id])
+        .map(l => ({ id:l.id, label:l.label, color:l.color, permission:personModalDraft.lists[l.id] }));
+      await setShareLists(pmOut.id, selected);
+      const fallbackPermission = selected.some(l => l.permission === "edit") ? "edit" : "view";
+      await supabase.from("shares").update({ permission:fallbackPermission }).eq("id", pmOut.id);
+    }
+    await reloadAll();
+    setPersonModalEmail(null);
+  };
 
   const generateApiKey = async () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -1974,11 +1979,12 @@ export default function App() {
       }));
       setSharedLists(shared.flatMap(({ share, sl }) => sl.map(l => ({
         id: prefixSharedId(share.owner_id, l.listId), label: l.label || "Gedeeld", color: l.color || "#9ca3af",
-        isShared: true, ownerId: share.owner_id, ownerEmail: share.owner_email, permission: share.permission,
+        isShared: true, ownerId: share.owner_id, ownerEmail: share.owner_email, permission: l.permission || share.permission,
       }))));
-      setSharedTasks(shared.flatMap(({ share, sTasks }) => sTasks.map(task => ({
+      setSharedTasks(shared.flatMap(({ share, sl, sTasks }) => sTasks.map(task => ({
         ...task, list: prefixSharedId(share.owner_id, task.list || "mine"),
-        isShared: true, ownerId: share.owner_id, ownerEmail: share.owner_email, permission: share.permission,
+        isShared: true, ownerId: share.owner_id, ownerEmail: share.owner_email,
+        permission: sl.find(l => l.listId === (task.list || "mine"))?.permission || share.permission,
       }))));
       setSharedEvents(shared.flatMap(({ share, sEvents }) => sEvents.map(e => ({
         ...e, isShared: true, ownerId: share.owner_id, ownerEmail: share.owner_email,
@@ -1990,7 +1996,7 @@ export default function App() {
       const slMap = {};
       await Promise.all(outgoing.map(async (share) => {
         const sl = await loadShareLists(share.id);
-        slMap[share.id] = sl.map(x => x.listId);
+        slMap[share.id] = sl.map(x => ({ listId:x.listId, permission:x.permission || share.permission || "view" }));
       }));
       setShareListsMap(slMap);
     }
@@ -2339,7 +2345,7 @@ export default function App() {
                     const myColor = personColors[email];
                     const dot = myColor ? PERSON_COLORS[myColor].dot : "#3f3f46";
                     return (
-                      <div key={email} onClick={() => setPersonModalEmail(email)}
+                      <div key={email} onClick={() => openPersonModal(email)}
                         style={{ display:"flex", alignItems:"center", gap:8, background:"#111827", borderRadius:6, padding:"8px 10px", marginBottom:4, cursor:"pointer" }}>
                         <div style={{ width:11, height:11, borderRadius:"50%", background:dot, border: myColor ? "none" : "1px solid #3f3f46", flexShrink:0 }} />
                         <div style={{ flex:1, minWidth:0 }}>
@@ -2399,9 +2405,9 @@ export default function App() {
 
       {/* ── Persoon-instellingen (popup over de instellingen) ── */}
       {personModalEmail && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:80, display:"flex", alignItems:"center", justifyContent:"center" }}
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.72)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:18 }}
           onClick={() => setPersonModalEmail(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background:"#18181b", borderRadius:14, width:340, maxHeight:"85vh", overflowY:"auto", padding:22 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#18181b", border:"1px solid #3f3f46", borderRadius:16, width:420, maxWidth:"100%", maxHeight:"88vh", overflowY:"auto", padding:24, boxShadow:"0 24px 80px rgba(0,0,0,0.65)" }}>
             <div style={{ display:"flex", alignItems:"center", marginBottom:16 }}>
               <div style={{ flex:1, color:"#f9fafb", fontSize:14, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{personModalEmail}</div>
               <button onClick={() => setPersonModalEmail(null)} style={{ background:"none", border:"none", color:"#9ca3af", fontSize:18, cursor:"pointer" }}>✕</button>
@@ -2410,41 +2416,64 @@ export default function App() {
             <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, marginBottom:8 }}>KLEUR</div>
             <div style={{ display:"flex", gap:10, marginBottom:18 }}>
               {PERSON_COLOR_KEYS.map(key => (
-                <div key={key} onClick={() => setPersonColor(personModalEmail, pmColor===key ? null : key)}
-                  style={{ width:28, height:28, borderRadius:"50%", background: PERSON_COLORS[key].dot, cursor:"pointer", border: pmColor===key ? "3px solid #f9fafb" : "3px solid transparent", boxSizing:"border-box" }} />
+                <div key={key} onClick={() => setPersonModalDraft(d => ({ ...d, color:d.color===key ? null : key }))}
+                  style={{ width:28, height:28, borderRadius:"50%", background: PERSON_COLORS[key].dot, cursor:"pointer", border: personModalDraft.color===key ? "3px solid #f9fafb" : "3px solid transparent", boxSizing:"border-box" }} />
               ))}
             </div>
 
             {pmOut ? (
               <>
                 <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, marginBottom:8 }}>
-                  WAT KAN {(personModalEmail||"").split("@")[0].toUpperCase()} ZIEN
+                  TOEGANG PER LIJST
+                </div>
+                <div style={{ fontSize:11, color:"#71717a", lineHeight:1.5, marginBottom:10 }}>
+                  Kies per lijst of {(personModalEmail||"").split("@")[0]} niets ziet, alleen kan bekijken of ook mag bewerken.
                 </div>
                 {ownListsForShare.map(l => {
-                  const on = pmSharedIds.includes(l.id);
+                  const permission = personModalDraft.lists[l.id] || null;
                   return (
-                    <div key={l.id} onClick={() => toggleShareList(pmOut, l.id)}
-                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 2px", borderBottom:"1px solid #27272a", cursor:"pointer" }}>
+                    <div key={l.id}
+                      style={{ padding:"10px 0", borderBottom:"1px solid #27272a" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:7 }}>
                       <div style={{ width:9, height:9, borderRadius:"50%", background:l.color }} />
                       <div style={{ flex:1, color:"#f9fafb", fontSize:13 }}>{l.label}</div>
-                      <div style={{ width:22, height:22, borderRadius:5, border:"2px solid "+(on?"#2563EB":"#3f3f46"), background:on?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13 }}>{on?"✓":""}</div>
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:5 }}>
+                        {[[null,"Niet delen"],["view","Bekijken"],["edit","Bewerken"]].map(([value,label]) => {
+                          const active = permission === value;
+                          return (
+                            <button key={label} onClick={() => setPersonModalDraft(d => ({ ...d, lists:{ ...d.lists, [l.id]:value } }))}
+                              style={{ border:"1px solid "+(active?"#2563EB":"#3f3f46"), background:active?"#1e3a8a":"#111827", color:active?"#fff":"#9ca3af", borderRadius:6, padding:"6px 4px", fontSize:10, fontWeight:600, cursor:"pointer" }}>
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })}
                 <div style={{ fontSize:11, color:"#6b7280", marginTop:10, lineHeight:1.5 }}>Afspraken deel je per stuk in de agenda.</div>
-
-                <div style={{ fontSize:10, color:"#6b7280", fontWeight:700, letterSpacing:1, margin:"18px 0 8px" }}>RECHTEN</div>
-                <div style={{ display:"flex", gap:8, marginBottom:16 }}>
-                  {[["view","👁 Bekijken"],["edit","✏️ Bewerken"]].map(([p,labelTxt]) => (
-                    <button key={p} onClick={() => updateSharePermission(pmOut.id, p)}
-                      style={{ flex:1, border:"1px solid "+(pmOut.permission===p?"#2563EB":"#3f3f46"), background: pmOut.permission===p?"#1e3a8a":"transparent", color: pmOut.permission===p?"#fff":"#9ca3af", borderRadius:7, padding:"8px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>{labelTxt}</button>
-                  ))}
+                <div style={{ display:"flex", gap:8, marginTop:18 }}>
+                  <button onClick={savePersonSettings}
+                    style={{ flex:1, border:"none", background:"#2563EB", color:"#fff", borderRadius:7, padding:"10px 0", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                    Opslaan
+                  </button>
+                  <button onClick={() => setPersonModalEmail(null)}
+                    style={{ border:"1px solid #3f3f46", background:"transparent", color:"#9ca3af", borderRadius:7, padding:"10px 14px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                    Annuleren
+                  </button>
                 </div>
                 <button onClick={() => { removeShare(pmOut.id); setPersonModalEmail(null); }}
-                  style={{ width:"100%", border:"1px solid #7f1d1d", background:"transparent", color:"#f87171", borderRadius:7, padding:"9px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>Stop met delen</button>
+                  style={{ width:"100%", marginTop:9, border:"1px solid #7f1d1d", background:"transparent", color:"#f87171", borderRadius:7, padding:"9px 0", fontSize:12, fontWeight:600, cursor:"pointer" }}>Stop met delen</button>
               </>
             ) : (
-              <div style={{ fontSize:12, color:"#9ca3af", lineHeight:1.6 }}>Deze persoon deelt met jou. Geef een kleur zodat je z'n gedeelde lijsten en afspraken herkent. Wil je zelf iets delen? Nodig 'm uit via z'n e-mailadres.</div>
+              <>
+                <div style={{ fontSize:12, color:"#9ca3af", lineHeight:1.6 }}>Deze persoon deelt met jou. Geef een kleur zodat je z'n gedeelde lijsten en afspraken herkent. Wil je zelf iets delen? Nodig 'm uit via z'n e-mailadres.</div>
+                <button onClick={savePersonSettings}
+                  style={{ width:"100%", marginTop:18, border:"none", background:"#2563EB", color:"#fff", borderRadius:7, padding:"10px 0", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                  Opslaan
+                </button>
+              </>
             )}
           </div>
         </div>
